@@ -26,22 +26,48 @@ public class MainActivity extends Activity {
 
     private LinearLayout container;
 
-    private final List<Double> btcOpen = new ArrayList<>();
-    private final List<Double> btcHigh = new ArrayList<>();
-    private final List<Double> btcLow = new ArrayList<>();
-    private final List<Double> btcPrices = new ArrayList<>();
-    private final List<Double> btcVolume = new ArrayList<>();
+    private final List<Double> btcOpen =
+            new ArrayList<>();
+
+    private final List<Double> btcHigh =
+            new ArrayList<>();
+
+    private final List<Double> btcLow =
+            new ArrayList<>();
+
+    private final List<Double> btcPrices =
+            new ArrayList<>();
+
+    private final List<Double> btcVolume =
+            new ArrayList<>();
 
     @Override
-    protected void onCreate(Bundle savedInstanceState) {
+    protected void onCreate(
+            Bundle savedInstanceState
+    ) {
+
         super.onCreate(savedInstanceState);
 
-        ScrollView scrollView = new ScrollView(this);
+        ScrollView scrollView =
+                new ScrollView(this);
 
-        container = new LinearLayout(this);
-        container.setOrientation(LinearLayout.VERTICAL);
-        container.setPadding(32, 32, 32, 32);
-        container.setBackgroundColor(Color.rgb(11, 15, 20));
+        container =
+                new LinearLayout(this);
+
+        container.setOrientation(
+                LinearLayout.VERTICAL
+        );
+
+        container.setPadding(
+                32,
+                32,
+                32,
+                32
+        );
+
+        container.setBackgroundColor(
+                Color.rgb(11, 15, 20)
+        );
 
         scrollView.addView(container);
 
@@ -49,20 +75,23 @@ public class MainActivity extends Activity {
 
         showTitle("MARKET AI");
 
-        TextView loading = addText(
-                "Loading market data...",
-                18,
-                Color.LTGRAY
-        );
+        TextView loading =
+                addText(
+                        "Loading market data...",
+                        18,
+                        Color.LTGRAY
+                );
 
         loadMarketData(loading);
     }
 
     // =========================================================
-    // LOAD MARKET DATA
+    // LOAD DATA
     // =========================================================
 
-    private void loadMarketData(TextView loading) {
+    private void loadMarketData(
+            TextView loading
+    ) {
 
         new Thread(() -> {
 
@@ -70,36 +99,48 @@ public class MainActivity extends Activity {
 
                 fetchBTC();
 
-                double goldPrice = fetchGold();
+                double goldPrice =
+                        fetchGold();
 
                 TechnicalAnalyzer.TechnicalResult technical =
                         TechnicalAnalyzer.analyze(
                                 btcPrices,
                                 btcHigh,
-                                btcLow
+                                btcLow,
+                                btcVolume
                         );
 
                 ProbabilityEngine.ProbabilityResult probability =
                         ProbabilityEngine.calculate(
                                 btcPrices,
                                 btcHigh,
-                                btcLow
+                                btcLow,
+                                btcVolume
                         );
 
-                double support = calculateSupport();
+                double support =
+                        calculateSupport();
 
-                double resistance = calculateResistance();
+                double resistance =
+                        calculateResistance();
+
+                double currentPrice =
+                        btcPrices.get(
+                                btcPrices.size() - 1
+                        );
 
                 String trend =
                         getTrend(
-                                btcPrices,
-                                technical.ema20
+                                currentPrice,
+                                technical
                         );
 
                 double averageVolume =
                         calculateAverageVolume();
 
-                new Handler(Looper.getMainLooper()).post(() -> {
+                new Handler(
+                        Looper.getMainLooper()
+                ).post(() -> {
 
                     container.removeAllViews();
 
@@ -113,30 +154,38 @@ public class MainActivity extends Activity {
 
                     addSpace();
 
+                    // =================================================
+                    // MARKET
+                    // =================================================
+
                     addSection("MARKET");
 
                     addMetric(
                             "Bitcoin",
                             "$" + format(
-                                    btcPrices.get(
-                                            btcPrices.size() - 1
-                                    )
+                                    currentPrice
                             )
                     );
 
                     addMetric(
                             "Gold",
-                            "$" + format(goldPrice)
+                            "$" + format(
+                                    goldPrice
+                            )
                     );
 
                     addMetric(
                             "Support",
-                            "$" + format(support)
+                            "$" + format(
+                                    support
+                            )
                     );
 
                     addMetric(
                             "Resistance",
-                            "$" + format(resistance)
+                            "$" + format(
+                                    resistance
+                            )
                     );
 
                     addMetric(
@@ -146,37 +195,95 @@ public class MainActivity extends Activity {
 
                     addMetric(
                             "Average Volume",
-                            format(averageVolume)
+                            format(
+                                    averageVolume
+                            )
                     );
 
                     addSpace();
 
-                    addSection("TECHNICAL ANALYSIS");
+                    // =================================================
+                    // TECHNICAL
+                    // =================================================
+
+                    addSection(
+                            "TECHNICAL ANALYSIS"
+                    );
 
                     addMetric(
                             "RSI",
-                            format(technical.rsi)
+                            format(
+                                    technical.rsi
+                            )
                     );
 
                     addMetric(
                             "EMA 20",
-                            "$" + format(technical.ema20)
+                            "$" + format(
+                                    technical.ema20
+                            )
+                    );
+
+                    addMetric(
+                            "EMA 50",
+                            "$" + format(
+                                    technical.ema50
+                            )
+                    );
+
+                    addMetric(
+                            "EMA 200",
+                            "$" + format(
+                                    technical.ema200
+                            )
                     );
 
                     addMetric(
                             "MACD",
-                            format(technical.macd)
+                            format(
+                                    technical.macd
+                            )
                     );
 
                     addMetric(
                             "ATR",
-                            "$" + format(technical.atr)
+                            "$" + format(
+                                    technical.atr
+                            )
+                    );
+
+                    addMetric(
+                            "Bollinger Upper",
+                            "$" + format(
+                                    technical.bollingerUpper
+                            )
+                    );
+
+                    addMetric(
+                            "Bollinger Lower",
+                            "$" + format(
+                                    technical.bollingerLower
+                            )
+                    );
+
+                    addMetric(
+                            "Momentum",
+                            format(
+                                    technical.momentum
+                            ) + "%"
+                    );
+
+                    addMetric(
+                            "Volume Ratio",
+                            format(
+                                    technical.volumeRatio
+                            ) + "x"
                     );
 
                     String signal =
                             getTechnicalSignal(
                                     technical,
-                                    trend
+                                    currentPrice
                             );
 
                     addMetric(
@@ -186,7 +293,13 @@ public class MainActivity extends Activity {
 
                     addSpace();
 
-                    addSection("AI PROBABILITY");
+                    // =================================================
+                    // AI PROBABILITY
+                    // =================================================
+
+                    addSection(
+                            "AI PROBABILITY"
+                    );
 
                     addMetric(
                             "BUY Probability",
@@ -226,11 +339,24 @@ public class MainActivity extends Activity {
                             )
                     );
 
+                    addMetric(
+                            "Validation Accuracy",
+                            format(
+                                    probability.validationAccuracy
+                            ) + "%"
+                    );
+
+                    addMetric(
+                            "Validation Samples",
+                            String.valueOf(
+                                    probability.validationSamples
+                            )
+                    );
+
                     addSpace();
 
                     addText(
-                            "Historical/model estimate only. "
-                                    + "It is not a guarantee of future price movement.",
+                            "Model output is a historical/statistical estimate, not a guarantee of future price movement.",
                             12,
                             Color.GRAY
                     );
@@ -238,7 +364,9 @@ public class MainActivity extends Activity {
 
             } catch (Exception e) {
 
-                new Handler(Looper.getMainLooper()).post(() -> {
+                new Handler(
+                        Looper.getMainLooper()
+                ).post(() -> {
 
                     container.removeAllViews();
 
@@ -266,10 +394,11 @@ public class MainActivity extends Activity {
     }
 
     // =========================================================
-    // BTC - REAL DAILY OHLCV
+    // BTC OHLCV
     // =========================================================
 
-    private void fetchBTC() throws Exception {
+    private void fetchBTC()
+            throws Exception {
 
         String urlString =
                 "https://api.binance.com/api/v3/klines"
@@ -281,12 +410,18 @@ public class MainActivity extends Activity {
                 new URL(urlString);
 
         HttpURLConnection connection =
-                (HttpURLConnection) url.openConnection();
+                (HttpURLConnection)
+                        url.openConnection();
 
         connection.setRequestMethod("GET");
 
-        connection.setConnectTimeout(15000);
-        connection.setReadTimeout(15000);
+        connection.setConnectTimeout(
+                15000
+        );
+
+        connection.setReadTimeout(
+                15000
+        );
 
         int responseCode =
                 connection.getResponseCode();
@@ -299,13 +434,13 @@ public class MainActivity extends Activity {
             );
         }
 
-        InputStream inputStream =
+        InputStream input =
                 connection.getInputStream();
 
         BufferedReader reader =
                 new BufferedReader(
                         new InputStreamReader(
-                                inputStream
+                                input
                         )
                 );
 
@@ -314,13 +449,16 @@ public class MainActivity extends Activity {
 
         String line;
 
-        while ((line = reader.readLine()) != null) {
+        while (
+                (line = reader.readLine())
+                        != null
+        ) {
 
             response.append(line);
         }
 
         reader.close();
-        inputStream.close();
+        input.close();
 
         connection.disconnect();
 
@@ -374,7 +512,7 @@ public class MainActivity extends Activity {
             btcVolume.add(volume);
         }
 
-        if (btcPrices.size() < 30) {
+        if (btcPrices.size() < 60) {
 
             throw new Exception(
                     "Not enough BTC historical data"
@@ -386,7 +524,8 @@ public class MainActivity extends Activity {
     // GOLD
     // =========================================================
 
-    private double fetchGold() throws Exception {
+    private double fetchGold()
+            throws Exception {
 
         String urlString =
                 "https://query1.finance.yahoo.com/v8/finance/chart/GC=F"
@@ -397,12 +536,18 @@ public class MainActivity extends Activity {
                 new URL(urlString);
 
         HttpURLConnection connection =
-                (HttpURLConnection) url.openConnection();
+                (HttpURLConnection)
+                        url.openConnection();
 
         connection.setRequestMethod("GET");
 
-        connection.setConnectTimeout(15000);
-        connection.setReadTimeout(15000);
+        connection.setConnectTimeout(
+                15000
+        );
+
+        connection.setReadTimeout(
+                15000
+        );
 
         connection.setRequestProperty(
                 "User-Agent",
@@ -420,13 +565,13 @@ public class MainActivity extends Activity {
             );
         }
 
-        InputStream inputStream =
+        InputStream input =
                 connection.getInputStream();
 
         BufferedReader reader =
                 new BufferedReader(
                         new InputStreamReader(
-                                inputStream
+                                input
                         )
                 );
 
@@ -435,13 +580,16 @@ public class MainActivity extends Activity {
 
         String line;
 
-        while ((line = reader.readLine()) != null) {
+        while (
+                (line = reader.readLine())
+                        != null
+        ) {
 
             response.append(line);
         }
 
         reader.close();
-        inputStream.close();
+        input.close();
 
         connection.disconnect();
 
@@ -451,10 +599,14 @@ public class MainActivity extends Activity {
                 );
 
         JSONObject chart =
-                root.getJSONObject("chart");
+                root.getJSONObject(
+                        "chart"
+                );
 
         JSONArray results =
-                chart.getJSONArray("result");
+                chart.getJSONArray(
+                        "result"
+                );
 
         if (results.length() == 0) {
 
@@ -472,37 +624,43 @@ public class MainActivity extends Activity {
                 );
 
         JSONArray quote =
-                indicators.getJSONArray("quote");
+                indicators.getJSONArray(
+                        "quote"
+                );
 
         JSONObject quoteData =
                 quote.getJSONObject(0);
 
-        JSONArray closeArray =
-                quoteData.getJSONArray("close");
+        JSONArray closes =
+                quoteData.getJSONArray(
+                        "close"
+                );
 
-        double latestGold = 0.0;
+        double latest =
+                0.0;
 
-        for (int i = closeArray.length() - 1;
+        for (int i =
+                     closes.length() - 1;
              i >= 0;
              i--) {
 
-            if (!closeArray.isNull(i)) {
+            if (!closes.isNull(i)) {
 
-                latestGold =
-                        closeArray.getDouble(i);
+                latest =
+                        closes.getDouble(i);
 
                 break;
             }
         }
 
-        if (latestGold <= 0) {
+        if (latest <= 0) {
 
             throw new Exception(
                     "Gold price unavailable"
             );
         }
 
-        return latestGold;
+        return latest;
     }
 
     // =========================================================
@@ -527,11 +685,11 @@ public class MainActivity extends Activity {
              i < size;
              i++) {
 
-            if (btcLow.get(i) < support) {
-
-                support =
-                        btcLow.get(i);
-            }
+            support =
+                    Math.min(
+                            support,
+                            btcLow.get(i)
+                    );
         }
 
         return support;
@@ -559,11 +717,11 @@ public class MainActivity extends Activity {
              i < size;
              i++) {
 
-            if (btcHigh.get(i) > resistance) {
-
-                resistance =
-                        btcHigh.get(i);
-            }
+            resistance =
+                    Math.max(
+                            resistance,
+                            btcHigh.get(i)
+                    );
         }
 
         return resistance;
@@ -574,34 +732,59 @@ public class MainActivity extends Activity {
     // =========================================================
 
     private String getTrend(
-            List<Double> prices,
-            double ema20
+            double price,
+            TechnicalAnalyzer.TechnicalResult result
     ) {
 
-        if (prices == null ||
-                prices.size() < 5) {
+        int bullish = 0;
+        int bearish = 0;
 
-            return "NEUTRAL";
+        if (result.ema20 > 0 &&
+                price > result.ema20) {
+
+            bullish++;
+
+        } else if (result.ema20 > 0) {
+
+            bearish++;
         }
 
-        double current =
-                prices.get(
-                        prices.size() - 1
-                );
+        if (result.ema50 > 0 &&
+                price > result.ema50) {
 
-        double previous =
-                prices.get(
-                        prices.size() - 5
-                );
+            bullish++;
 
-        if (current > ema20 &&
-                current > previous) {
+        } else if (result.ema50 > 0) {
+
+            bearish++;
+        }
+
+        if (result.ema200 > 0 &&
+                price > result.ema200) {
+
+            bullish++;
+
+        } else if (result.ema200 > 0) {
+
+            bearish++;
+        }
+
+        if (result.momentum > 0) {
+
+            bullish++;
+
+        } else if (result.momentum < 0) {
+
+            bearish++;
+        }
+
+        if (bullish >= 3) {
 
             return "UP";
+
         }
 
-        if (current < ema20 &&
-                current < previous) {
+        if (bearish >= 3) {
 
             return "DOWN";
         }
@@ -615,55 +798,81 @@ public class MainActivity extends Activity {
 
     private String getTechnicalSignal(
             TechnicalAnalyzer.TechnicalResult result,
-            String trend
+            double price
     ) {
 
-        int score = 0;
-
-        double currentPrice =
-                btcPrices.get(
-                        btcPrices.size() - 1
-                );
+        int bullish = 0;
+        int bearish = 0;
 
         if (result.rsi > 50) {
-            score++;
-        }
 
-        if (result.ema20 > 0 &&
-                currentPrice > result.ema20) {
+            bullish++;
 
-            score++;
+        } else if (result.rsi < 50) {
+
+            bearish++;
         }
 
         if (result.macd > 0) {
-            score++;
-        }
 
-        if ("UP".equals(trend)) {
-            score++;
-        }
-
-        if (score >= 3) {
-
-            return "BUY BIAS";
-
-        } else if (score <= 1) {
-
-            return "SELL BIAS";
+            bullish++;
 
         } else {
 
-            return "NEUTRAL";
+            bearish++;
         }
+
+        if (result.momentum > 0) {
+
+            bullish++;
+
+        } else if (result.momentum < 0) {
+
+            bearish++;
+        }
+
+        if (result.ema50 > 0 &&
+                price > result.ema50) {
+
+            bullish++;
+
+        } else {
+
+            bearish++;
+        }
+
+        if (result.ema200 > 0 &&
+                price > result.ema200) {
+
+            bullish++;
+
+        } else {
+
+            bearish++;
+        }
+
+        if (bullish >= 4) {
+
+            return "BUY BIAS";
+
+        }
+
+        if (bearish >= 4) {
+
+            return "SELL BIAS";
+        }
+
+        return "NEUTRAL";
     }
 
     // =========================================================
-    // AVERAGE VOLUME
+    // VOLUME
     // =========================================================
 
     private double calculateAverageVolume() {
 
         if (btcVolume.isEmpty()) {
+
             return 0.0;
         }
 
@@ -689,7 +898,7 @@ public class MainActivity extends Activity {
     }
 
     // =========================================================
-    // UI
+    // UI TITLE
     // =========================================================
 
     private void showTitle(
@@ -721,6 +930,10 @@ public class MainActivity extends Activity {
         container.addView(title);
     }
 
+    // =========================================================
+    // SECTION
+    // =========================================================
+
     private void addSection(
             String text
     ) {
@@ -746,6 +959,10 @@ public class MainActivity extends Activity {
         container.addView(section);
     }
 
+    // =========================================================
+    // METRIC
+    // =========================================================
+
     private void addMetric(
             String name,
             String value
@@ -755,7 +972,9 @@ public class MainActivity extends Activity {
                 new TextView(this);
 
         metric.setText(
-                name + "    " + value
+                name
+                        + "    "
+                        + value
         );
 
         metric.setTextSize(16);
@@ -773,6 +992,10 @@ public class MainActivity extends Activity {
 
         container.addView(metric);
     }
+
+    // =========================================================
+    // TEXT
+    // =========================================================
 
     private TextView addText(
             String text,
@@ -801,6 +1024,10 @@ public class MainActivity extends Activity {
         return view;
     }
 
+    // =========================================================
+    // SPACE
+    // =========================================================
+
     private void addSpace() {
 
         TextView space =
@@ -818,6 +1045,10 @@ public class MainActivity extends Activity {
         container.addView(space);
     }
 
+    // =========================================================
+    // FORMAT
+    // =========================================================
+
     private String format(
             double value
     ) {
@@ -828,4 +1059,4 @@ public class MainActivity extends Activity {
                 value
         );
     }
-}
+            }
