@@ -5,395 +5,452 @@ import java.util.List;
 
 public class ProbabilityEngine {
 
-    // =========================================================
-    // RESULT
-    // =========================================================
-
     public static class ProbabilityResult {
 
         public double buyProbability;
         public double sellProbability;
         public double neutralProbability;
 
-        public int sampleSize;
-
+        public String direction;
         public String confidence;
 
-        public String direction;
-
+        public int samples;
 
         public ProbabilityResult(
                 double buyProbability,
                 double sellProbability,
                 double neutralProbability,
-                int sampleSize,
+                String direction,
                 String confidence,
-                String direction
+                int samples
         ) {
 
-            this.buyProbability = buyProbability;
-            this.sellProbability = sellProbability;
-            this.neutralProbability = neutralProbability;
-            this.sampleSize = sampleSize;
-            this.confidence = confidence;
-            this.direction = direction;
+            this.buyProbability =
+                    buyProbability;
+
+            this.sellProbability =
+                    sellProbability;
+
+            this.neutralProbability =
+                    neutralProbability;
+
+            this.direction =
+                    direction;
+
+            this.confidence =
+                    confidence;
+
+            this.samples =
+                    samples;
         }
     }
 
-
     // =========================================================
-    // SETTINGS
-    // =========================================================
-
-    /*
-     * Number of future candles used to evaluate
-     * a historical signal.
-     */
-    private static final int FORWARD_DAYS = 5;
-
-
-    /*
-     * Price movement required to classify
-     * a historical outcome.
-     *
-     * >= +1%  -> BUY outcome
-     * <= -1%  -> SELL outcome
-     * between -> NEUTRAL outcome
-     */
-    private static final double MOVE_THRESHOLD = 0.01;
-
-
-    /*
-     * Minimum technical history required.
-     */
-    private static final int MIN_HISTORY = 40;
-
-
-    /*
-     * Percentage of history reserved for
-     * validation / out-of-sample checking.
-     *
-     * The engine does NOT use the validation
-     * period for its main probability estimate.
-     */
-    private static final double TRAINING_RATIO = 0.80;
-
-
-    /*
-     * Maximum acceptable score difference
-     * for a historical match.
-     */
-    private static final int STRICT_SCORE_DISTANCE = 1;
-
-
-    /*
-     * Wider matching if strict matching
-     * does not produce enough examples.
-     */
-    private static final int WIDE_SCORE_DISTANCE = 2;
-
-
-    /*
-     * Laplace smoothing prevents extreme
-     * 0% / 100% probabilities from tiny samples.
-     */
-    private static final double SMOOTHING = 2.0;
-
-
-    // =========================================================
-    // MAIN ENGINE
+    // MAIN CALCULATION
     // =========================================================
 
     public static ProbabilityResult calculate(
-            List<Double> prices
+            List<Double> prices,
+            List<Double> highs,
+            List<Double> lows
     ) {
 
-        if (
-                prices == null ||
-                prices.size() < MIN_HISTORY
-        ) {
+        if (prices == null ||
+                highs == null ||
+                lows == null) {
 
-            return new ProbabilityResult(
-                    33.33,
-                    33.33,
-                    33.34,
-                    0,
-                    "LOW",
-                    "INSUFFICIENT DATA"
-            );
+            return defaultResult();
         }
 
+        int size =
+                Math.min(
+                        prices.size(),
+                        Math.min(
+                                highs.size(),
+                                lows.size()
+                        )
+                );
 
-        // -----------------------------------------------------
-        // CURRENT MARKET STATE
-        // -----------------------------------------------------
+        if (size < 40) {
+
+            return defaultResult();
+        }
+
+        /*
+         * Use only the common portion of the
+         * three OHLC lists.
+         */
+
+        List<Double> p =
+                new ArrayList<>(
+                        prices.subList(
+                                0,
+                                size
+                        )
+                );
+
+        List<Double> h =
+                new ArrayList<>(
+                        highs.subList(
+                                0,
+                                size
+                        )
+                );
+
+        List<Double> l =
+                new ArrayList<>(
+                        lows.subList(
+                                0,
+                                size
+                        )
+                );
+
+        /*
+         * Keep the most recent 80% as validation.
+         * Older data is used for historical matching.
+         */
+
+        int trainingEnd =
+                (int) (size * 0.80);
+
+        if (trainingEnd < 35) {
+
+            return defaultResult();
+        }
+
+        int validationStart =
+                trainingEnd;
+
+        int validationEnd =
+                size - 5;
+
+        double buyScore = 2.0;
+        double sellScore = 2.0;
+        double neutralScore = 2.0;
+
+        int matchedSamples = 0;
+
+        /*
+         * Evaluate historical situations.
+         *
+         * Each historical candle is compared with
+         * the current market's technical state.
+         */
 
         TechnicalAnalyzer.TechnicalResult currentTechnical =
                 TechnicalAnalyzer.analyze(
-                        prices,
-                        createProxyHighs(prices),
-                        createProxyLows(prices)
+                        p,
+                        h,
+                        l
                 );
-
-
-        String currentTrend =
-                calculateTrend(prices);
-
 
         double currentPrice =
-                prices.get(
-                        prices.size() - 1
+                p.get(
+                        p.size() - 1
                 );
 
+        for (int i = 30;
+             i < trainingEnd - 5;
+             i++) {
 
-        int currentScore =
-                calculateScore(
-                        currentPrice,
-                        currentTrend,
-                        currentTechnical
-                );
+            List<Double> historicalPrices =
+                    new ArrayList<>(
+                            p.subList(
+                                    0,
+                                    i + 1
+                            )
+                    );
 
+            List<Double> historicalHighs =
+                    new ArrayList<>(
+                            h.subList(
+                                    0,
+                                    i + 1
+                            )
+                    );
 
-        // -----------------------------------------------------
-        // TRAINING / VALIDATION SPLIT
-        // -----------------------------------------------------
+            List<Double> historicalLows =
+                    new ArrayList<>(
+                            l.subList(
+                                    0,
+                                    i + 1
+                            )
+                    );
 
-        int totalUsable =
-                prices.size()
-                        -
-                FORWARD_DAYS;
+            TechnicalAnalyzer.TechnicalResult historicalTechnical =
+                    TechnicalAnalyzer.analyze(
+                            historicalPrices,
+                            historicalHighs,
+                            historicalLows
+                    );
 
+            double distance =
+                    calculateTechnicalDistance(
+                            currentTechnical,
+                            historicalTechnical,
+                            currentPrice,
+                            historicalPrices.get(
+                                    historicalPrices.size() - 1
+                            )
+                    );
 
-        int trainingEnd =
-                (int)
-                Math.floor(
-                        totalUsable
-                                *
-                        TRAINING_RATIO
-                );
+            /*
+             * Strict historical match.
+             */
 
+            if (distance <= 1.0) {
+
+                double oldPrice =
+                        historicalPrices.get(
+                                historicalPrices.size() - 1
+                        );
+
+                double futurePrice =
+                        p.get(i + 5);
+
+                double movement =
+                        (
+                                futurePrice
+                                        - oldPrice
+                        )
+                        / oldPrice
+                        * 100.0;
+
+                if (movement >= 1.0) {
+
+                    buyScore += 1.0;
+
+                } else if (movement <= -1.0) {
+
+                    sellScore += 1.0;
+
+                } else {
+
+                    neutralScore += 1.0;
+                }
+
+                matchedSamples++;
+            }
+        }
 
         /*
-         * Safety boundaries.
+         * If strict matching is too small,
+         * use a wider historical distance.
          */
-        trainingEnd =
-                Math.max(
-                        30,
-                        trainingEnd
-                );
 
+        if (matchedSamples < 8) {
 
-        trainingEnd =
-                Math.min(
-                        trainingEnd,
-                        totalUsable - 1
-                );
+            buyScore = 2.0;
+            sellScore = 2.0;
+            neutralScore = 2.0;
 
+            matchedSamples = 0;
 
-        // -----------------------------------------------------
-        // STRICT HISTORICAL MATCHING
-        // -----------------------------------------------------
+            for (int i = 30;
+                 i < trainingEnd - 5;
+                 i++) {
 
-        HistoricalStats strictStats =
-                collectHistoricalStats(
-                        prices,
-                        currentScore,
-                        currentTrend,
-                        0,
-                        trainingEnd,
-                        STRICT_SCORE_DISTANCE
-                );
+                List<Double> historicalPrices =
+                        new ArrayList<>(
+                                p.subList(
+                                        0,
+                                        i + 1
+                                )
+                        );
 
+                List<Double> historicalHighs =
+                        new ArrayList<>(
+                                h.subList(
+                                        0,
+                                        i + 1
+                                )
+                        );
 
-        HistoricalStats stats =
-                strictStats;
+                List<Double> historicalLows =
+                        new ArrayList<>(
+                                l.subList(
+                                        0,
+                                        i + 1
+                                )
+                        );
 
+                TechnicalAnalyzer.TechnicalResult historicalTechnical =
+                        TechnicalAnalyzer.analyze(
+                                historicalPrices,
+                                historicalHighs,
+                                historicalLows
+                        );
 
-        // -----------------------------------------------------
-        // WIDE MATCHING FALLBACK
-        // -----------------------------------------------------
+                double distance =
+                        calculateTechnicalDistance(
+                                currentTechnical,
+                                historicalTechnical,
+                                currentPrice,
+                                historicalPrices.get(
+                                        historicalPrices.size() - 1
+                                )
+                        );
 
-        if (
-                stats.sampleSize < 10
-        ) {
+                if (distance <= 2.0) {
 
-            stats =
-                    collectHistoricalStats(
-                            prices,
-                            currentScore,
-                            currentTrend,
-                            0,
-                            trainingEnd,
-                            WIDE_SCORE_DISTANCE
-                    );
+                    double oldPrice =
+                            historicalPrices.get(
+                                    historicalPrices.size() - 1
+                            );
+
+                    double futurePrice =
+                            p.get(i + 5);
+
+                    double movement =
+                            (
+                                    futurePrice
+                                            - oldPrice
+                            )
+                            / oldPrice
+                            * 100.0;
+
+                    if (movement >= 1.0) {
+
+                        buyScore += 1.0;
+
+                    } else if (movement <= -1.0) {
+
+                        sellScore += 1.0;
+
+                    } else {
+
+                        neutralScore += 1.0;
+                    }
+
+                    matchedSamples++;
+                }
+            }
         }
-
-
-        // -----------------------------------------------------
-        // GLOBAL FALLBACK
-        // -----------------------------------------------------
-
-        if (
-                stats.sampleSize < 10
-        ) {
-
-            stats =
-                    collectGlobalStats(
-                            prices,
-                            0,
-                            trainingEnd
-                    );
-        }
-
-
-        // -----------------------------------------------------
-        // NO DATA
-        // -----------------------------------------------------
-
-        if (
-                stats.sampleSize == 0
-        ) {
-
-            return new ProbabilityResult(
-                    33.33,
-                    33.33,
-                    33.34,
-                    0,
-                    "LOW",
-                    "NO HISTORICAL DATA"
-            );
-        }
-
-
-        // -----------------------------------------------------
-        // CALIBRATED PROBABILITY
-        // -----------------------------------------------------
-
-        double buyProbability =
-                smoothedProbability(
-                        stats.buyCount,
-                        stats.sampleSize
-                );
-
-
-        double sellProbability =
-                smoothedProbability(
-                        stats.sellCount,
-                        stats.sampleSize
-                );
-
-
-        double neutralProbability =
-                smoothedProbability(
-                        stats.neutralCount,
-                        stats.sampleSize
-                );
-
 
         /*
-         * Normalise all three values so their total
-         * is exactly 100%.
+         * Validation stage.
+         *
+         * This gives us a basic out-of-sample
+         * quality check.
          */
+
+        int validationSamples = 0;
+        int validationCorrect = 0;
+
+        if (validationStart < validationEnd) {
+
+            for (int i = validationStart;
+                 i < validationEnd;
+                 i++) {
+
+                if (i < 30) {
+                    continue;
+                }
+
+                List<Double> validationPrices =
+                        new ArrayList<>(
+                                p.subList(
+                                        0,
+                                        i + 1
+                                )
+                        );
+
+                List<Double> validationHighs =
+                        new ArrayList<>(
+                                h.subList(
+                                        0,
+                                        i + 1
+                                )
+                        );
+
+                List<Double> validationLows =
+                        new ArrayList<>(
+                                l.subList(
+                                        0,
+                                        i + 1
+                                )
+                        );
+
+                TechnicalAnalyzer.TechnicalResult vt =
+                        TechnicalAnalyzer.analyze(
+                                validationPrices,
+                                validationHighs,
+                                validationLows
+                        );
+
+                String predicted =
+                        technicalDirection(vt);
+
+                double oldPrice =
+                        p.get(i);
+
+                double futurePrice =
+                        p.get(i + 5);
+
+                double movement =
+                        (
+                                futurePrice
+                                        - oldPrice
+                        )
+                        / oldPrice
+                        * 100.0;
+
+                String actual;
+
+                if (movement >= 1.0) {
+
+                    actual = "BUY";
+
+                } else if (movement <= -1.0) {
+
+                    actual = "SELL";
+
+                } else {
+
+                    actual = "NEUTRAL";
+                }
+
+                if (predicted.equals(actual)) {
+                    validationCorrect++;
+                }
+
+                validationSamples++;
+            }
+        }
+
         double total =
-                buyProbability
-                        +
-                sellProbability
-                        +
-                neutralProbability;
+                buyScore
+                        + sellScore
+                        + neutralScore;
 
-
-        if (total > 0.0) {
-
-            buyProbability =
-                    buyProbability
-                            *
-                    100.0
-                            /
-                    total;
-
-
-            sellProbability =
-                    sellProbability
-                            *
-                    100.0
-                            /
-                    total;
-
-
-            neutralProbability =
-                    neutralProbability
-                            *
-                    100.0
-                            /
-                    total;
+        if (total <= 0) {
+            return defaultResult();
         }
 
+        double buy =
+                buyScore
+                        / total
+                        * 100.0;
 
-        buyProbability =
-                round2(
-                        buyProbability
-                );
+        double sell =
+                sellScore
+                        / total
+                        * 100.0;
 
-
-        sellProbability =
-                round2(
-                        sellProbability
-                );
-
-
-        neutralProbability =
-                round2(
-                        neutralProbability
-                );
-
-
-        /*
-         * Fix possible rounding difference so
-         * displayed probabilities total 100%.
-         */
-        double displayedTotal =
-                buyProbability
-                        +
-                sellProbability
-                        +
-                neutralProbability;
-
-
-        double difference =
-                round2(
-                        100.0 -
-                        displayedTotal
-                );
-
-
-        neutralProbability =
-                round2(
-                        neutralProbability
-                                +
-                        difference
-                );
-
-
-        // -----------------------------------------------------
-        // DIRECTION
-        // -----------------------------------------------------
+        double neutral =
+                neutralScore
+                        / total
+                        * 100.0;
 
         String direction;
 
-
-        if (
-                buyProbability >= sellProbability
-                        &&
-                buyProbability >= neutralProbability
-        ) {
+        if (buy > sell &&
+                buy > neutral) {
 
             direction = "BUY";
 
-        } else if (
-                sellProbability >= buyProbability
-                        &&
-                sellProbability >= neutralProbability
-        ) {
+        } else if (sell > buy &&
+                sell > neutral) {
 
             direction = "SELL";
 
@@ -402,511 +459,157 @@ public class ProbabilityEngine {
             direction = "NEUTRAL";
         }
 
-
-        // -----------------------------------------------------
-        // OUT-OF-SAMPLE VALIDATION
-        // -----------------------------------------------------
-
-        ValidationStats validation =
-                validateOutOfSample(
-                        prices,
-                        currentScore,
-                        currentTrend,
-                        trainingEnd,
-                        totalUsable,
-                        STRICT_SCORE_DISTANCE
-                );
-
-
-        /*
-         * If strict validation has very few examples,
-         * use wider validation.
-         */
-        if (
-                validation.sampleSize < 5
-        ) {
-
-            validation =
-                    validateOutOfSample(
-                            prices,
-                            currentScore,
-                            currentTrend,
-                            trainingEnd,
-                            totalUsable,
-                            WIDE_SCORE_DISTANCE
-                    );
-        }
-
-
-        // -----------------------------------------------------
-        // CONFIDENCE
-        // -----------------------------------------------------
-
         String confidence =
                 calculateConfidence(
-                        stats.sampleSize,
-                        buyProbability,
-                        sellProbability,
-                        neutralProbability,
-                        validation
+                        matchedSamples,
+                        validationSamples,
+                        validationCorrect,
+                        buy,
+                        sell,
+                        neutral
                 );
 
-
         return new ProbabilityResult(
-                buyProbability,
-                sellProbability,
-                neutralProbability,
-                stats.sampleSize,
+                round(buy),
+                round(sell),
+                round(neutral),
+                direction,
                 confidence,
-                direction
+                matchedSamples
         );
     }
 
-
     // =========================================================
-    // HISTORICAL STATS
+    // TECHNICAL DISTANCE
     // =========================================================
 
-    private static HistoricalStats
-    collectHistoricalStats(
-            List<Double> prices,
-            int currentScore,
-            String currentTrend,
-            int start,
-            int end,
-            int scoreDistance
+    private static double calculateTechnicalDistance(
+            TechnicalAnalyzer.TechnicalResult current,
+            TechnicalAnalyzer.TechnicalResult historical,
+            double currentPrice,
+            double historicalPrice
     ) {
 
-        HistoricalStats stats =
-                new HistoricalStats();
-
-
-        for (
-                int i = start + 30;
-                i <= end;
-                i++
-        ) {
-
-            if (
-                    i + FORWARD_DAYS
-                            >=
-                    prices.size()
-            ) {
-
-                break;
-            }
-
-
-            List<Double> historicalPrices =
-                    new ArrayList<>(
-                            prices.subList(
-                                    0,
-                                    i + 1
-                            )
-                    );
-
-
-            TechnicalAnalyzer.TechnicalResult technical =
-                    TechnicalAnalyzer.analyze(
-                            historicalPrices,
-                            createProxyHighs(
-                                    historicalPrices
-                            ),
-                            createProxyLows(
-                                    historicalPrices
-                            )
-                    );
-
-
-            String trend =
-                    calculateTrend(
-                            historicalPrices
-                    );
-
-
-            int score =
-                    calculateScore(
-                            historicalPrices.get(
-                                    historicalPrices.size() - 1
-                            ),
-                            trend,
-                            technical
-                    );
-
-
-            boolean scoreMatch =
-                    Math.abs(
-                            score -
-                            currentScore
-                    )
-                    <=
-                    scoreDistance;
-
-
-            boolean trendMatch =
-                    trend.equals(
-                            currentTrend
-                    );
-
-
-            if (
-                    !scoreMatch ||
-                    !trendMatch
-            ) {
-
-                continue;
-            }
-
-
-            double historicalPrice =
-                    historicalPrices.get(
-                            historicalPrices.size() - 1
-                    );
-
-
-            double futurePrice =
-                    prices.get(
-                            i + FORWARD_DAYS
-                    );
-
-
-            double returnPercent =
-                    (
-                            futurePrice -
-                            historicalPrice
-                    )
-                    /
-                    historicalPrice;
-
-
-            stats.sampleSize++;
-
-
-            if (
-                    returnPercent
-                            >=
-                    MOVE_THRESHOLD
-            ) {
-
-                stats.buyCount++;
-
-            } else if (
-                    returnPercent
-                            <=
-                    -MOVE_THRESHOLD
-            ) {
-
-                stats.sellCount++;
-
-            } else {
-
-                stats.neutralCount++;
-            }
-        }
-
-
-        return stats;
-    }
-
-
-    // =========================================================
-    // GLOBAL STATS
-    // =========================================================
-
-    private static HistoricalStats
-    collectGlobalStats(
-            List<Double> prices,
-            int start,
-            int end
-    ) {
-
-        HistoricalStats stats =
-                new HistoricalStats();
-
-
-        for (
-                int i = start + 30;
-                i <= end;
-                i++
-        ) {
-
-            if (
-                    i + FORWARD_DAYS
-                            >=
-                    prices.size()
-            ) {
-
-                break;
-            }
-
-
-            double current =
-                    prices.get(i);
-
-
-            double future =
-                    prices.get(
-                            i + FORWARD_DAYS
-                    );
-
-
-            double returnPercent =
-                    (
-                            future -
-                            current
-                    )
-                    /
-                    current;
-
-
-            stats.sampleSize++;
-
-
-            if (
-                    returnPercent
-                            >=
-                    MOVE_THRESHOLD
-            ) {
-
-                stats.buyCount++;
-
-            } else if (
-                    returnPercent
-                            <=
-                    -MOVE_THRESHOLD
-            ) {
-
-                stats.sellCount++;
-
-            } else {
-
-                stats.neutralCount++;
-            }
-        }
-
-
-        return stats;
-    }
-
-
-    // =========================================================
-    // OUT OF SAMPLE VALIDATION
-    // =========================================================
-
-    private static ValidationStats
-    validateOutOfSample(
-            List<Double> prices,
-            int currentScore,
-            String currentTrend,
-            int start,
-            int end,
-            int scoreDistance
-    ) {
-
-        ValidationStats result =
-                new ValidationStats();
-
-
-        for (
-                int i = start;
-                i <= end;
-                i++
-        ) {
-
-            if (
-                    i < 30 ||
-                    i + FORWARD_DAYS
-                            >=
-                    prices.size()
-            ) {
-
-                continue;
-            }
-
-
-            List<Double> historicalPrices =
-                    new ArrayList<>(
-                            prices.subList(
-                                    0,
-                                    i + 1
-                            )
-                    );
-
-
-            TechnicalAnalyzer.TechnicalResult technical =
-                    TechnicalAnalyzer.analyze(
-                            historicalPrices,
-                            createProxyHighs(
-                                    historicalPrices
-                            ),
-                            createProxyLows(
-                                    historicalPrices
-                            )
-                    );
-
-
-            String trend =
-                    calculateTrend(
-                            historicalPrices
-                    );
-
-
-            int score =
-                    calculateScore(
-                            historicalPrices.get(
-                                    historicalPrices.size() - 1
-                            ),
-                            trend,
-                            technical
-                    );
-
-
-            boolean scoreMatch =
-                    Math.abs(
-                            score -
-                            currentScore
-                    )
-                    <=
-                    scoreDistance;
-
-
-            boolean trendMatch =
-                    trend.equals(
-                            currentTrend
-                    );
-
-
-            if (
-                    !scoreMatch ||
-                    !trendMatch
-            ) {
-
-                continue;
-            }
-
-
-            double current =
-                    prices.get(i);
-
-
-            double future =
-                    prices.get(
-                            i + FORWARD_DAYS
-                    );
-
-
-            double movement =
-                    (
-                            future -
-                            current
-                    )
-                    /
-                    current;
-
-
-            result.sampleSize++;
-
-
-            /*
-             * Validation asks:
-             *
-             * Did the historical direction
-             * agree with the current direction?
-             */
-            if (
-                    currentScore > 0
-            ) {
-
-                if (
-                        movement
-                                >=
-                        MOVE_THRESHOLD
-                ) {
-
-                    result.correct++;
-                }
-
-            } else if (
-                    currentScore < 0
-            ) {
-
-                if (
-                        movement
-                                <=
-                        -MOVE_THRESHOLD
-                ) {
-
-                    result.correct++;
-                }
-
-            } else {
-
-                if (
-                        Math.abs(movement)
-                                <
-                        MOVE_THRESHOLD
-                ) {
-
-                    result.correct++;
-                }
-            }
-        }
-
-
-        return result;
-    }
-
-
-    // =========================================================
-    // PROBABILITY SMOOTHING
-    // =========================================================
-
-    private static double
-    smoothedProbability(
-            int count,
-            int total
-    ) {
+        double distance = 0.0;
 
         /*
-         * Three possible classes:
-         *
-         * BUY
-         * SELL
-         * NEUTRAL
-         *
-         * Laplace smoothing adds the same
-         * small prior to every class.
+         * RSI difference
          */
 
-        return
-                (
-                        count +
-                        SMOOTHING
-                )
-                /
-                (
-                        total +
-                        (
-                                SMOOTHING * 3.0
-                        )
+        double rsiDifference =
+                Math.abs(
+                        current.rsi
+                                - historical.rsi
                 );
+
+        if (rsiDifference > 20) {
+
+            distance += 1.0;
+        }
+
+        /*
+         * EMA relationship
+         */
+
+        boolean currentAboveEMA =
+                currentPrice > current.ema20;
+
+        boolean historicalAboveEMA =
+                historicalPrice > historical.ema20;
+
+        if (currentAboveEMA !=
+                historicalAboveEMA) {
+
+            distance += 1.0;
+        }
+
+        /*
+         * MACD direction
+         */
+
+        boolean currentMACDPositive =
+                current.macd > 0;
+
+        boolean historicalMACDPositive =
+                historical.macd > 0;
+
+        if (currentMACDPositive !=
+                historicalMACDPositive) {
+
+            distance += 1.0;
+        }
+
+        /*
+         * ATR regime
+         */
+
+        if (current.atr > 0 &&
+                historical.atr > 0) {
+
+            double atrRatio =
+                    current.atr
+                            / historical.atr;
+
+            if (atrRatio > 1.75 ||
+                    atrRatio < 0.57) {
+
+                distance += 1.0;
+            }
+        }
+
+        return distance;
     }
 
+    // =========================================================
+    // TECHNICAL DIRECTION
+    // =========================================================
+
+    private static String technicalDirection(
+            TechnicalAnalyzer.TechnicalResult result
+    ) {
+
+        int score = 0;
+
+        if (result.rsi > 50) {
+            score++;
+        }
+
+        if (result.macd > 0) {
+            score++;
+        }
+
+        if (result.ema20 > 0) {
+            score++;
+        }
+
+        if (score >= 2) {
+
+            return "BUY";
+
+        } else if (score == 0) {
+
+            return "SELL";
+
+        } else {
+
+            return "NEUTRAL";
+        }
+    }
 
     // =========================================================
     // CONFIDENCE
     // =========================================================
 
-    private static String
-    calculateConfidence(
-            int sampleSize,
+    private static String calculateConfidence(
+            int matchedSamples,
+            int validationSamples,
+            int validationCorrect,
             double buy,
             double sell,
-            double neutral,
-            ValidationStats validation
+            double neutral
     ) {
 
-        double highest =
+        double largest =
                 Math.max(
                         buy,
                         Math.max(
@@ -915,25 +618,19 @@ public class ProbabilityEngine {
                         )
                 );
 
+        double second;
 
-        double secondHighest;
+        if (largest == buy) {
 
-
-        if (
-                highest == buy
-        ) {
-
-            secondHighest =
+            second =
                     Math.max(
                             sell,
                             neutral
                     );
 
-        } else if (
-                highest == sell
-        ) {
+        } else if (largest == sell) {
 
-            secondHighest =
+            second =
                     Math.max(
                             buy,
                             neutral
@@ -941,394 +638,66 @@ public class ProbabilityEngine {
 
         } else {
 
-            secondHighest =
+            second =
                     Math.max(
                             buy,
                             sell
                     );
         }
 
+        double edge =
+                largest - second;
 
-        double separation =
-                highest -
-                secondHighest;
-
-
-        /*
-         * Validation quality.
-         */
         double validationAccuracy = 0.0;
 
-
-        if (
-                validation.sampleSize > 0
-        ) {
+        if (validationSamples > 0) {
 
             validationAccuracy =
                     (
-                            validation.correct
-                                    *
-                            100.0
+                            validationCorrect
+                                    / (double)
+                                    validationSamples
                     )
-                    /
-                    validation.sampleSize;
+                    * 100.0;
         }
 
-
-        /*
-         * HIGH:
-         *
-         * Large historical sample
-         * Strong probability separation
-         * Reasonable validation sample
-         * Validation accuracy above 55%
-         */
-        if (
-                sampleSize >= 50
-                        &&
-                separation >= 20
-                        &&
-                validation.sampleSize >= 10
-                        &&
-                validationAccuracy >= 55
-        ) {
+        if (matchedSamples >= 20 &&
+                edge >= 10 &&
+                validationAccuracy >= 55) {
 
             return "HIGH";
         }
 
-
-        /*
-         * MODERATE
-         */
-        if (
-                sampleSize >= 25
-                        &&
-                separation >= 10
-                        &&
-                validation.sampleSize >= 5
-                        &&
-                validationAccuracy >= 50
-        ) {
+        if (matchedSamples >= 10 &&
+                edge >= 5) {
 
             return "MODERATE";
         }
 
-
         return "LOW";
     }
 
-
     // =========================================================
-    // TECHNICAL SCORE
+    // DEFAULT
     // =========================================================
 
-    private static int calculateScore(
-            double currentPrice,
-            String trend,
-            TechnicalAnalyzer.TechnicalResult technical
-    ) {
+    private static ProbabilityResult defaultResult() {
 
-        int score = 0;
-
-
-        // Trend
-
-        if (
-                trend.equals("UP")
-        ) {
-
-            score++;
-
-        } else if (
-                trend.equals("DOWN")
-        ) {
-
-            score--;
-        }
-
-
-        // EMA20
-
-        if (
-                currentPrice >
-                technical.ema20
-        ) {
-
-            score++;
-
-        } else if (
-                currentPrice <
-                technical.ema20
-        ) {
-
-            score--;
-        }
-
-
-        // RSI
-
-        if (
-                technical.rsi >= 55 &&
-                technical.rsi <= 70
-        ) {
-
-            score++;
-
-        } else if (
-                technical.rsi >= 30 &&
-                technical.rsi <= 45
-        ) {
-
-            score--;
-        }
-
-
-        // MACD
-
-        if (
-                technical.macd > 0
-        ) {
-
-            score++;
-
-        } else if (
-                technical.macd < 0
-        ) {
-
-            score--;
-        }
-
-
-        if (score > 4) {
-
-            score = 4;
-        }
-
-
-        if (score < -4) {
-
-            score = -4;
-        }
-
-
-        return score;
+        return new ProbabilityResult(
+                33.33,
+                33.33,
+                33.34,
+                "NEUTRAL",
+                "LOW",
+                0
+        );
     }
-
-
-    // =========================================================
-    // TREND
-    // =========================================================
-
-    private static String calculateTrend(
-            List<Double> prices
-    ) {
-
-        if (
-                prices == null ||
-                prices.size() < 20
-        ) {
-
-            return "UNKNOWN";
-        }
-
-
-        double recent =
-                averageLast(
-                        prices,
-                        5
-                );
-
-
-        double previous =
-                averageRange(
-                        prices,
-                        prices.size() - 10,
-                        prices.size() - 5
-                );
-
-
-        if (
-                recent >
-                previous * 1.002
-        ) {
-
-            return "UP";
-
-        } else if (
-                recent <
-                previous * 0.998
-        ) {
-
-            return "DOWN";
-
-        } else {
-
-            return "SIDEWAYS";
-        }
-    }
-
-
-    // =========================================================
-    // PROXY HIGH
-    // =========================================================
-
-    private static List<Double>
-    createProxyHighs(
-            List<Double> prices
-    ) {
-
-        List<Double> result =
-                new ArrayList<>();
-
-
-        for (
-                Double price : prices
-        ) {
-
-            result.add(
-                    price * 1.01
-            );
-        }
-
-
-        return result;
-    }
-
-
-    // =========================================================
-    // PROXY LOW
-    // =========================================================
-
-    private static List<Double>
-    createProxyLows(
-            List<Double> prices
-    ) {
-
-        List<Double> result =
-                new ArrayList<>();
-
-
-        for (
-                Double price : prices
-        ) {
-
-            result.add(
-                    price * 0.99
-            );
-        }
-
-
-        return result;
-    }
-
-
-    // =========================================================
-    // AVERAGES
-    // =========================================================
-
-    private static double averageLast(
-            List<Double> values,
-            int count
-    ) {
-
-        if (
-                values == null ||
-                values.isEmpty()
-        ) {
-
-            return 0.0;
-        }
-
-
-        count =
-                Math.min(
-                        count,
-                        values.size()
-                );
-
-
-        double sum = 0.0;
-
-
-        for (
-                int i =
-                        values.size() - count;
-                i < values.size();
-                i++
-        ) {
-
-            sum +=
-                    values.get(i);
-        }
-
-
-        return sum / count;
-    }
-
-
-    private static double averageRange(
-            List<Double> values,
-            int start,
-            int end
-    ) {
-
-        if (
-                values == null ||
-                values.isEmpty()
-        ) {
-
-            return 0.0;
-        }
-
-
-        start =
-                Math.max(
-                        0,
-                        start
-                );
-
-
-        end =
-                Math.min(
-                        values.size(),
-                        end
-                );
-
-
-        if (
-                start >= end
-        ) {
-
-            return values.get(
-                    values.size() - 1
-            );
-        }
-
-
-        double sum = 0.0;
-
-
-        for (
-                int i = start;
-                i < end;
-                i++
-        ) {
-
-            sum +=
-                    values.get(i);
-        }
-
-
-        return sum /
-                (end - start);
-    }
-
 
     // =========================================================
     // ROUND
     // =========================================================
 
-    private static double round2(
+    private static double round(
             double value
     ) {
 
@@ -1336,32 +705,4 @@ public class ProbabilityEngine {
                 value * 100.0
         ) / 100.0;
     }
-
-
-    // =========================================================
-    // HISTORICAL STATS CLASS
-    // =========================================================
-
-    private static class HistoricalStats {
-
-        int buyCount = 0;
-
-        int sellCount = 0;
-
-        int neutralCount = 0;
-
-        int sampleSize = 0;
-    }
-
-
-    // =========================================================
-    // VALIDATION STATS CLASS
-    // =========================================================
-
-    private static class ValidationStats {
-
-        int correct = 0;
-
-        int sampleSize = 0;
-    }
-            }
+                            }
