@@ -6,6 +6,8 @@ import android.os.Handler;
 import android.os.Looper;
 import android.graphics.Color;
 import android.graphics.Typeface;
+import android.graphics.Canvas;
+import android.graphics.Paint;
 import android.view.Gravity;
 import android.view.View;
 import android.widget.LinearLayout;
@@ -18,12 +20,11 @@ import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.util.ArrayList;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 public class MainActivity extends Activity {
-
-    private LinearLayout root;
 
     private TextView btcCard;
     private TextView goldCard;
@@ -32,6 +33,8 @@ public class MainActivity extends Activity {
     private TextView trendCard;
     private TextView volumeCard;
     private TextView status;
+
+    private PriceChart chartView;
 
     private final ExecutorService executor =
             Executors.newFixedThreadPool(2);
@@ -81,11 +84,12 @@ public class MainActivity extends Activity {
             String value
     ) {
 
-        TextView tv = makeText(
-                title + "\n" + value,
-                15,
-                true
-        );
+        TextView tv =
+                makeText(
+                        title + "\n" + value,
+                        15,
+                        true
+                );
 
         tv.setBackgroundColor(
                 Color.rgb(24, 31, 40)
@@ -117,7 +121,8 @@ public class MainActivity extends Activity {
 
         super.onCreate(savedInstanceState);
 
-        root = new LinearLayout(this);
+        LinearLayout root =
+                new LinearLayout(this);
 
         root.setOrientation(
                 LinearLayout.VERTICAL
@@ -242,34 +247,47 @@ public class MainActivity extends Activity {
 
         root.addView(row2);
 
-        TextView chart =
+        TextView chartTitle =
                 makeText(
-                        "PRICE CHART\n\n"
-                        + "Historical + Live Market Data",
+                        "PRICE CHART",
                         17,
                         true
                 );
 
-        chart.setBackgroundColor(
+        chartTitle.setPadding(
+                0,
+                dp(18),
+                0,
+                dp(4)
+        );
+
+        root.addView(chartTitle);
+
+        chartView =
+                new PriceChart(this);
+
+        chartView.setBackgroundColor(
                 Color.rgb(17, 23, 31)
         );
 
         LinearLayout.LayoutParams chartParams =
                 new LinearLayout.LayoutParams(
                         LinearLayout.LayoutParams.MATCH_PARENT,
-                        dp(210)
+                        dp(260)
                 );
 
         chartParams.setMargins(
                 0,
-                dp(15),
+                dp(4),
                 0,
                 dp(15)
         );
 
-        chart.setLayoutParams(chartParams);
+        chartView.setLayoutParams(
+                chartParams
+        );
 
-        root.addView(chart);
+        root.addView(chartView);
 
         TextView button =
                 makeText(
@@ -296,7 +314,7 @@ public class MainActivity extends Activity {
         status =
                 makeText(
                         "ENGINE STATUS: READY\n"
-                        + "Live data engine: READY",
+                        + "Waiting for market data...",
                         14,
                         false
                 );
@@ -319,7 +337,7 @@ public class MainActivity extends Activity {
 
         status.setText(
                 "ENGINE STATUS: RUNNING\n"
-                + "Connecting to market data..."
+                + "Downloading market data..."
         );
 
         loadBTC();
@@ -384,15 +402,19 @@ public class MainActivity extends Activity {
                                                     )
                                             );
 
+                                            chartView.setPrices(
+                                                    result.prices
+                                            );
+
                                             status.setText(
                                                     "ENGINE STATUS: READY\n"
-                                                    + "BTC live data loaded"
+                                                    + "BTC live + chart data loaded"
                                             );
                                         }
                                     }
                             );
 
-                        } catch (final Exception e) {
+                        } catch (Exception e) {
 
                             handler.post(
                                     new Runnable() {
@@ -482,7 +504,9 @@ public class MainActivity extends Activity {
                 (HttpURLConnection)
                         url.openConnection();
 
-        connection.setRequestMethod("GET");
+        connection.setRequestMethod(
+                "GET"
+        );
 
         connection.setRequestProperty(
                 "User-Agent",
@@ -500,8 +524,8 @@ public class MainActivity extends Activity {
         int responseCode =
                 connection.getResponseCode();
 
-        if (responseCode < 200
-                || responseCode >= 300) {
+        if (responseCode < 200 ||
+                responseCode >= 300) {
 
             throw new Exception(
                     "HTTP " + responseCode
@@ -511,8 +535,7 @@ public class MainActivity extends Activity {
         BufferedReader reader =
                 new BufferedReader(
                         new InputStreamReader(
-                                connection
-                                        .getInputStream()
+                                connection.getInputStream()
                         )
                 );
 
@@ -546,15 +569,14 @@ public class MainActivity extends Activity {
                 root.getJSONArray("prices");
 
         JSONArray volumes =
-                root.getJSONArray("total_volumes");
+                root.getJSONArray(
+                        "total_volumes"
+                );
 
-        int size =
-                prices.length();
+        ArrayList<Double> priceList =
+                new ArrayList<>();
 
-        double latest =
-                prices
-                    .getJSONArray(size - 1)
-                    .getDouble(1);
+        double latest = 0;
 
         double lowest =
                 Double.MAX_VALUE;
@@ -566,9 +588,41 @@ public class MainActivity extends Activity {
 
         int volumeCount = 0;
 
-        double recentSum = 0;
+        for (int i = 0;
+             i < prices.length();
+             i++) {
 
-        double previousSum = 0;
+            double price =
+                    prices
+                        .getJSONArray(i)
+                        .getDouble(1);
+
+            priceList.add(price);
+
+            latest = price;
+
+            if (price < lowest) {
+                lowest = price;
+            }
+
+            if (price > highest) {
+                highest = price;
+            }
+
+            if (i < volumes.length()) {
+
+                double volume =
+                        volumes
+                            .getJSONArray(i)
+                            .getDouble(1);
+
+                volumeSum += volume;
+                volumeCount++;
+            }
+        }
+
+        int size =
+                priceList.size();
 
         int recentStart =
                 Math.max(
@@ -588,43 +642,23 @@ public class MainActivity extends Activity {
                         size - 20
                 );
 
-        for (int i = 0;
+        double recentSum = 0;
+        double previousSum = 0;
+
+        for (int i = recentStart;
              i < size;
              i++) {
 
-            double price =
-                    prices
-                        .getJSONArray(i)
-                        .getDouble(1);
+            recentSum +=
+                    priceList.get(i);
+        }
 
-            if (price < lowest) {
-                lowest = price;
-            }
+        for (int i = previousStart;
+             i < previousEnd;
+             i++) {
 
-            if (price > highest) {
-                highest = price;
-            }
-
-            if (i >= recentStart) {
-                recentSum += price;
-            }
-
-            if (i >= previousStart
-                    && i < previousEnd) {
-
-                previousSum += price;
-            }
-
-            if (i < volumes.length()) {
-
-                double volume =
-                        volumes
-                            .getJSONArray(i)
-                            .getDouble(1);
-
-                volumeSum += volume;
-                volumeCount++;
-            }
+            previousSum +=
+                    priceList.get(i);
         }
 
         double recentSMA =
@@ -637,8 +671,8 @@ public class MainActivity extends Activity {
         double previousSMA =
                 previousEnd > previousStart
                         ? previousSum /
-                          (previousEnd
-                          - previousStart)
+                          (previousEnd -
+                           previousStart)
                         : recentSMA;
 
         String trend =
@@ -650,12 +684,6 @@ public class MainActivity extends Activity {
             trend = "DOWN";
         }
 
-        double averageVolume =
-                volumeCount > 0
-                        ? volumeSum /
-                          volumeCount
-                        : 0;
-
         BTCResult result =
                 new BTCResult();
 
@@ -663,7 +691,15 @@ public class MainActivity extends Activity {
         result.support = lowest;
         result.resistance = highest;
         result.trend = trend;
-        result.volume = averageVolume;
+
+        result.volume =
+                volumeCount > 0
+                        ? volumeSum /
+                          volumeCount
+                        : 0;
+
+        result.prices =
+                priceList;
 
         return result;
     }
@@ -702,9 +738,10 @@ public class MainActivity extends Activity {
 
         double latest = 0;
 
-        for (int i = close.length() - 1;
-             i >= 0;
-             i--) {
+        for (int i =
+                close.length() - 1;
+                i >= 0;
+                i--) {
 
             if (!close.isNull(i)) {
 
@@ -715,28 +752,20 @@ public class MainActivity extends Activity {
             }
         }
 
-        GoldResult resultData =
+        GoldResult data =
                 new GoldResult();
 
-        resultData.price = latest;
+        data.price = latest;
 
-        return resultData;
+        return data;
     }
 
     private String format(
             double value
     ) {
 
-        if (value >= 1000) {
-
-            return String.format(
-                    "%,.2f",
-                    value
-            );
-        }
-
         return String.format(
-                "%.2f",
+                "%,.2f",
                 value
         );
     }
@@ -780,11 +809,252 @@ public class MainActivity extends Activity {
         double resistance;
         double volume;
         String trend;
+
+        ArrayList<Double> prices;
     }
 
     private static class GoldResult {
 
         double price;
+    }
+
+    private class PriceChart
+            extends View {
+
+        private final Paint linePaint =
+                new Paint(
+                        Paint.ANTI_ALIAS_FLAG
+                );
+
+        private final Paint gridPaint =
+                new Paint(
+                        Paint.ANTI_ALIAS_FLAG
+                );
+
+        private final Paint textPaint =
+                new Paint(
+                        Paint.ANTI_ALIAS_FLAG
+                );
+
+        private ArrayList<Double> prices =
+                new ArrayList<>();
+
+        PriceChart(
+                android.content.Context context
+        ) {
+
+            super(context);
+
+            linePaint.setColor(
+                    Color.rgb(
+                            0,
+                            220,
+                            120
+                    )
+            );
+
+            linePaint.setStrokeWidth(
+                    dp(2)
+            );
+
+            linePaint.setStyle(
+                    Paint.Style.STROKE
+            );
+
+            gridPaint.setColor(
+                    Color.rgb(
+                            45,
+                            55,
+                            65
+                    )
+            );
+
+            gridPaint.setStrokeWidth(
+                    dp(1)
+            );
+
+            textPaint.setColor(
+                    Color.LTGRAY
+            );
+
+            textPaint.setTextSize(
+                    dp(10)
+            );
+        }
+
+        void setPrices(
+                ArrayList<Double> data
+        ) {
+
+            prices =
+                    new ArrayList<>(
+                            data
+                    );
+
+            invalidate();
+        }
+
+        @Override
+        protected void onDraw(
+                Canvas canvas
+        ) {
+
+            super.onDraw(canvas);
+
+            float width =
+                    getWidth();
+
+            float height =
+                    getHeight();
+
+            float left =
+                    dp(10);
+
+            float right =
+                    width - dp(10);
+
+            float top =
+                    dp(15);
+
+            float bottom =
+                    height - dp(15);
+
+            // Grid
+
+            for (int i = 0; i <= 4; i++) {
+
+                float y =
+                        top +
+                        ((bottom - top)
+                        * i / 4f);
+
+                canvas.drawLine(
+                        left,
+                        y,
+                        right,
+                        y,
+                        gridPaint
+                );
+            }
+
+            if (prices.size() < 2) {
+
+                canvas.drawText(
+                        "Loading chart...",
+                        left,
+                        height / 2,
+                        textPaint
+                );
+
+                return;
+            }
+
+            double min =
+                    Double.MAX_VALUE;
+
+            double max =
+                    -Double.MAX_VALUE;
+
+            for (double value :
+                    prices) {
+
+                if (value < min) {
+                    min = value;
+                }
+
+                if (value > max) {
+                    max = value;
+                }
+            }
+
+            double range =
+                    max - min;
+
+            if (range <= 0) {
+                range = 1;
+            }
+
+            float previousX = 0;
+            float previousY = 0;
+
+            for (int i = 0;
+                 i < prices.size();
+                 i++) {
+
+                double value =
+                        prices.get(i);
+
+                float x =
+                        left +
+                        (right - left)
+                        * i /
+                        (prices.size() - 1);
+
+                float y =
+                        bottom -
+                        (float)
+                        ((value - min)
+                        / range)
+                        * (bottom - top);
+
+                if (i > 0) {
+
+                    canvas.drawLine(
+                            previousX,
+                            previousY,
+                            x,
+                            y,
+                            linePaint
+                    );
+                }
+
+                previousX = x;
+                previousY = y;
+            }
+
+            // Latest price
+
+            double latest =
+                    prices.get(
+                            prices.size() - 1
+                    );
+
+            canvas.drawText(
+                    "$ "
+                    + format(latest),
+                    left,
+                    top + dp(12),
+                    textPaint
+            );
+
+            // Low
+
+            canvas.drawText(
+                    "Low "
+                    + format(min),
+                    left,
+                    bottom,
+                    textPaint
+            );
+
+            // High
+
+            String highText =
+                    "High "
+                    + format(max);
+
+            float textWidth =
+                    textPaint.measureText(
+                            highText
+                    );
+
+            canvas.drawText(
+                    highText,
+                    right - textWidth,
+                    bottom,
+                    textPaint
+            );
+        }
     }
 
     @Override
