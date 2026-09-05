@@ -14,7 +14,6 @@ import android.widget.ScrollView;
 import android.widget.Toast;
 
 import org.json.JSONArray;
-import org.json.JSONObject;
 
 import java.io.BufferedReader;
 import java.io.InputStream;
@@ -58,13 +57,16 @@ public class MainActivity extends Activity {
     private final ExecutorService executor =
             Executors.newSingleThreadExecutor();
 
-    private final List<Double> btcPrices =
+    private final List<Double> btcOpen =
             new ArrayList<>();
 
     private final List<Double> btcHighs =
             new ArrayList<>();
 
     private final List<Double> btcLows =
+            new ArrayList<>();
+
+    private final List<Double> btcPrices =
             new ArrayList<>();
 
     private final List<Double> btcVolumes =
@@ -143,10 +145,6 @@ public class MainActivity extends Activity {
         );
 
 
-        // =====================================================
-        // MARKET
-        // =====================================================
-
         root.addView(
                 sectionTitle("MARKET")
         );
@@ -187,10 +185,6 @@ public class MainActivity extends Activity {
                 )
         );
 
-
-        // =====================================================
-        // PRICE LEVELS
-        // =====================================================
 
         root.addView(
                 sectionTitle("PRICE LEVELS")
@@ -269,10 +263,6 @@ public class MainActivity extends Activity {
         );
 
 
-        // =====================================================
-        // CHART
-        // =====================================================
-
         root.addView(
                 sectionTitle("BTC CHART")
         );
@@ -302,10 +292,6 @@ public class MainActivity extends Activity {
                 chartParams
         );
 
-
-        // =====================================================
-        // TECHNICAL ANALYSIS
-        // =====================================================
 
         root.addView(
                 sectionTitle("TECHNICAL ANALYSIS")
@@ -384,10 +370,6 @@ public class MainActivity extends Activity {
         );
 
 
-        // =====================================================
-        // TECHNICAL SIGNAL
-        // =====================================================
-
         root.addView(
                 sectionTitle("AI SIGNAL")
         );
@@ -434,10 +416,6 @@ public class MainActivity extends Activity {
                 )
         );
 
-
-        // =====================================================
-        // PROBABILITY ENGINE
-        // =====================================================
 
         root.addView(
                 sectionTitle("AI PROBABILITY")
@@ -620,13 +598,11 @@ public class MainActivity extends Activity {
         TextView view =
                 new TextView(this);
 
-
         view.setText(text);
 
         view.setTextSize(size);
 
         view.setTextColor(color);
-
 
         return view;
     }
@@ -669,7 +645,8 @@ public class MainActivity extends Activity {
         return (int)
                 (
                         value * density
-                                + 0.5f
+                                +
+                        0.5f
                 );
     }
 
@@ -682,7 +659,7 @@ public class MainActivity extends Activity {
 
         Toast.makeText(
                 this,
-                "Loading market data...",
+                "Loading real OHLC data...",
                 Toast.LENGTH_SHORT
         ).show();
 
@@ -691,9 +668,22 @@ public class MainActivity extends Activity {
 
             try {
 
+                /*
+                 * Real BTC daily OHLCV.
+                 *
+                 * Binance kline response:
+                 *
+                 * 0 = open time
+                 * 1 = open
+                 * 2 = high
+                 * 3 = low
+                 * 4 = close
+                 * 5 = volume
+                 */
+
                 String btcJson =
                         download(
-                                "https://api.coingecko.com/api/v3/coins/bitcoin/market_chart?vs_currency=usd&days=180&interval=daily"
+                                "https://api.binance.com/api/v3/klines?symbol=BTCUSDT&interval=1d&limit=180"
                         );
 
 
@@ -732,7 +722,7 @@ public class MainActivity extends Activity {
 
                     Toast.makeText(
                             MainActivity.this,
-                            "Data loading failed",
+                            "Market data loading failed",
                             Toast.LENGTH_LONG
                     ).show();
 
@@ -752,7 +742,7 @@ public class MainActivity extends Activity {
 
 
     // =========================================================
-    // DOWNLOAD
+    // HTTP DOWNLOAD
     // =========================================================
 
     private String download(
@@ -855,80 +845,97 @@ public class MainActivity extends Activity {
 
 
     // =========================================================
-    // PARSE BTC
+    // REAL BTC OHLCV PARSER
     // =========================================================
 
     private void parseBTC(
             String json
     ) throws Exception {
 
-        JSONObject object =
-                new JSONObject(json);
+        JSONArray candles =
+                new JSONArray(json);
 
 
-        JSONArray prices =
-                object.getJSONArray(
-                        "prices"
-                );
-
-
-        JSONArray totalVolumes =
-                object.getJSONArray(
-                        "total_volumes"
-                );
-
-
-        btcPrices.clear();
+        btcOpen.clear();
 
         btcHighs.clear();
 
         btcLows.clear();
+
+        btcPrices.clear();
 
         btcVolumes.clear();
 
 
         for (
                 int i = 0;
-                i < prices.length();
+                i < candles.length();
                 i++
         ) {
 
-            JSONArray row =
-                    prices.getJSONArray(i);
+            JSONArray candle =
+                    candles.getJSONArray(i);
+
+
+            /*
+             * Binance daily kline:
+             *
+             * [0] open time
+             * [1] open
+             * [2] high
+             * [3] low
+             * [4] close
+             * [5] volume
+             */
+
+            double open =
+                    Double.parseDouble(
+                            candle.getString(1)
+                    );
+
+
+            double high =
+                    Double.parseDouble(
+                            candle.getString(2)
+                    );
+
+
+            double low =
+                    Double.parseDouble(
+                            candle.getString(3)
+                    );
 
 
             double close =
-                    row.getDouble(1);
+                    Double.parseDouble(
+                            candle.getString(4)
+                    );
+
+
+            double volume =
+                    Double.parseDouble(
+                            candle.getString(5)
+                    );
+
+
+            btcOpen.add(
+                    open
+            );
+
+
+            btcHighs.add(
+                    high
+            );
+
+
+            btcLows.add(
+                    low
+            );
 
 
             btcPrices.add(
                     close
             );
-
-
-            /*
-             * Temporary OHLC proxy.
-             *
-             * This will later be replaced
-             * with proper historical OHLC data.
-             */
-
-            btcHighs.add(
-                    close * 1.01
-            );
-
-
-            btcLows.add(
-                    close * 0.99
-            );
-
-
-            JSONArray volumeRow =
-                    totalVolumes.getJSONArray(i);
-
-
-            double volume =
-                    volumeRow.getDouble(1);
 
 
             btcVolumes.add(
@@ -939,18 +946,18 @@ public class MainActivity extends Activity {
 
 
     // =========================================================
-    // PARSE GOLD
+    // GOLD PARSER
     // =========================================================
 
     private double parseGold(
             String json
     ) throws Exception {
 
-        JSONObject rootObject =
-                new JSONObject(json);
+        org.json.JSONObject rootObject =
+                new org.json.JSONObject(json);
 
 
-        JSONObject chart =
+        org.json.JSONObject chart =
                 rootObject
                         .getJSONObject("chart");
 
@@ -959,11 +966,11 @@ public class MainActivity extends Activity {
                 chart.getJSONArray("result");
 
 
-        JSONObject result =
+        org.json.JSONObject result =
                 results.getJSONObject(0);
 
 
-        JSONObject indicators =
+        org.json.JSONObject indicators =
                 result.getJSONObject(
                         "indicators"
                 );
@@ -975,7 +982,7 @@ public class MainActivity extends Activity {
                 );
 
 
-        JSONObject quoteObject =
+        org.json.JSONObject quoteObject =
                 quote.getJSONObject(0);
 
 
@@ -1042,13 +1049,13 @@ public class MainActivity extends Activity {
 
         double support =
                 calculateSupport(
-                        btcPrices
+                        btcLows
                 );
 
 
         double resistance =
                 calculateResistance(
-                        btcPrices
+                        btcHighs
                 );
 
 
@@ -1089,7 +1096,7 @@ public class MainActivity extends Activity {
 
 
         // =====================================================
-        // TECHNICAL ENGINE
+        // REAL OHLC TECHNICAL ANALYSIS
         // =====================================================
 
         TechnicalAnalyzer.TechnicalResult technical =
@@ -1174,12 +1181,14 @@ public class MainActivity extends Activity {
 
 
         // =====================================================
-        // PROBABILITY ENGINE
+        // REAL OHLC PROBABILITY ENGINE
         // =====================================================
 
         ProbabilityEngine.ProbabilityResult probability =
                 ProbabilityEngine.calculate(
-                        btcPrices
+                        btcPrices,
+                        btcHighs,
+                        btcLows
                 );
 
 
@@ -1228,10 +1237,6 @@ public class MainActivity extends Activity {
         );
 
 
-        // =====================================================
-        // CHART
-        // =====================================================
-
         chartView.setPrices(
                 btcPrices
         );
@@ -1243,13 +1248,13 @@ public class MainActivity extends Activity {
     // =========================================================
 
     private double calculateSupport(
-            List<Double> prices
+            List<Double> lows
     ) {
 
         int start =
                 Math.max(
                         0,
-                        prices.size() - 30
+                        lows.size() - 30
                 );
 
 
@@ -1259,12 +1264,12 @@ public class MainActivity extends Activity {
 
         for (
                 int i = start;
-                i < prices.size();
+                i < lows.size();
                 i++
         ) {
 
             double value =
-                    prices.get(i);
+                    lows.get(i);
 
 
             if (
@@ -1285,13 +1290,13 @@ public class MainActivity extends Activity {
     // =========================================================
 
     private double calculateResistance(
-            List<Double> prices
+            List<Double> highs
     ) {
 
         int start =
                 Math.max(
                         0,
-                        prices.size() - 30
+                        highs.size() - 30
                 );
 
 
@@ -1301,12 +1306,12 @@ public class MainActivity extends Activity {
 
         for (
                 int i = start;
-                i < prices.size();
+                i < highs.size();
                 i++
         ) {
 
             double value =
-                    prices.get(i);
+                    highs.get(i);
 
 
             if (
@@ -1429,8 +1434,6 @@ public class MainActivity extends Activity {
         int score = 0;
 
 
-        // Trend
-
         if (
                 trend.equals("UP")
         ) {
@@ -1444,8 +1447,6 @@ public class MainActivity extends Activity {
             score--;
         }
 
-
-        // EMA20
 
         if (
                 currentPrice >
@@ -1463,8 +1464,6 @@ public class MainActivity extends Activity {
         }
 
 
-        // RSI
-
         if (
                 technical.rsi >= 55 &&
                 technical.rsi <= 70
@@ -1480,8 +1479,6 @@ public class MainActivity extends Activity {
             score--;
         }
 
-
-        // MACD
 
         if (
                 technical.macd > 0
@@ -1514,7 +1511,7 @@ public class MainActivity extends Activity {
 
 
     // =========================================================
-    // AVERAGE HELPERS
+    // AVERAGES
     // =========================================================
 
     private double averageLast(
@@ -1542,7 +1539,8 @@ public class MainActivity extends Activity {
 
 
         for (
-                int i = values.size() - count;
+                int i =
+                        values.size() - count;
                 i < values.size();
                 i++
         ) {
