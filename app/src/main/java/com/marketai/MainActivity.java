@@ -24,6 +24,7 @@ import java.util.concurrent.Executors;
 public class MainActivity extends Activity {
 
     private LinearLayout root;
+
     private TextView btcCard;
     private TextView goldCard;
     private TextView supportCard;
@@ -33,14 +34,17 @@ public class MainActivity extends Activity {
     private TextView status;
 
     private final ExecutorService executor =
-            Executors.newSingleThreadExecutor();
+            Executors.newFixedThreadPool(2);
 
     private final Handler handler =
             new Handler(Looper.getMainLooper());
 
     private int dp(float value) {
-        return (int) (value *
-                getResources().getDisplayMetrics().density + 0.5f);
+        return (int) (
+                value *
+                getResources().getDisplayMetrics().density
+                + 0.5f
+        );
     }
 
     private TextView makeText(
@@ -56,7 +60,10 @@ public class MainActivity extends Activity {
         tv.setGravity(Gravity.CENTER);
 
         if (bold) {
-            tv.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
+            tv.setTypeface(
+                    Typeface.DEFAULT,
+                    Typeface.BOLD
+            );
         }
 
         tv.setPadding(
@@ -104,11 +111,14 @@ public class MainActivity extends Activity {
     }
 
     @Override
-    protected void onCreate(Bundle savedInstanceState) {
+    protected void onCreate(
+            Bundle savedInstanceState
+    ) {
 
         super.onCreate(savedInstanceState);
 
         root = new LinearLayout(this);
+
         root.setOrientation(
                 LinearLayout.VERTICAL
         );
@@ -125,7 +135,11 @@ public class MainActivity extends Activity {
         );
 
         TextView title =
-                makeText("MARKET AI", 28, true);
+                makeText(
+                        "MARKET AI",
+                        28,
+                        true
+                );
 
         title.setPadding(
                 0,
@@ -144,10 +158,16 @@ public class MainActivity extends Activity {
         );
 
         btcCard =
-                makeCard("₿ BTC", "Loading...");
+                makeCard(
+                        "₿ BTC",
+                        "Loading..."
+                );
 
         goldCard =
-                makeCard("GOLD", "Loading...");
+                makeCard(
+                        "GOLD",
+                        "Loading..."
+                );
 
         assets.addView(btcCard);
         assets.addView(goldCard);
@@ -266,7 +286,7 @@ public class MainActivity extends Activity {
                 new View.OnClickListener() {
                     @Override
                     public void onClick(View v) {
-                        loadMarketData();
+                        loadAllData();
                     }
                 }
         );
@@ -292,15 +312,21 @@ public class MainActivity extends Activity {
 
         setContentView(root);
 
-        loadMarketData();
+        loadAllData();
     }
 
-    private void loadMarketData() {
+    private void loadAllData() {
 
         status.setText(
                 "ENGINE STATUS: RUNNING\n"
-                + "Downloading market data..."
+                + "Connecting to market data..."
         );
+
+        loadBTC();
+        loadGold();
+    }
+
+    private void loadBTC() {
 
         executor.execute(
                 new Runnable() {
@@ -309,34 +335,117 @@ public class MainActivity extends Activity {
 
                         try {
 
-                            String btc =
-                                    getMarketData("BTC-USD");
+                            String json =
+                                    getUrl(
+                                        "https://api.coingecko.com/api/v3/coins/bitcoin/market_chart"
+                                        + "?vs_currency=usd"
+                                        + "&days=180"
+                                        + "&interval=daily"
+                                    );
 
-                            String gold =
-                                    getMarketData("GC=F");
-
-                            final String btcResult =
-                                    analyze(btc);
-
-                            final String goldResult =
-                                    analyze(gold);
+                            final BTCResult result =
+                                    analyzeBTC(json);
 
                             handler.post(
                                     new Runnable() {
                                         @Override
                                         public void run() {
 
-                                            updateBTC(
-                                                    btcResult
+                                            btcCard.setText(
+                                                    "₿ BTC\n$ "
+                                                    + format(
+                                                        result.price
+                                                    )
                                             );
 
-                                            updateGold(
-                                                    goldResult
+                                            supportCard.setText(
+                                                    "SUPPORT\n"
+                                                    + format(
+                                                        result.support
+                                                    )
+                                            );
+
+                                            resistanceCard.setText(
+                                                    "RESISTANCE\n"
+                                                    + format(
+                                                        result.resistance
+                                                    )
+                                            );
+
+                                            trendCard.setText(
+                                                    "TREND\n"
+                                                    + result.trend
+                                            );
+
+                                            volumeCard.setText(
+                                                    "VOLUME\n"
+                                                    + formatVolume(
+                                                        result.volume
+                                                    )
                                             );
 
                                             status.setText(
                                                     "ENGINE STATUS: READY\n"
-                                                    + "Live analysis completed"
+                                                    + "BTC live data loaded"
+                                            );
+                                        }
+                                    }
+                            );
+
+                        } catch (final Exception e) {
+
+                            handler.post(
+                                    new Runnable() {
+                                        @Override
+                                        public void run() {
+
+                                            btcCard.setText(
+                                                    "₿ BTC\n"
+                                                    + "Connection failed"
+                                            );
+
+                                            status.setText(
+                                                    "ENGINE STATUS: WARNING\n"
+                                                    + "BTC data unavailable"
+                                            );
+                                        }
+                                    }
+                            );
+                        }
+                    }
+                }
+        );
+    }
+
+    private void loadGold() {
+
+        executor.execute(
+                new Runnable() {
+                    @Override
+                    public void run() {
+
+                        try {
+
+                            String json =
+                                    getUrl(
+                                        "https://query1.finance.yahoo.com/v8/finance/chart/GC%3DF"
+                                        + "?range=6mo"
+                                        + "&interval=1d"
+                                    );
+
+                            final GoldResult result =
+                                    analyzeGold(json);
+
+                            handler.post(
+                                    new Runnable() {
+                                        @Override
+                                        public void run() {
+
+                                            goldCard.setText(
+                                                    "GOLD FUTURES\n$ "
+                                                    + format(
+                                                        result.price
+                                                    )
                                             );
                                         }
                                     }
@@ -349,9 +458,9 @@ public class MainActivity extends Activity {
                                         @Override
                                         public void run() {
 
-                                            status.setText(
-                                                    "ENGINE STATUS: ERROR\n"
-                                                    + "Could not load market data"
+                                            goldCard.setText(
+                                                    "GOLD FUTURES\n"
+                                                    + "Connection failed"
                                             );
                                         }
                                     }
@@ -362,20 +471,12 @@ public class MainActivity extends Activity {
         );
     }
 
-    private String getMarketData(
-            String symbol
+    private String getUrl(
+            String address
     ) throws Exception {
 
-        String encoded =
-                symbol.replace("=", "%3D");
-
-        String urlString =
-                "https://query1.finance.yahoo.com/v8/finance/chart/"
-                + encoded
-                + "?range=6mo&interval=1d";
-
         URL url =
-                new URL(urlString);
+                new URL(address);
 
         HttpURLConnection connection =
                 (HttpURLConnection)
@@ -383,13 +484,35 @@ public class MainActivity extends Activity {
 
         connection.setRequestMethod("GET");
 
-        connection.setConnectTimeout(10000);
-        connection.setReadTimeout(10000);
+        connection.setRequestProperty(
+                "User-Agent",
+                "Mozilla/5.0"
+        );
+
+        connection.setConnectTimeout(
+                15000
+        );
+
+        connection.setReadTimeout(
+                15000
+        );
+
+        int responseCode =
+                connection.getResponseCode();
+
+        if (responseCode < 200
+                || responseCode >= 300) {
+
+            throw new Exception(
+                    "HTTP " + responseCode
+            );
+        }
 
         BufferedReader reader =
                 new BufferedReader(
                         new InputStreamReader(
-                                connection.getInputStream()
+                                connection
+                                        .getInputStream()
                         )
                 );
 
@@ -398,7 +521,10 @@ public class MainActivity extends Activity {
 
         String line;
 
-        while ((line = reader.readLine()) != null) {
+        while (
+                (line = reader.readLine())
+                        != null
+        ) {
             response.append(line);
         }
 
@@ -409,7 +535,140 @@ public class MainActivity extends Activity {
         return response.toString();
     }
 
-    private String analyze(
+    private BTCResult analyzeBTC(
+            String json
+    ) throws Exception {
+
+        JSONObject root =
+                new JSONObject(json);
+
+        JSONArray prices =
+                root.getJSONArray("prices");
+
+        JSONArray volumes =
+                root.getJSONArray("total_volumes");
+
+        int size =
+                prices.length();
+
+        double latest =
+                prices
+                    .getJSONArray(size - 1)
+                    .getDouble(1);
+
+        double lowest =
+                Double.MAX_VALUE;
+
+        double highest =
+                -Double.MAX_VALUE;
+
+        double volumeSum = 0;
+
+        int volumeCount = 0;
+
+        double recentSum = 0;
+
+        double previousSum = 0;
+
+        int recentStart =
+                Math.max(
+                        0,
+                        size - 20
+                );
+
+        int previousStart =
+                Math.max(
+                        0,
+                        size - 50
+                );
+
+        int previousEnd =
+                Math.max(
+                        0,
+                        size - 20
+                );
+
+        for (int i = 0;
+             i < size;
+             i++) {
+
+            double price =
+                    prices
+                        .getJSONArray(i)
+                        .getDouble(1);
+
+            if (price < lowest) {
+                lowest = price;
+            }
+
+            if (price > highest) {
+                highest = price;
+            }
+
+            if (i >= recentStart) {
+                recentSum += price;
+            }
+
+            if (i >= previousStart
+                    && i < previousEnd) {
+
+                previousSum += price;
+            }
+
+            if (i < volumes.length()) {
+
+                double volume =
+                        volumes
+                            .getJSONArray(i)
+                            .getDouble(1);
+
+                volumeSum += volume;
+                volumeCount++;
+            }
+        }
+
+        double recentSMA =
+                recentSum /
+                Math.max(
+                        1,
+                        size - recentStart
+                );
+
+        double previousSMA =
+                previousEnd > previousStart
+                        ? previousSum /
+                          (previousEnd
+                          - previousStart)
+                        : recentSMA;
+
+        String trend =
+                "NEUTRAL";
+
+        if (recentSMA > previousSMA) {
+            trend = "UP";
+        } else if (recentSMA < previousSMA) {
+            trend = "DOWN";
+        }
+
+        double averageVolume =
+                volumeCount > 0
+                        ? volumeSum /
+                          volumeCount
+                        : 0;
+
+        BTCResult result =
+                new BTCResult();
+
+        result.price = latest;
+        result.support = lowest;
+        result.resistance = highest;
+        result.trend = trend;
+        result.volume = averageVolume;
+
+        return result;
+    }
+
+    private GoldResult analyzeGold(
             String json
     ) throws Exception {
 
@@ -426,11 +685,14 @@ public class MainActivity extends Activity {
                 results.getJSONObject(0);
 
         JSONObject indicators =
-                result.getJSONObject("indicators");
+                result.getJSONObject(
+                        "indicators"
+                );
 
         JSONArray quote =
-                indicators
-                        .getJSONArray("quote");
+                indicators.getJSONArray(
+                        "quote"
+                );
 
         JSONObject q =
                 quote.getJSONObject(0);
@@ -438,192 +700,91 @@ public class MainActivity extends Activity {
         JSONArray close =
                 q.getJSONArray("close");
 
-        JSONArray volume =
-                q.optJSONArray("volume");
+        double latest = 0;
 
-        double lowest =
-                Double.MAX_VALUE;
+        for (int i = close.length() - 1;
+             i >= 0;
+             i--) {
 
-        double highest =
-                -Double.MAX_VALUE;
+            if (!close.isNull(i)) {
 
-        double sumVolume = 0;
+                latest =
+                        close.getDouble(i);
 
-        int count = 0;
-
-        for (int i = 0;
-             i < close.length();
-             i++) {
-
-            if (close.isNull(i)) {
-                continue;
+                break;
             }
-
-            double price =
-                    close.getDouble(i);
-
-            if (price < lowest) {
-                lowest = price;
-            }
-
-            if (price > highest) {
-                highest = price;
-            }
-
-            if (volume != null
-                    && !volume.isNull(i)) {
-
-                sumVolume +=
-                        volume.getDouble(i);
-            }
-
-            count++;
         }
 
-        double averageVolume =
-                count > 0
-                        ? sumVolume / count
-                        : 0;
+        GoldResult resultData =
+                new GoldResult();
 
-        double last =
-                close.getDouble(
-                        close.length() - 1
-                );
+        resultData.price = latest;
 
-        String trend =
-                "NEUTRAL";
+        return resultData;
+    }
 
-        if (close.length() >= 20) {
+    private String format(
+            double value
+    ) {
 
-            double recentSum = 0;
-            double oldSum = 0;
+        if (value >= 1000) {
 
-            int start =
-                    Math.max(
-                            0,
-                            close.length() - 20
-                    );
-
-            for (int i = start;
-                 i < close.length();
-                 i++) {
-
-                if (!close.isNull(i)) {
-                    recentSum +=
-                            close.getDouble(i);
-                }
-            }
-
-            int recentCount =
-                    close.length() - start;
-
-            double sma20 =
-                    recentSum /
-                    Math.max(
-                            recentCount,
-                            1
-                    );
-
-            int oldStart =
-                    Math.max(
-                            0,
-                            close.length() - 50
-                    );
-
-            int oldEnd =
-                    Math.max(
-                            0,
-                            close.length() - 20
-                    );
-
-            for (int i = oldStart;
-                 i < oldEnd;
-                 i++) {
-
-                if (!close.isNull(i)) {
-                    oldSum +=
-                            close.getDouble(i);
-                }
-            }
-
-            int oldCount =
-                    oldEnd - oldStart;
-
-            if (oldCount > 0) {
-
-                double smaOld =
-                        oldSum / oldCount;
-
-                if (sma20 > smaOld) {
-                    trend = "UP";
-                } else if (sma20 < smaOld) {
-                    trend = "DOWN";
-                }
-            }
+            return String.format(
+                    "%,.2f",
+                    value
+            );
         }
 
         return String.format(
-                "%.2f|%.2f|%.2f|%s|%.0f",
-                last,
-                lowest,
-                highest,
-                trend,
-                averageVolume
+                "%.2f",
+                value
         );
     }
 
-    private void updateBTC(
-            String result
+    private String formatVolume(
+            double value
     ) {
 
-        String[] data =
-                result.split("\\|");
+        if (value >= 1000000000) {
 
-        if (data.length < 5) {
-            return;
+            return String.format(
+                    "%.2fB",
+                    value / 1000000000.0
+            );
+
+        } else if (value >= 1000000) {
+
+            return String.format(
+                    "%.2fM",
+                    value / 1000000.0
+            );
+
+        } else if (value >= 1000) {
+
+            return String.format(
+                    "%.2fK",
+                    value / 1000.0
+            );
         }
 
-        btcCard.setText(
-                "₿ BTC\n$ "
-                + data[0]
-        );
-
-        supportCard.setText(
-                "SUPPORT\n"
-                + data[1]
-        );
-
-        resistanceCard.setText(
-                "RESISTANCE\n"
-                + data[2]
-        );
-
-        trendCard.setText(
-                "TREND\n"
-                + data[3]
-        );
-
-        volumeCard.setText(
-                "VOLUME\n"
-                + data[4]
+        return String.format(
+                "%.0f",
+                value
         );
     }
 
-    private void updateGold(
-            String result
-    ) {
+    private static class BTCResult {
 
-        String[] data =
-                result.split("\\|");
+        double price;
+        double support;
+        double resistance;
+        double volume;
+        String trend;
+    }
 
-        if (data.length < 5) {
-            return;
-        }
+    private static class GoldResult {
 
-        goldCard.setText(
-                "GOLD FUTURES\n$ "
-                + data[0]
-        );
+        double price;
     }
 
     @Override
@@ -633,4 +794,4 @@ public class MainActivity extends Activity {
 
         super.onDestroy();
     }
-            }
+                                }
