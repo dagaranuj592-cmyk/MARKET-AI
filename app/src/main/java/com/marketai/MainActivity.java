@@ -11,6 +11,7 @@ import android.graphics.Paint;
 import android.view.Gravity;
 import android.view.View;
 import android.widget.LinearLayout;
+import android.widget.ScrollView;
 import android.widget.TextView;
 
 import org.json.JSONArray;
@@ -132,6 +133,16 @@ public class MainActivity extends Activity {
 
         super.onCreate(savedInstanceState);
 
+        /*
+         * SCROLL VIEW
+         * This makes the complete screen scrollable.
+         */
+
+        ScrollView scrollView =
+                new ScrollView(this);
+
+        scrollView.setFillViewport(true);
+
         LinearLayout root =
                 new LinearLayout(this);
 
@@ -143,12 +154,18 @@ public class MainActivity extends Activity {
                 dp(12),
                 dp(18),
                 dp(12),
-                dp(12)
+                dp(20)
         );
 
         root.setBackgroundColor(
                 Color.rgb(8, 12, 18)
         );
+
+        scrollView.addView(root);
+
+        /*
+         * TITLE
+         */
 
         TextView title =
                 makeText(
@@ -166,6 +183,10 @@ public class MainActivity extends Activity {
 
         root.addView(title);
 
+        /*
+         * BTC + GOLD
+         */
+
         LinearLayout assets =
                 new LinearLayout(this);
 
@@ -181,7 +202,7 @@ public class MainActivity extends Activity {
 
         goldCard =
                 makeCard(
-                        "GOLD",
+                        "GOLD FUTURES",
                         "Loading..."
                 );
 
@@ -189,6 +210,10 @@ public class MainActivity extends Activity {
         assets.addView(goldCard);
 
         root.addView(assets);
+
+        /*
+         * MARKET ANALYSIS
+         */
 
         TextView heading =
                 makeText(
@@ -209,6 +234,10 @@ public class MainActivity extends Activity {
         );
 
         root.addView(heading);
+
+        /*
+         * SUPPORT + RESISTANCE
+         */
 
         LinearLayout row1 =
                 new LinearLayout(this);
@@ -234,6 +263,10 @@ public class MainActivity extends Activity {
 
         root.addView(row1);
 
+        /*
+         * TREND + VOLUME
+         */
+
         LinearLayout row2 =
                 new LinearLayout(this);
 
@@ -258,6 +291,10 @@ public class MainActivity extends Activity {
 
         root.addView(row2);
 
+        /*
+         * TECHNICAL ANALYSIS
+         */
+
         TextView technicalHeading =
                 makeText(
                         "TECHNICAL ANALYSIS",
@@ -277,6 +314,10 @@ public class MainActivity extends Activity {
         );
 
         root.addView(technicalHeading);
+
+        /*
+         * RSI + EMA
+         */
 
         LinearLayout technicalRow1 =
                 new LinearLayout(this);
@@ -302,6 +343,10 @@ public class MainActivity extends Activity {
 
         root.addView(technicalRow1);
 
+        /*
+         * MACD + ATR
+         */
+
         LinearLayout technicalRow2 =
                 new LinearLayout(this);
 
@@ -325,6 +370,10 @@ public class MainActivity extends Activity {
         technicalRow2.addView(atrCard);
 
         root.addView(technicalRow2);
+
+        /*
+         * TECHNICAL SIGNAL
+         */
 
         signalCard =
                 makeCard(
@@ -355,12 +404,20 @@ public class MainActivity extends Activity {
 
         root.addView(signalCard);
 
+        /*
+         * PRICE CHART
+         */
+
         TextView chartTitle =
                 makeText(
                         "PRICE CHART",
                         17,
                         true
                 );
+
+        chartTitle.setGravity(
+                Gravity.CENTER_VERTICAL
+        );
 
         chartTitle.setPadding(
                 0,
@@ -397,6 +454,10 @@ public class MainActivity extends Activity {
 
         root.addView(chartView);
 
+        /*
+         * RUN BUTTON
+         */
+
         TextView button =
                 makeText(
                         "🔍  RUN FULL ANALYSIS",
@@ -413,12 +474,17 @@ public class MainActivity extends Activity {
 
                     @Override
                     public void onClick(View v) {
+
                         loadAllData();
                     }
                 }
         );
 
         root.addView(button);
+
+        /*
+         * STATUS
+         */
 
         status =
                 makeText(
@@ -436,15 +502,24 @@ public class MainActivity extends Activity {
                 0,
                 dp(18),
                 0,
-                0
+                dp(10)
         );
 
         root.addView(status);
 
-        setContentView(root);
+        /*
+         * IMPORTANT:
+         * Set ScrollView, NOT root.
+         */
+
+        setContentView(scrollView);
 
         loadAllData();
     }
+
+    /*
+     * LOAD ALL DATA
+     */
 
     private void loadAllData() {
 
@@ -456,6 +531,10 @@ public class MainActivity extends Activity {
         loadBTC();
         loadGold();
     }
+
+    /*
+     * BTC DATA
+     */
 
     private void loadBTC() {
 
@@ -595,6 +674,10 @@ public class MainActivity extends Activity {
         );
     }
 
+    /*
+     * GOLD DATA
+     */
+
     private void loadGold() {
 
         executor.execute(
@@ -651,6 +734,10 @@ public class MainActivity extends Activity {
                 }
         );
     }
+
+    /*
+     * HTTP REQUEST
+     */
 
     private String getUrl(
             String address
@@ -718,6 +805,10 @@ public class MainActivity extends Activity {
         return response.toString();
     }
 
+    /*
+     * BTC ANALYSIS
+     */
+
     private BTCResult analyzeBTC(
             String json
     ) throws Exception {
@@ -771,8 +862,20 @@ public class MainActivity extends Activity {
                 volumeList.add(0.0);
             }
 
-            double high = close;
-            double low = close;
+            /*
+             * CoinGecko market_chart
+             * does not provide daily OHLC here.
+             *
+             * We create conservative
+             * high/low proxies so ATR
+             * can still operate.
+             */
+
+            double high =
+                    close;
+
+            double low =
+                    close;
 
             if (i > 0) {
 
@@ -830,7 +933,19 @@ public class MainActivity extends Activity {
                         volumeList
                 );
 
-        TechnicalAnalyzer.TechnicalResult technical =
+        /*
+         * IMPORTANT:
+         * TechnicalResult is a separate
+         * package-level class.
+         *
+         * So use:
+         * TechnicalResult
+         *
+         * NOT:
+         * TechnicalAnalyzer.TechnicalResult
+         */
+
+        TechnicalResult technical =
                 TechnicalAnalyzer.analyze(
                         priceList,
                         highList,
@@ -845,7 +960,9 @@ public class MainActivity extends Activity {
                 );
 
         String signal =
-                calculateSignal(score);
+                calculateSignal(
+                        score
+                );
 
         BTCResult result =
                 new BTCResult();
@@ -888,6 +1005,10 @@ public class MainActivity extends Activity {
 
         return result;
     }
+
+    /*
+     * SUPPORT
+     */
 
     private double calculateSupport(
             ArrayList<Double> prices,
@@ -945,6 +1066,10 @@ public class MainActivity extends Activity {
         return nearest;
     }
 
+    /*
+     * RESISTANCE
+     */
+
     private double calculateResistance(
             ArrayList<Double> prices,
             double currentPrice
@@ -1000,6 +1125,10 @@ public class MainActivity extends Activity {
         return nearest;
     }
 
+    /*
+     * TREND
+     */
+
     private String calculateTrend(
             ArrayList<Double> prices
     ) {
@@ -1019,8 +1148,8 @@ public class MainActivity extends Activity {
                         size
                 );
 
-        double recentSum = 0.0;
-        double previousSum = 0.0;
+        double recentSum = 0;
+        double previousSum = 0;
 
         for (int i =
                 size - recentPeriod;
@@ -1058,6 +1187,7 @@ public class MainActivity extends Activity {
                 previousStart;
 
         if (count <= 0) {
+
             return "NEUTRAL";
         }
 
@@ -1081,6 +1211,10 @@ public class MainActivity extends Activity {
         return "NEUTRAL";
     }
 
+    /*
+     * AVERAGE VOLUME
+     */
+
     private double calculateAverageVolume(
             ArrayList<Double> volumes
     ) {
@@ -1091,7 +1225,8 @@ public class MainActivity extends Activity {
                         volumes.size() - 30
                 );
 
-        double sum = 0.0;
+        double sum = 0;
+
         int count = 0;
 
         for (int i = start;
@@ -1109,44 +1244,51 @@ public class MainActivity extends Activity {
         }
 
         if (count == 0) {
-            return 0.0;
+
+            return 0;
         }
 
         return sum / count;
     }
 
+    /*
+     * TECHNICAL SCORE
+     */
+
     private int calculateTechnicalScore(
             double currentPrice,
             String trend,
-            TechnicalAnalyzer.TechnicalResult technical
+            TechnicalResult technical
     ) {
 
         int score = 0;
 
         /*
          * RSI
-         *
-         * 50-70 = bullish momentum
-         * below 30 = oversold recovery possibility
-         * above 70 = overbought
          */
-        if (technical.rsi >= 50.0 &&
-                technical.rsi <= 70.0) {
+
+        if (technical.rsi >= 50 &&
+                technical.rsi <= 70) {
 
             score++;
 
-        } else if (technical.rsi < 30.0) {
+        } else if (
+                technical.rsi < 30
+        ) {
 
             score++;
 
-        } else if (technical.rsi > 70.0) {
+        } else if (
+                technical.rsi > 70
+        ) {
 
             score--;
         }
 
         /*
-         * Price vs EMA20
+         * EMA
          */
+
         if (currentPrice >
                 technical.ema20) {
 
@@ -1163,20 +1305,22 @@ public class MainActivity extends Activity {
         /*
          * MACD
          */
-        if (technical.macd > 0.0) {
+
+        if (technical.macd > 0) {
 
             score++;
 
         } else if (
-                technical.macd < 0.0
+                technical.macd < 0
         ) {
 
             score--;
         }
 
         /*
-         * Trend
+         * TREND
          */
+
         if (trend.equals("UP")) {
 
             score++;
@@ -1191,6 +1335,10 @@ public class MainActivity extends Activity {
         return score;
     }
 
+    /*
+     * SIGNAL
+     */
+
     private String calculateSignal(
             int score
     ) {
@@ -1199,13 +1347,19 @@ public class MainActivity extends Activity {
 
             return "BUY BIAS";
 
-        } else if (score <= -3) {
+        } else if (
+                score <= -3
+        ) {
 
             return "SELL BIAS";
         }
 
         return "NEUTRAL";
     }
+
+    /*
+     * GOLD ANALYSIS
+     */
 
     private GoldResult analyzeGold(
             String json
@@ -1224,12 +1378,6 @@ public class MainActivity extends Activity {
                         "result"
                 );
 
-        if (results.length() == 0) {
-            throw new Exception(
-                    "Gold data unavailable"
-            );
-        }
-
         JSONObject result =
                 results.getJSONObject(0);
 
@@ -1247,11 +1395,9 @@ public class MainActivity extends Activity {
                 quote.getJSONObject(0);
 
         JSONArray close =
-                q.getJSONArray(
-                        "close"
-                );
+                q.getJSONArray("close");
 
-        double latest = 0.0;
+        double latest = 0;
 
         for (int i =
                 close.length() - 1;
@@ -1268,6 +1414,7 @@ public class MainActivity extends Activity {
         }
 
         if (latest <= 0) {
+
             throw new Exception(
                     "Gold price unavailable"
             );
@@ -1282,6 +1429,10 @@ public class MainActivity extends Activity {
         return data;
     }
 
+    /*
+     * NUMBER FORMAT
+     */
+
     private String format(
             double value
     ) {
@@ -1293,11 +1444,15 @@ public class MainActivity extends Activity {
         );
     }
 
+    /*
+     * VOLUME FORMAT
+     */
+
     private String formatVolume(
             double value
     ) {
 
-        if (value >= 1000000000.0) {
+        if (value >= 1000000000) {
 
             return String.format(
                     Locale.US,
@@ -1306,7 +1461,9 @@ public class MainActivity extends Activity {
                     1000000000.0
             );
 
-        } else if (value >= 1000000.0) {
+        } else if (
+                value >= 1000000
+        ) {
 
             return String.format(
                     Locale.US,
@@ -1315,7 +1472,9 @@ public class MainActivity extends Activity {
                     1000000.0
             );
 
-        } else if (value >= 1000.0) {
+        } else if (
+                value >= 1000
+        ) {
 
             return String.format(
                     Locale.US,
@@ -1331,6 +1490,10 @@ public class MainActivity extends Activity {
                 value
         );
     }
+
+    /*
+     * BTC RESULT
+     */
 
     private static class BTCResult {
 
@@ -1352,10 +1515,18 @@ public class MainActivity extends Activity {
         ArrayList<Double> prices;
     }
 
+    /*
+     * GOLD RESULT
+     */
+
     private static class GoldResult {
 
         double price;
     }
+
+    /*
+     * PRICE CHART
+     */
 
     private class PriceChart
             extends View {
@@ -1425,18 +1596,10 @@ public class MainActivity extends Activity {
                 ArrayList<Double> data
         ) {
 
-            if (data == null) {
-
-                prices =
-                        new ArrayList<>();
-
-            } else {
-
-                prices =
-                        new ArrayList<>(
-                                data
-                        );
-            }
+            prices =
+                    new ArrayList<>(
+                            data
+                    );
 
             invalidate();
         }
@@ -1466,6 +1629,10 @@ public class MainActivity extends Activity {
             float bottom =
                     height - dp(15);
 
+            /*
+             * GRID
+             */
+
             for (int i = 0;
                  i <= 4;
                  i++) {
@@ -1486,6 +1653,10 @@ public class MainActivity extends Activity {
                 );
             }
 
+            /*
+             * NO DATA
+             */
+
             if (prices.size() < 2) {
 
                 canvas.drawText(
@@ -1498,6 +1669,10 @@ public class MainActivity extends Activity {
                 return;
             }
 
+            /*
+             * MIN + MAX
+             */
+
             double min =
                     Double.MAX_VALUE;
 
@@ -1508,10 +1683,12 @@ public class MainActivity extends Activity {
                     prices) {
 
                 if (value < min) {
+
                     min = value;
                 }
 
                 if (value > max) {
+
                     max = value;
                 }
             }
@@ -1520,8 +1697,13 @@ public class MainActivity extends Activity {
                     max - min;
 
             if (range <= 0) {
-                range = 1.0;
+
+                range = 1;
             }
+
+            /*
+             * DRAW LINE
+             */
 
             float previousX = 0;
             float previousY = 0;
@@ -1565,6 +1747,10 @@ public class MainActivity extends Activity {
                 previousY = y;
             }
 
+            /*
+             * CURRENT PRICE
+             */
+
             double latest =
                     prices.get(
                             prices.size() - 1
@@ -1577,12 +1763,20 @@ public class MainActivity extends Activity {
                     textPaint
             );
 
+            /*
+             * LOW
+             */
+
             canvas.drawText(
                     "Low " + format(min),
                     left,
                     bottom,
                     textPaint
             );
+
+            /*
+             * HIGH
+             */
 
             String highText =
                     "High " + format(max);
@@ -1601,6 +1795,10 @@ public class MainActivity extends Activity {
         }
     }
 
+    /*
+     * DESTROY
+     */
+
     @Override
     protected void onDestroy() {
 
@@ -1608,4 +1806,4 @@ public class MainActivity extends Activity {
 
         super.onDestroy();
     }
-                    }
+            }
