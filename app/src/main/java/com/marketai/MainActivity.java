@@ -38,7 +38,6 @@ public class MainActivity extends Activity {
     private TextView emaCard;
     private TextView macdCard;
     private TextView atrCard;
-
     private TextView signalCard;
     private TextView status;
 
@@ -53,7 +52,9 @@ public class MainActivity extends Activity {
     private int dp(float value) {
         return (int) (
                 value *
-                getResources().getDisplayMetrics().density
+                getResources()
+                        .getDisplayMetrics()
+                        .density
                 + 0.5f
         );
     }
@@ -196,10 +197,6 @@ public class MainActivity extends Activity {
                         true
                 );
 
-        heading.setGravity(
-                Gravity.CENTER_VERTICAL
-        );
-
         heading.setPadding(
                 dp(5),
                 dp(22),
@@ -263,10 +260,6 @@ public class MainActivity extends Activity {
                         20,
                         true
                 );
-
-        technicalHeading.setGravity(
-                Gravity.CENTER_VERTICAL
-        );
 
         technicalHeading.setPadding(
                 dp(5),
@@ -547,8 +540,7 @@ public class MainActivity extends Activity {
                                             signalCard.setText(
                                                     "TECHNICAL SIGNAL\n"
                                                     + result.signal
-                                                    + "\n"
-                                                    + "Score: "
+                                                    + "\nScore: "
                                                     + result.score
                                                     + "/4"
                                             );
@@ -659,9 +651,7 @@ public class MainActivity extends Activity {
                 (HttpURLConnection)
                         url.openConnection();
 
-        connection.setRequestMethod(
-                "GET"
-        );
+        connection.setRequestMethod("GET");
 
         connection.setRequestProperty(
                 "User-Agent",
@@ -722,9 +712,7 @@ public class MainActivity extends Activity {
                 new JSONObject(json);
 
         JSONArray prices =
-                root.getJSONArray(
-                        "prices"
-                );
+                root.getJSONArray("prices");
 
         JSONArray volumes =
                 root.getJSONArray(
@@ -736,14 +724,6 @@ public class MainActivity extends Activity {
 
         ArrayList<Double> volumeList =
                 new ArrayList<>();
-
-        /*
-         * CoinGecko market_chart gives
-         * price data but not candle high/low.
-         *
-         * We create conservative high/low
-         * proxy values for the TechnicalAnalyzer.
-         */
 
         ArrayList<Double> highList =
                 new ArrayList<>();
@@ -803,10 +783,7 @@ public class MainActivity extends Activity {
             lowList.add(low);
         }
 
-        int size =
-                priceList.size();
-
-        if (size < 30) {
+        if (priceList.size() < 30) {
 
             throw new Exception(
                     "Not enough market data"
@@ -815,7 +792,7 @@ public class MainActivity extends Activity {
 
         double currentPrice =
                 priceList.get(
-                        size - 1
+                        priceList.size() - 1
                 );
 
         double support =
@@ -839,15 +816,6 @@ public class MainActivity extends Activity {
                 calculateAverageVolume(
                         volumeList
                 );
-
-        /*
-         * IMPORTANT:
-         * TechnicalAnalyzer needs:
-         *
-         * close list
-         * high list
-         * low list
-         */
 
         TechnicalAnalyzer.TechnicalResult technical =
                 TechnicalAnalyzer.analyze(
@@ -922,8 +890,7 @@ public class MainActivity extends Activity {
                         size - 90
                 );
 
-        double nearest =
-                0;
+        double nearest = 0;
 
         double distance =
                 Double.MAX_VALUE;
@@ -941,26 +908,16 @@ public class MainActivity extends Activity {
                     p < prices.get(i + 1) &&
                     p < prices.get(i + 2);
 
-            double d =
-                    Math.abs(
-                            p - currentPrice
-                    ) / currentPrice;
-
             if (swingLow &&
-                    p < currentPrice &&
-                    d <= 0.15) {
+                    p < currentPrice) {
 
-                double actualDistance =
+                double d =
                         currentPrice - p;
 
-                if (actualDistance <
-                        distance) {
+                if (d < distance) {
 
-                    distance =
-                            actualDistance;
-
-                    nearest =
-                            p;
+                    distance = d;
+                    nearest = p;
                 }
             }
         }
@@ -988,8 +945,7 @@ public class MainActivity extends Activity {
                         size - 90
                 );
 
-        double nearest =
-                0;
+        double nearest = 0;
 
         double distance =
                 Double.MAX_VALUE;
@@ -1007,26 +963,16 @@ public class MainActivity extends Activity {
                     p > prices.get(i + 1) &&
                     p > prices.get(i + 2);
 
-            double d =
-                    Math.abs(
-                            p - currentPrice
-                    ) / currentPrice;
-
             if (swingHigh &&
-                    p > currentPrice &&
-                    d <= 0.15) {
+                    p > currentPrice) {
 
-                double actualDistance =
+                double d =
                         p - currentPrice;
 
-                if (actualDistance <
-                        distance) {
+                if (d < distance) {
 
-                    distance =
-                            actualDistance;
-
-                    nearest =
-                            p;
+                    distance = d;
+                    nearest = p;
                 }
             }
         }
@@ -1048,22 +994,13 @@ public class MainActivity extends Activity {
                 prices.size();
 
         int recentPeriod =
-                Math.min(
-                        20,
-                        size
-                );
+                Math.min(20, size);
 
         int previousPeriod =
-                Math.min(
-                        50,
-                        size
-                );
+                Math.min(50, size);
 
-        double recentSum =
-                0;
-
-        double previousSum =
-                0;
+        double recentSum = 0;
+        double previousSum = 0;
 
         for (int i =
                 size - recentPeriod;
@@ -1081,10 +1018,7 @@ public class MainActivity extends Activity {
                 );
 
         int previousEnd =
-                Math.max(
-                        0,
-                        size - recentPeriod
-                );
+                size - recentPeriod;
 
         for (int i =
                 previousStart;
@@ -1104,7 +1038,6 @@ public class MainActivity extends Activity {
                 previousStart;
 
         if (count <= 0) {
-
             return "NEUTRAL";
         }
 
@@ -1132,22 +1065,14 @@ public class MainActivity extends Activity {
             ArrayList<Double> volumes
     ) {
 
-        if (volumes.size() == 0) {
-
-            return 0;
-        }
-
         int start =
                 Math.max(
                         0,
                         volumes.size() - 30
                 );
 
-        double sum =
-                0;
-
-        int count =
-                0;
+        double sum = 0;
+        int count = 0;
 
         for (int i = start;
              i < volumes.size();
@@ -1164,7 +1089,6 @@ public class MainActivity extends Activity {
         }
 
         if (count == 0) {
-
             return 0;
         }
 
@@ -1177,34 +1101,21 @@ public class MainActivity extends Activity {
             TechnicalAnalyzer.TechnicalResult technical
     ) {
 
-        int score =
-                0;
-
-        /*
-         * RSI
-         */
+        int score = 0;
 
         if (technical.rsi >= 50 &&
                 technical.rsi <= 70) {
 
             score++;
 
-        } else if (
-                technical.rsi < 30
-        ) {
+        } else if (technical.rsi < 30) {
 
             score++;
 
-        } else if (
-                technical.rsi > 70
-        ) {
+        } else if (technical.rsi > 70) {
 
             score--;
         }
-
-        /*
-         * EMA
-         */
 
         if (currentPrice >
                 technical.ema20) {
@@ -1219,10 +1130,6 @@ public class MainActivity extends Activity {
             score--;
         }
 
-        /*
-         * MACD
-         */
-
         if (technical.macd > 0) {
 
             score++;
@@ -1233,10 +1140,6 @@ public class MainActivity extends Activity {
 
             score--;
         }
-
-        /*
-         * TREND
-         */
 
         if (trend.equals("UP")) {
 
@@ -1276,14 +1179,10 @@ public class MainActivity extends Activity {
                 new JSONObject(json);
 
         JSONObject chart =
-                root.getJSONObject(
-                        "chart"
-                );
+                root.getJSONObject("chart");
 
         JSONArray results =
-                chart.getJSONArray(
-                        "result"
-                );
+                chart.getJSONArray("result");
 
         JSONObject result =
                 results.getJSONObject(0);
@@ -1294,20 +1193,15 @@ public class MainActivity extends Activity {
                 );
 
         JSONArray quote =
-                indicators.getJSONArray(
-                        "quote"
-                );
+                indicators.getJSONArray("quote");
 
         JSONObject q =
                 quote.getJSONObject(0);
 
         JSONArray close =
-                q.getJSONArray(
-                        "close"
-                );
+                q.getJSONArray("close");
 
-        double latest =
-                0;
+        double latest = 0;
 
         for (int i =
                 close.length() - 1;
@@ -1355,9 +1249,7 @@ public class MainActivity extends Activity {
                     value / 1000000000.0
             );
 
-        } else if (
-                value >= 1000000
-        ) {
+        } else if (value >= 1000000) {
 
             return String.format(
                     Locale.US,
@@ -1365,9 +1257,7 @@ public class MainActivity extends Activity {
                     value / 1000000.0
             );
 
-        } else if (
-                value >= 1000
-        ) {
+        } else if (value >= 1000) {
 
             return String.format(
                     Locale.US,
@@ -1408,8 +1298,7 @@ public class MainActivity extends Activity {
         double price;
     }
 
-    private class PriceChart
-            extends View {
+    private class PriceChart extends View {
 
         private final Paint linePaint =
                 new Paint(
@@ -1551,12 +1440,10 @@ public class MainActivity extends Activity {
                     prices) {
 
                 if (value < min) {
-
                     min = value;
                 }
 
                 if (value > max) {
-
                     max = value;
                 }
             }
@@ -1565,15 +1452,11 @@ public class MainActivity extends Activity {
                     max - min;
 
             if (range <= 0) {
-
                 range = 1;
             }
 
-            float previousX =
-                    0;
-
-            float previousY =
-                    0;
+            float previousX = 0;
+            float previousY = 0;
 
             for (int i = 0;
                  i < prices.size();
@@ -1657,4 +1540,4 @@ public class MainActivity extends Activity {
 
         super.onDestroy();
     }
-                     }
+            }
