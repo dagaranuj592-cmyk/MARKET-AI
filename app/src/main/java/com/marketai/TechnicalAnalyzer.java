@@ -4,6 +4,10 @@ import java.util.List;
 
 public class TechnicalAnalyzer {
 
+    // =========================================================
+    // TECHNICAL RESULT
+    // =========================================================
+
     public static class TechnicalResult {
 
         public double rsi;
@@ -17,6 +21,7 @@ public class TechnicalAnalyzer {
                 double macd,
                 double atr
         ) {
+
             this.rsi = rsi;
             this.ema20 = ema20;
             this.macd = macd;
@@ -24,13 +29,18 @@ public class TechnicalAnalyzer {
         }
     }
 
+    // =========================================================
+    // MAIN ANALYSIS
+    // =========================================================
+
     public static TechnicalResult analyze(
             List<Double> close,
             List<Double> high,
             List<Double> low
     ) {
 
-        if (close == null || close.size() < 30) {
+        if (close == null ||
+                close.size() < 30) {
 
             return new TechnicalResult(
                     50.0,
@@ -73,6 +83,10 @@ public class TechnicalAnalyzer {
         );
     }
 
+    // =========================================================
+    // EMA
+    // =========================================================
+
     private static double calculateEMA(
             List<Double> prices,
             int period
@@ -91,10 +105,10 @@ public class TechnicalAnalyzer {
             );
         }
 
-        double sum = 0.0;
-
         int start =
                 prices.size() - period;
+
+        double sum = 0.0;
 
         for (int i = start;
              i < prices.size();
@@ -110,7 +124,11 @@ public class TechnicalAnalyzer {
                 2.0 /
                 (period + 1.0);
 
-        for (int i = start + period;
+        /*
+         * Continue calculation from
+         * the first available candle.
+         */
+        for (int i = period;
              i < prices.size();
              i++) {
 
@@ -127,6 +145,10 @@ public class TechnicalAnalyzer {
 
         return ema;
     }
+
+    // =========================================================
+    // RSI
+    // =========================================================
 
     private static double calculateRSI(
             List<Double> prices,
@@ -173,19 +195,38 @@ public class TechnicalAnalyzer {
 
         if (averageLoss == 0.0) {
 
-            return 100.0;
+            if (averageGain > 0.0) {
+                return 100.0;
+            }
+
+            return 50.0;
         }
 
         double rs =
                 averageGain /
                 averageLoss;
 
-        return 100.0 -
+        double rsi =
+                100.0 -
                 (
                     100.0 /
                     (1.0 + rs)
                 );
+
+        if (rsi < 0.0) {
+            rsi = 0.0;
+        }
+
+        if (rsi > 100.0) {
+            rsi = 100.0;
+        }
+
+        return rsi;
     }
+
+    // =========================================================
+    // MACD
+    // =========================================================
 
     private static double calculateMACD(
             List<Double> prices
@@ -211,6 +252,10 @@ public class TechnicalAnalyzer {
 
         return ema12 - ema26;
     }
+
+    // =========================================================
+    // ATR
+    // =========================================================
 
     private static double calculateATR(
             List<Double> close,
@@ -288,4 +333,4 @@ public class TechnicalAnalyzer {
 
         return trSum / period;
     }
-}
+    }
