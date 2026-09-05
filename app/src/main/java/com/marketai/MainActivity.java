@@ -83,7 +83,6 @@ public class MainActivity extends Activity {
             String title,
             String value
     ) {
-
         TextView tv =
                 makeText(
                         title + "\n" + value,
@@ -118,7 +117,6 @@ public class MainActivity extends Activity {
     protected void onCreate(
             Bundle savedInstanceState
     ) {
-
         super.onCreate(savedInstanceState);
 
         LinearLayout root =
@@ -558,6 +556,12 @@ public class MainActivity extends Activity {
         return response.toString();
     }
 
+    /*
+     * =====================================================
+     * BTC ANALYSIS ENGINE
+     * =====================================================
+     */
+
     private BTCResult analyzeBTC(
             String json
     ) throws Exception {
@@ -576,17 +580,8 @@ public class MainActivity extends Activity {
         ArrayList<Double> priceList =
                 new ArrayList<>();
 
-        double latest = 0;
-
-        double lowest =
-                Double.MAX_VALUE;
-
-        double highest =
-                -Double.MAX_VALUE;
-
-        double volumeSum = 0;
-
-        int volumeCount = 0;
+        ArrayList<Double> volumeList =
+                new ArrayList<>();
 
         for (int i = 0;
              i < prices.length();
@@ -594,115 +589,372 @@ public class MainActivity extends Activity {
 
             double price =
                     prices
-                        .getJSONArray(i)
-                        .getDouble(1);
-
-            priceList.add(price);
-
-            latest = price;
-
-            if (price < lowest) {
-                lowest = price;
-            }
-
-            if (price > highest) {
-                highest = price;
-            }
-
-            if (i < volumes.length()) {
-
-                double volume =
-                        volumes
                             .getJSONArray(i)
                             .getDouble(1);
 
-                volumeSum += volume;
-                volumeCount++;
+            priceList.add(price);
+
+            if (i < volumes.length()) {
+
+                volumeList.add(
+                        volumes
+                                .getJSONArray(i)
+                                .getDouble(1)
+                );
+
+            } else {
+
+                volumeList.add(0.0);
             }
         }
 
         int size =
                 priceList.size();
 
-        int recentStart =
-                Math.max(
-                        0,
-                        size - 20
+        if (size < 20) {
+
+            throw new Exception(
+                    "Not enough market data"
+            );
+        }
+
+        double currentPrice =
+                priceList.get(size - 1);
+
+        /*
+         * -------------------------------------------------
+         * RECENT SWING LEVELS
+         * -------------------------------------------------
+         */
+
+        int lookback =
+                Math.min(
+                        90,
+                        size
                 );
 
-        int previousStart =
-                Math.max(
-                        0,
-                        size - 50
+        int start =
+                size - lookback;
+
+        ArrayList<Double>
+                supportCandidates =
+                new ArrayList<>();
+
+        ArrayList<Double>
+                resistanceCandidates =
+                new ArrayList<>();
+
+        for (int i = start + 2;
+             i < size - 2;
+             i++) {
+
+            double p =
+                    priceList.get(i);
+
+            double left1 =
+                    priceList.get(i - 1);
+
+            double left2 =
+                    priceList.get(i - 2);
+
+            double right1 =
+                    priceList.get(i + 1);
+
+            double right2 =
+                    priceList.get(i + 2);
+
+            boolean swingLow =
+                    p < left1 &&
+                    p < left2 &&
+                    p < right1 &&
+                    p < right2;
+
+            boolean swingHigh =
+                    p > left1 &&
+                    p > left2 &&
+                    p > right1 &&
+                    p > right2;
+
+            double distance =
+                    Math.abs(
+                            p - currentPrice
+                    ) / currentPrice;
+
+            /*
+             * Ignore extremely distant levels.
+             */
+
+            if (distance <= 0.15) {
+
+                if (swingLow &&
+                        p < currentPrice) {
+
+                    supportCandidates.add(p);
+                }
+
+                if (swingHigh &&
+                        p > currentPrice) {
+
+                    resistanceCandidates.add(p);
+                }
+            }
+        }
+
+        /*
+         * -------------------------------------------------
+         * NEAREST SUPPORT / RESISTANCE
+         * -------------------------------------------------
+         */
+
+        double support =
+                findNearestLevel(
+                        supportCandidates,
+                        currentPrice,
+                        true
                 );
 
-        int previousEnd =
-                Math.max(
-                        0,
-                        size - 20
+        double resistance =
+                findNearestLevel(
+                        resistanceCandidates,
+                        currentPrice,
+                        false
+                );
+
+        /*
+         * -------------------------------------------------
+         * FALLBACK
+         * -------------------------------------------------
+         */
+
+        if (support <= 0 ||
+                support >= currentPrice) {
+
+            support =
+                    currentPrice * 0.97;
+        }
+
+        if (resistance <= currentPrice) {
+
+            resistance =
+                    currentPrice * 1.03;
+        }
+
+        /*
+         * -------------------------------------------------
+         * TREND
+         * -------------------------------------------------
+         */
+
+        int recentPeriod =
+                Math.min(
+                        20,
+                        size
+                );
+
+        int previousPeriod =
+                Math.min(
+                        50,
+                        size
                 );
 
         double recentSum = 0;
+
         double previousSum = 0;
 
-        for (int i = recentStart;
-             i < size;
-             i++) {
+        for (int i =
+                size - recentPeriod;
+                i < size;
+                i++) {
 
             recentSum +=
                     priceList.get(i);
         }
 
-        for (int i = previousStart;
-             i < previousEnd;
-             i++) {
+        int previousStart =
+                Math.max(
+                        0,
+                        size - previousPeriod
+                );
+
+        int previousEnd =
+                Math.max(
+                        0,
+                        size - recentPeriod
+                );
+
+        for (int i =
+                previousStart;
+                i < previousEnd;
+                i++) {
 
             previousSum +=
                     priceList.get(i);
         }
 
-        double recentSMA =
+        double sma20 =
                 recentSum /
-                Math.max(
-                        1,
-                        size - recentStart
-                );
+                recentPeriod;
 
-        double previousSMA =
-                previousEnd > previousStart
-                        ? previousSum /
-                          (previousEnd -
-                           previousStart)
-                        : recentSMA;
+        int previousCount =
+                previousEnd -
+                previousStart;
+
+        double previousSMA;
+
+        if (previousCount > 0) {
+
+            previousSMA =
+                    previousSum /
+                    previousCount;
+
+        } else {
+
+            previousSMA =
+                    sma20;
+        }
 
         String trend =
                 "NEUTRAL";
 
-        if (recentSMA > previousSMA) {
+        if (sma20 > previousSMA) {
+
             trend = "UP";
-        } else if (recentSMA < previousSMA) {
+
+        } else if (sma20 < previousSMA) {
+
             trend = "DOWN";
         }
 
-        BTCResult result =
-                new BTCResult();
+        /*
+         * -------------------------------------------------
+         * VOLUME
+         * -------------------------------------------------
+         */
 
-        result.price = latest;
-        result.support = lowest;
-        result.resistance = highest;
-        result.trend = trend;
+        double volumeSum = 0;
 
-        result.volume =
+        int volumeCount = 0;
+
+        int volumeStart =
+                Math.max(
+                        0,
+                        size - 30
+                );
+
+        for (int i =
+                volumeStart;
+                i < volumeList.size();
+                i++) {
+
+            double volume =
+                    volumeList.get(i);
+
+            if (volume > 0) {
+
+                volumeSum += volume;
+                volumeCount++;
+            }
+        }
+
+        double averageVolume =
                 volumeCount > 0
                         ? volumeSum /
                           volumeCount
                         : 0;
+
+        /*
+         * -------------------------------------------------
+         * RESULT
+         * -------------------------------------------------
+         */
+
+        BTCResult result =
+                new BTCResult();
+
+        result.price =
+                currentPrice;
+
+        result.support =
+                support;
+
+        result.resistance =
+                resistance;
+
+        result.trend =
+                trend;
+
+        result.volume =
+                averageVolume;
 
         result.prices =
                 priceList;
 
         return result;
     }
+
+    /*
+     * Find the closest valid level to current price.
+     */
+
+    private double findNearestLevel(
+            ArrayList<Double> candidates,
+            double currentPrice,
+            boolean support
+    ) {
+
+        if (candidates == null ||
+                candidates.size() == 0) {
+
+            return 0;
+        }
+
+        double best =
+                0;
+
+        double bestDistance =
+                Double.MAX_VALUE;
+
+        for (double level :
+                candidates) {
+
+            if (support) {
+
+                if (level >= currentPrice) {
+                    continue;
+                }
+
+            } else {
+
+                if (level <= currentPrice) {
+                    continue;
+                }
+            }
+
+            double distance =
+                    Math.abs(
+                            currentPrice -
+                            level
+                    );
+
+            if (distance <
+                    bestDistance) {
+
+                bestDistance =
+                        distance;
+
+                best =
+                        level;
+            }
+        }
+
+        return best;
+    }
+
+    /*
+     * =====================================================
+     * GOLD
+     * =====================================================
+     */
 
     private GoldResult analyzeGold(
             String json
@@ -712,10 +964,14 @@ public class MainActivity extends Activity {
                 new JSONObject(json);
 
         JSONObject chart =
-                root.getJSONObject("chart");
+                root.getJSONObject(
+                        "chart"
+                );
 
         JSONArray results =
-                chart.getJSONArray("result");
+                chart.getJSONArray(
+                        "result"
+                );
 
         JSONObject result =
                 results.getJSONObject(0);
@@ -734,7 +990,9 @@ public class MainActivity extends Activity {
                 quote.getJSONObject(0);
 
         JSONArray close =
-                q.getJSONArray("close");
+                q.getJSONArray(
+                        "close"
+                );
 
         double latest = 0;
 
@@ -755,10 +1013,17 @@ public class MainActivity extends Activity {
         GoldResult data =
                 new GoldResult();
 
-        data.price = latest;
+        data.price =
+                latest;
 
         return data;
     }
+
+    /*
+     * =====================================================
+     * FORMATTERS
+     * =====================================================
+     */
 
     private String format(
             double value
@@ -778,21 +1043,24 @@ public class MainActivity extends Activity {
 
             return String.format(
                     "%.2fB",
-                    value / 1000000000.0
+                    value /
+                    1000000000.0
             );
 
         } else if (value >= 1000000) {
 
             return String.format(
                     "%.2fM",
-                    value / 1000000.0
+                    value /
+                    1000000.0
             );
 
         } else if (value >= 1000) {
 
             return String.format(
                     "%.2fK",
-                    value / 1000.0
+                    value /
+                    1000.0
             );
         }
 
@@ -802,12 +1070,19 @@ public class MainActivity extends Activity {
         );
     }
 
+    /*
+     * =====================================================
+     * DATA CLASSES
+     * =====================================================
+     */
+
     private static class BTCResult {
 
         double price;
         double support;
         double resistance;
         double volume;
+
         String trend;
 
         ArrayList<Double> prices;
@@ -817,6 +1092,12 @@ public class MainActivity extends Activity {
 
         double price;
     }
+
+    /*
+     * =====================================================
+     * PRICE CHART
+     * =====================================================
+     */
 
     private class PriceChart
             extends View {
@@ -919,14 +1200,20 @@ public class MainActivity extends Activity {
             float bottom =
                     height - dp(15);
 
-            // Grid
+            /*
+             * Grid
+             */
 
-            for (int i = 0; i <= 4; i++) {
+            for (int i = 0;
+                 i <= 4;
+                 i++) {
 
                 float y =
                         top +
-                        ((bottom - top)
-                        * i / 4f);
+                        (
+                            (bottom - top)
+                            * i / 4f
+                        );
 
                 canvas.drawLine(
                         left,
@@ -986,15 +1273,19 @@ public class MainActivity extends Activity {
 
                 float x =
                         left +
-                        (right - left)
-                        * i /
-                        (prices.size() - 1);
+                        (
+                            (right - left)
+                            * i /
+                            (prices.size() - 1)
+                        );
 
                 float y =
                         bottom -
                         (float)
-                        ((value - min)
-                        / range)
+                        (
+                            (value - min)
+                            / range
+                        )
                         * (bottom - top);
 
                 if (i > 0) {
@@ -1012,7 +1303,9 @@ public class MainActivity extends Activity {
                 previousY = y;
             }
 
-            // Latest price
+            /*
+             * Latest price
+             */
 
             double latest =
                     prices.get(
@@ -1027,7 +1320,9 @@ public class MainActivity extends Activity {
                     textPaint
             );
 
-            // Low
+            /*
+             * Low
+             */
 
             canvas.drawText(
                     "Low "
@@ -1037,7 +1332,9 @@ public class MainActivity extends Activity {
                     textPaint
             );
 
-            // High
+            /*
+             * High
+             */
 
             String highText =
                     "High "
@@ -1064,4 +1361,4 @@ public class MainActivity extends Activity {
 
         super.onDestroy();
     }
-                                }
+            }
