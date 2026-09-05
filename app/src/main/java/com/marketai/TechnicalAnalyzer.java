@@ -4,6 +4,26 @@ import java.util.List;
 
 public class TechnicalAnalyzer {
 
+    public static class TechnicalResult {
+
+        public double rsi;
+        public double ema20;
+        public double macd;
+        public double atr;
+
+        public TechnicalResult(
+                double rsi,
+                double ema20,
+                double macd,
+                double atr
+        ) {
+            this.rsi = rsi;
+            this.ema20 = ema20;
+            this.macd = macd;
+            this.atr = atr;
+        }
+    }
+
     public static TechnicalResult analyze(
             List<Double> close,
             List<Double> high,
@@ -260,31 +280,5 @@ public class TechnicalAnalyzer {
         }
 
         return trSum / period;
-    }
-}
-
-
-/*
- * TechnicalResult is now a separate
- * package-level class.
- */
-class TechnicalResult {
-
-    public double rsi;
-    public double ema20;
-    public double macd;
-    public double atr;
-
-    public TechnicalResult(
-            double rsi,
-            double ema20,
-            double macd,
-            double atr
-    ) {
-
-        this.rsi = rsi;
-        this.ema20 = ema20;
-        this.macd = macd;
-        this.atr = atr;
     }
 }
