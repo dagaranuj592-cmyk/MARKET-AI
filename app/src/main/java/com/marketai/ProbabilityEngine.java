@@ -5,6 +5,10 @@ import java.util.List;
 
 public class ProbabilityEngine {
 
+    // =========================================================
+    // RESULT
+    // =========================================================
+
     public static class ProbabilityResult {
 
         public double buyProbability;
@@ -30,34 +34,41 @@ public class ProbabilityEngine {
                 int validationSamples
         ) {
 
-            this.buyProbability =
-                    buyProbability;
+            this.buyProbability = buyProbability;
+            this.sellProbability = sellProbability;
+            this.neutralProbability = neutralProbability;
 
-            this.sellProbability =
-                    sellProbability;
+            this.direction = direction;
+            this.confidence = confidence;
 
-            this.neutralProbability =
-                    neutralProbability;
+            this.samples = samples;
 
-            this.direction =
-                    direction;
-
-            this.confidence =
-                    confidence;
-
-            this.samples =
-                    samples;
-
-            this.validationAccuracy =
-                    validationAccuracy;
-
-            this.validationSamples =
-                    validationSamples;
+            this.validationAccuracy = validationAccuracy;
+            this.validationSamples = validationSamples;
         }
     }
 
     // =========================================================
-    // MAIN ENGINE
+    // 3-ARGUMENT VERSION
+    // =========================================================
+    // This keeps compatibility with an older MainActivity.
+
+    public static ProbabilityResult calculate(
+            List<Double> prices,
+            List<Double> highs,
+            List<Double> lows
+    ) {
+
+        return calculate(
+                prices,
+                highs,
+                lows,
+                null
+        );
+    }
+
+    // =========================================================
+    // 4-ARGUMENT VERSION
     // =========================================================
 
     public static ProbabilityResult calculate(
@@ -87,6 +98,10 @@ public class ProbabilityEngine {
 
             return defaultResult();
         }
+
+        // -----------------------------------------------------
+        // Prepare common OHLC data
+        // -----------------------------------------------------
 
         List<Double> p =
                 new ArrayList<>(
@@ -126,6 +141,10 @@ public class ProbabilityEngine {
                     );
         }
 
+        // -----------------------------------------------------
+        // 80% training / 20% validation
+        // -----------------------------------------------------
+
         int trainingEnd =
                 (int) (
                         size * 0.80
@@ -135,6 +154,10 @@ public class ProbabilityEngine {
 
             return defaultResult();
         }
+
+        // -----------------------------------------------------
+        // Current market state
+        // -----------------------------------------------------
 
         TechnicalAnalyzer.TechnicalResult current =
                 TechnicalAnalyzer.analyze(
@@ -149,6 +172,7 @@ public class ProbabilityEngine {
                         p.size() - 1
                 );
 
+        // Laplace smoothing
         double buyScore = 2.0;
         double sellScore = 2.0;
         double neutralScore = 2.0;
@@ -221,10 +245,16 @@ public class ProbabilityEngine {
                             historicalPrice
                     );
 
+            // -------------------------------------------------
+            // Historical match
+            // -------------------------------------------------
+
             if (distance <= 2.0) {
 
                 double futurePrice =
-                        p.get(i + 5);
+                        p.get(
+                                i + 5
+                        );
 
                 double movement =
                         (
@@ -252,7 +282,7 @@ public class ProbabilityEngine {
         }
 
         // =====================================================
-        // SECONDARY WIDE MATCH
+        // WIDER MATCH IF TOO FEW SAMPLES
         // =====================================================
 
         if (matchedSamples < 10) {
@@ -328,7 +358,9 @@ public class ProbabilityEngine {
                 if (distance <= 3.0) {
 
                     double futurePrice =
-                            p.get(i + 5);
+                            p.get(
+                                    i + 5
+                            );
 
                     double movement =
                             (
@@ -418,19 +450,24 @@ public class ProbabilityEngine {
                             vv
                     );
 
+            double validationPrice =
+                    vp.get(
+                            vp.size() - 1
+                    );
+
             String predicted =
                     technicalDirection(
                             validation,
-                            vp.get(
-                                    vp.size() - 1
-                            )
+                            validationPrice
                     );
 
             double oldPrice =
                     p.get(i);
 
             double futurePrice =
-                    p.get(i + 5);
+                    p.get(
+                            i + 5
+                    );
 
             double movement =
                     (
@@ -463,6 +500,10 @@ public class ProbabilityEngine {
             validationSamples++;
         }
 
+        // =====================================================
+        // VALIDATION ACCURACY
+        // =====================================================
+
         double validationAccuracy = 0.0;
 
         if (validationSamples > 0) {
@@ -475,7 +516,7 @@ public class ProbabilityEngine {
         }
 
         // =====================================================
-        // FINAL PROBABILITY
+        // PROBABILITY
         // =====================================================
 
         double total =
@@ -489,13 +530,19 @@ public class ProbabilityEngine {
         }
 
         double buy =
-                buyScore / total * 100.0;
+                buyScore
+                        / total
+                        * 100.0;
 
         double sell =
-                sellScore / total * 100.0;
+                sellScore
+                        / total
+                        * 100.0;
 
         double neutral =
-                neutralScore / total * 100.0;
+                neutralScore
+                        / total
+                        * 100.0;
 
         String direction;
 
@@ -536,7 +583,7 @@ public class ProbabilityEngine {
     }
 
     // =========================================================
-    // DISTANCE
+    // DISTANCE CALCULATION
     // =========================================================
 
     private static double calculateDistance(
@@ -557,7 +604,7 @@ public class ProbabilityEngine {
             distance += 1.0;
         }
 
-        // EMA 50 relationship
+        // EMA 50
         boolean currentAbove50 =
                 currentPrice >
                         current.ema50;
@@ -573,22 +620,40 @@ public class ProbabilityEngine {
         }
 
         // MACD
-        if ((current.macd > 0) !=
-                (historical.macd > 0)) {
+        boolean currentMacdPositive =
+                current.macd > 0;
+
+        boolean historicalMacdPositive =
+                historical.macd > 0;
+
+        if (currentMacdPositive !=
+                historicalMacdPositive) {
 
             distance += 1.0;
         }
 
         // Momentum
-        if ((current.momentum > 0) !=
-                (historical.momentum > 0)) {
+        boolean currentMomentumPositive =
+                current.momentum > 0;
+
+        boolean historicalMomentumPositive =
+                historical.momentum > 0;
+
+        if (currentMomentumPositive !=
+                historicalMomentumPositive) {
 
             distance += 1.0;
         }
 
         // Volume regime
-        if ((current.volumeRatio > 1.2) !=
-                (historical.volumeRatio > 1.2)) {
+        boolean currentHighVolume =
+                current.volumeRatio > 1.20;
+
+        boolean historicalHighVolume =
+                historical.volumeRatio > 1.20;
+
+        if (currentHighVolume !=
+                historicalHighVolume) {
 
             distance += 1.0;
         }
@@ -608,6 +673,7 @@ public class ProbabilityEngine {
         int bullish = 0;
         int bearish = 0;
 
+        // RSI
         if (result.rsi >= 52) {
 
             bullish++;
@@ -617,6 +683,7 @@ public class ProbabilityEngine {
             bearish++;
         }
 
+        // MACD
         if (result.macd > 0) {
 
             bullish++;
@@ -626,6 +693,7 @@ public class ProbabilityEngine {
             bearish++;
         }
 
+        // Momentum
         if (result.momentum > 0) {
 
             bullish++;
@@ -635,16 +703,20 @@ public class ProbabilityEngine {
             bearish++;
         }
 
-        if (result.ema50 > 0 &&
-                price > result.ema50) {
+        // EMA 50
+        if (result.ema50 > 0) {
 
-            bullish++;
+            if (price > result.ema50) {
 
-        } else if (result.ema50 > 0) {
+                bullish++;
 
-            bearish++;
+            } else {
+
+                bearish++;
+            }
         }
 
+        // EMA 200
         if (result.ema200 > 0) {
 
             if (price > result.ema200) {
@@ -724,15 +796,15 @@ public class ProbabilityEngine {
                 largest - second;
 
         if (samples >= 20 &&
-                validationAccuracy >= 55 &&
-                edge >= 8) {
+                validationAccuracy >= 55.0 &&
+                edge >= 8.0) {
 
             return "HIGH";
         }
 
         if (samples >= 10 &&
-                validationAccuracy >= 45 &&
-                edge >= 5) {
+                validationAccuracy >= 45.0 &&
+                edge >= 5.0) {
 
             return "MODERATE";
         }
@@ -770,4 +842,4 @@ public class ProbabilityEngine {
                 value * 100.0
         ) / 100.0;
     }
-                }
+    }
