@@ -1,227 +1,115 @@
 package com.marketai;
 
-import java.util.ArrayList;
 import java.util.List;
 
 public class TechnicalAnalyzer {
 
-    public static class Analysis {
-
-        public double ema20;
-        public double ema50;
-        public double ema200;
+    public static class TechnicalResult {
 
         public double rsi;
-
+        public double ema20;
         public double macd;
-        public double macdSignal;
-        public double macdHistogram;
-
         public double atr;
 
-        public String trend;
-        public String momentum;
+        public TechnicalResult(
+                double rsi,
+                double ema20,
+                double macd,
+                double atr
+        ) {
 
-        public Analysis() {
-            ema20 = 0;
-            ema50 = 0;
-            ema200 = 0;
-
-            rsi = 50;
-
-            macd = 0;
-            macdSignal = 0;
-            macdHistogram = 0;
-
-            atr = 0;
-
-            trend = "NEUTRAL";
-            momentum = "NEUTRAL";
+            this.rsi = rsi;
+            this.ema20 = ema20;
+            this.macd = macd;
+            this.atr = atr;
         }
     }
 
-    public static Analysis analyze(
-            List<Double> closes,
-            List<Double> highs,
-            List<Double> lows
+    public static TechnicalResult analyze(
+            List<Double> close,
+            List<Double> high,
+            List<Double> low
     ) {
 
-        Analysis result = new Analysis();
+        if (close == null ||
+                close.size() < 30) {
 
-        if (closes == null ||
-                closes.size() < 50) {
-
-            return result;
+            return new TechnicalResult(
+                    50.0,
+                    0.0,
+                    0.0,
+                    0.0
+            );
         }
 
-        result.ema20 =
+        double currentPrice =
+                close.get(
+                        close.size() - 1
+                );
+
+        double ema20 =
                 calculateEMA(
-                        closes,
+                        close,
                         20
                 );
 
-        result.ema50 =
-                calculateEMA(
-                        closes,
-                        50
-                );
-
-        result.ema200 =
-                calculateEMA(
-                        closes,
-                        Math.min(
-                                200,
-                                closes.size()
-                        )
-                );
-
-        result.rsi =
+        double rsi =
                 calculateRSI(
-                        closes,
+                        close,
                         14
                 );
 
-        double[] macd =
+        double macd =
                 calculateMACD(
-                        closes
+                        close
                 );
 
-        result.macd =
-                macd[0];
-
-        result.macdSignal =
-                macd[1];
-
-        result.macdHistogram =
-                macd[2];
-
-        if (highs != null &&
-                lows != null &&
-                highs.size() == closes.size() &&
-                lows.size() == closes.size()) {
-
-            result.atr =
-                    calculateATR(
-                            highs,
-                            lows,
-                            closes,
-                            14
-                    );
-        }
-
-        /*
-         * TREND
-         */
-
-        double current =
-                closes.get(
-                        closes.size() - 1
+        double atr =
+                calculateATR(
+                        close,
+                        high,
+                        low,
+                        14
                 );
 
-        if (current > result.ema20 &&
-                result.ema20 > result.ema50 &&
-                result.ema50 > result.ema200) {
-
-            result.trend =
-                    "STRONG UP";
-
-        } else if (current > result.ema50 &&
-                result.ema50 > result.ema200) {
-
-            result.trend =
-                    "UP";
-
-        } else if (current < result.ema20 &&
-                result.ema20 < result.ema50 &&
-                result.ema50 < result.ema200) {
-
-            result.trend =
-                    "STRONG DOWN";
-
-        } else if (current < result.ema50 &&
-                result.ema50 < result.ema200) {
-
-            result.trend =
-                    "DOWN";
-
-        } else {
-
-            result.trend =
-                    "NEUTRAL";
-        }
-
-        /*
-         * MOMENTUM
-         */
-
-        if (result.rsi >= 60 &&
-                result.macdHistogram > 0) {
-
-            result.momentum =
-                    "BULLISH";
-
-        } else if (result.rsi <= 40 &&
-                result.macdHistogram < 0) {
-
-            result.momentum =
-                    "BEARISH";
-
-        } else {
-
-            result.momentum =
-                    "NEUTRAL";
-        }
-
-        return result;
+        return new TechnicalResult(
+                rsi,
+                ema20,
+                macd,
+                atr
+        );
     }
 
-    /*
-     * =====================================================
-     * EMA
-     * =====================================================
-     */
-
-    public static double calculateEMA(
+    private static double calculateEMA(
             List<Double> prices,
             int period
     ) {
 
-        if (prices == null ||
-                prices.size() == 0) {
+        if (prices.size() < period) {
 
-            return 0;
+            return prices.get(
+                    prices.size() - 1
+            );
         }
 
-        period =
-                Math.min(
-                        period,
-                        prices.size()
-                );
+        double sum = 0;
+
+        int start =
+                prices.size() - period;
+
+        for (int i = start;
+             i < prices.size();
+             i++) {
+
+            sum += prices.get(i);
+        }
+
+        double ema =
+                sum / period;
 
         double multiplier =
                 2.0 /
-                (period + 1);
-
-        double ema = 0;
-
-        /*
-         * Initial SMA
-         */
-
-        for (int i = 0;
-             i < period;
-             i++) {
-
-            ema +=
-                    prices.get(i);
-        }
-
-        ema =
-                ema / period;
-
-        /*
-         * EMA calculation
-         */
+                (period + 1.0);
 
         for (int i = period;
              i < prices.size();
@@ -232,37 +120,33 @@ public class TechnicalAnalyzer {
 
             ema =
                     (
-                        price - ema
+                        (price - ema)
+                        * multiplier
                     )
-                    * multiplier
                     + ema;
         }
 
         return ema;
     }
 
-    /*
-     * =====================================================
-     * RSI
-     * =====================================================
-     */
-
-    public static double calculateRSI(
+    private static double calculateRSI(
             List<Double> prices,
             int period
     ) {
 
-        if (prices == null ||
-                prices.size() <= period) {
+        if (prices.size() <= period) {
 
-            return 50;
+            return 50.0;
         }
 
         double gain = 0;
         double loss = 0;
 
-        for (int i = 1;
-             i <= period;
+        int start =
+                prices.size() - period;
+
+        for (int i = start;
+             i < prices.size();
              i++) {
 
             double change =
@@ -276,7 +160,8 @@ public class TechnicalAnalyzer {
 
             } else {
 
-                loss -= change;
+                loss +=
+                        Math.abs(change);
             }
         }
 
@@ -286,334 +171,123 @@ public class TechnicalAnalyzer {
         double averageLoss =
                 loss / period;
 
-        for (int i = period + 1;
-             i < prices.size();
-             i++) {
-
-            double change =
-                    prices.get(i)
-                    -
-                    prices.get(i - 1);
-
-            double currentGain =
-                    Math.max(
-                            change,
-                            0
-                    );
-
-            double currentLoss =
-                    Math.max(
-                            -change,
-                            0
-                    );
-
-            averageGain =
-                    (
-                        averageGain *
-                        (period - 1)
-                        + currentGain
-                    ) / period;
-
-            averageLoss =
-                    (
-                        averageLoss *
-                        (period - 1)
-                        + currentLoss
-                    ) / period;
-        }
-
         if (averageLoss == 0) {
 
-            return 100;
+            return 100.0;
         }
 
-        double relativeStrength =
+        double rs =
                 averageGain /
                 averageLoss;
 
-        return 100 -
+        double rsi =
+                100.0 -
                 (
-                    100 /
-                    (
-                        1 +
-                        relativeStrength
-                    )
+                    100.0 /
+                    (1.0 + rs)
                 );
+
+        return rsi;
     }
 
-    /*
-     * =====================================================
-     * MACD
-     * =====================================================
-     *
-     * MACD = EMA12 - EMA26
-     *
-     * Signal = EMA9 of MACD values
-     */
-
-    public static double[] calculateMACD(
+    private static double calculateMACD(
             List<Double> prices
     ) {
 
-        double[] output =
-                new double[]{
-                        0,
-                        0,
-                        0
-                };
+        if (prices.size() < 26) {
 
-        if (prices == null ||
-                prices.size() < 35) {
-
-            return output;
+            return 0.0;
         }
 
-        ArrayList<Double> macdValues =
-                new ArrayList<>();
-
         double ema12 =
-                calculateInitialEMA(
+                calculateEMA(
                         prices,
                         12
                 );
 
         double ema26 =
-                calculateInitialEMA(
+                calculateEMA(
                         prices,
                         26
                 );
 
-        double multiplier12 =
-                2.0 / 13.0;
+        return ema12 - ema26;
+    }
 
-        double multiplier26 =
-                2.0 / 27.0;
+    private static double calculateATR(
+            List<Double> close,
+            List<Double> high,
+            List<Double> low,
+            int period
+    ) {
 
-        /*
-         * Build EMA values from beginning.
-         */
+        if (close == null ||
+                high == null ||
+                low == null) {
 
-        double ema12Current = 0;
-        double ema26Current = 0;
-
-        for (int i = 0;
-             i < prices.size();
-             i++) {
-
-            double price =
-                    prices.get(i);
-
-            if (i == 11) {
-
-                ema12Current =
-                        calculateSMAAt(
-                                prices,
-                                i,
-                                12
-                        );
-
-            } else if (i > 11) {
-
-                ema12Current =
-                        (
-                            price -
-                            ema12Current
-                        )
-                        * multiplier12
-                        +
-                        ema12Current;
-            }
-
-            if (i == 25) {
-
-                ema26Current =
-                        calculateSMAAt(
-                                prices,
-                                i,
-                                26
-                        );
-
-            } else if (i > 25) {
-
-                ema26Current =
-                        (
-                            price -
-                            ema26Current
-                        )
-                        * multiplier26
-                        +
-                        ema26Current;
-            }
-
-            if (i >= 25) {
-
-                double macdValue =
-                        ema12Current -
-                        ema26Current;
-
-                macdValues.add(
-                        macdValue
-                );
-            }
+            return 0.0;
         }
 
-        if (macdValues.size() == 0) {
-            return output;
-        }
-
-        double signal =
-                calculateEMA(
-                        macdValues,
+        int size =
+                Math.min(
+                        close.size(),
                         Math.min(
-                                9,
-                                macdValues.size()
+                                high.size(),
+                                low.size()
                         )
                 );
 
-        double macd =
-                macdValues.get(
-                        macdValues.size() - 1
-                );
+        if (size < period + 1) {
 
-        output[0] =
-                macd;
-
-        output[1] =
-                signal;
-
-        output[2] =
-                macd - signal;
-
-        return output;
-    }
-
-    private static double calculateInitialEMA(
-            List<Double> prices,
-            int period
-    ) {
-
-        if (prices.size() < period) {
-            return 0;
+            return 0.0;
         }
-
-        return calculateSMAAt(
-                prices,
-                period - 1,
-                period
-        );
-    }
-
-    private static double calculateSMAAt(
-            List<Double> prices,
-            int endIndex,
-            int period
-    ) {
 
         int start =
-                endIndex -
-                period +
-                1;
+                size - period;
 
-        double sum = 0;
+        double trSum = 0;
 
         for (int i = start;
-             i <= endIndex;
+             i < size;
              i++) {
 
-            sum +=
-                    prices.get(i);
-        }
+            double currentHigh =
+                    high.get(i);
 
-        return sum / period;
-    }
-
-    /*
-     * =====================================================
-     * ATR
-     * =====================================================
-     */
-
-    public static double calculateATR(
-            List<Double> highs,
-            List<Double> lows,
-            List<Double> closes,
-            int period
-    ) {
-
-        if (highs == null ||
-                lows == null ||
-                closes == null) {
-
-            return 0;
-        }
-
-        if (closes.size() < period + 1) {
-            return 0;
-        }
-
-        ArrayList<Double> trueRanges =
-                new ArrayList<>();
-
-        for (int i = 1;
-             i < closes.size();
-             i++) {
-
-            double high =
-                    highs.get(i);
-
-            double low =
-                    lows.get(i);
+            double currentLow =
+                    low.get(i);
 
             double previousClose =
-                    closes.get(i - 1);
+                    close.get(i - 1);
 
             double range1 =
-                    high - low;
+                    currentHigh -
+                    currentLow;
 
             double range2 =
                     Math.abs(
-                            high -
-                            previousClose
+                        currentHigh -
+                        previousClose
                     );
 
             double range3 =
                     Math.abs(
-                            low -
-                            previousClose
+                        currentLow -
+                        previousClose
                     );
 
             double trueRange =
                     Math.max(
-                            range1,
-                            Math.max(
-                                    range2,
-                                    range3
-                            )
+                        range1,
+                        Math.max(
+                            range2,
+                            range3
+                        )
                     );
 
-            trueRanges.add(
-                    trueRange
-            );
+            trSum += trueRange;
         }
 
-        if (trueRanges.size() < period) {
-            return 0;
-        }
-
-        double atr = 0;
-
-        int start =
-                trueRanges.size() -
-                period;
-
-        for (int i = start;
-             i < trueRanges.size();
-             i++) {
-
-            atr +=
-                    trueRanges.get(i);
-        }
-
-        return atr / period;
+        return trSum / period;
     }
-          }
+}
