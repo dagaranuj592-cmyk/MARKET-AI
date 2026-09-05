@@ -1219,7 +1219,9 @@ public class MainActivity extends Activity {
                 quote.getJSONObject(0);
 
         JSONArray close =
-                q.getJSONArray("close");
+                q.getJSONArray(
+                        "close"
+                );
 
         double latest = 0;
 
