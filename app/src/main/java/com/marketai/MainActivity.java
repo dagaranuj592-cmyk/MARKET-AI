@@ -197,6 +197,10 @@ public class MainActivity extends Activity {
                         true
                 );
 
+        heading.setGravity(
+                Gravity.CENTER_VERTICAL
+        );
+
         heading.setPadding(
                 dp(5),
                 dp(22),
@@ -260,6 +264,10 @@ public class MainActivity extends Activity {
                         20,
                         true
                 );
+
+        technicalHeading.setGravity(
+                Gravity.CENTER_VERTICAL
+        );
 
         technicalHeading.setPadding(
                 dp(5),
@@ -420,6 +428,10 @@ public class MainActivity extends Activity {
                         false
                 );
 
+        status.setGravity(
+                Gravity.CENTER
+        );
+
         status.setPadding(
                 0,
                 dp(18),
@@ -480,14 +492,14 @@ public class MainActivity extends Activity {
                                             );
 
                                             supportCard.setText(
-                                                    "SUPPORT\n"
+                                                    "SUPPORT\n$ "
                                                     + format(
                                                         result.support
                                                     )
                                             );
 
                                             resistanceCard.setText(
-                                                    "RESISTANCE\n"
+                                                    "RESISTANCE\n$ "
                                                     + format(
                                                         result.resistance
                                                     )
@@ -531,7 +543,7 @@ public class MainActivity extends Activity {
                                             );
 
                                             atrCard.setText(
-                                                    "ATR\n"
+                                                    "ATR\n$ "
                                                     + format(
                                                         result.atr
                                                     )
@@ -759,11 +771,8 @@ public class MainActivity extends Activity {
                 volumeList.add(0.0);
             }
 
-            double high =
-                    close;
-
-            double low =
-                    close;
+            double high = close;
+            double low = close;
 
             if (i > 0) {
 
@@ -821,7 +830,7 @@ public class MainActivity extends Activity {
                         volumeList
                 );
 
-        TechnicalResult technical =
+        TechnicalAnalyzer.TechnicalResult technical =
                 TechnicalAnalyzer.analyze(
                         priceList,
                         highList,
@@ -836,9 +845,7 @@ public class MainActivity extends Activity {
                 );
 
         String signal =
-                calculateSignal(
-                        score
-                );
+                calculateSignal(score);
 
         BTCResult result =
                 new BTCResult();
@@ -928,7 +935,8 @@ public class MainActivity extends Activity {
             }
         }
 
-        if (nearest <= 0) {
+        if (nearest <= 0 ||
+                nearest >= currentPrice) {
 
             nearest =
                     currentPrice * 0.97;
@@ -1011,8 +1019,8 @@ public class MainActivity extends Activity {
                         size
                 );
 
-        double recentSum = 0;
-        double previousSum = 0;
+        double recentSum = 0.0;
+        double previousSum = 0.0;
 
         for (int i =
                 size - recentPeriod;
@@ -1050,7 +1058,6 @@ public class MainActivity extends Activity {
                 previousStart;
 
         if (count <= 0) {
-
             return "NEUTRAL";
         }
 
@@ -1084,7 +1091,7 @@ public class MainActivity extends Activity {
                         volumes.size() - 30
                 );
 
-        double sum = 0;
+        double sum = 0.0;
         int count = 0;
 
         for (int i = start;
@@ -1102,8 +1109,7 @@ public class MainActivity extends Activity {
         }
 
         if (count == 0) {
-
-            return 0;
+            return 0.0;
         }
 
         return sum / count;
@@ -1112,25 +1118,35 @@ public class MainActivity extends Activity {
     private int calculateTechnicalScore(
             double currentPrice,
             String trend,
-            TechnicalResult technical
+            TechnicalAnalyzer.TechnicalResult technical
     ) {
 
         int score = 0;
 
-        if (technical.rsi >= 50 &&
-                technical.rsi <= 70) {
+        /*
+         * RSI
+         *
+         * 50-70 = bullish momentum
+         * below 30 = oversold recovery possibility
+         * above 70 = overbought
+         */
+        if (technical.rsi >= 50.0 &&
+                technical.rsi <= 70.0) {
 
             score++;
 
-        } else if (technical.rsi < 30) {
+        } else if (technical.rsi < 30.0) {
 
             score++;
 
-        } else if (technical.rsi > 70) {
+        } else if (technical.rsi > 70.0) {
 
             score--;
         }
 
+        /*
+         * Price vs EMA20
+         */
         if (currentPrice >
                 technical.ema20) {
 
@@ -1144,17 +1160,23 @@ public class MainActivity extends Activity {
             score--;
         }
 
-        if (technical.macd > 0) {
+        /*
+         * MACD
+         */
+        if (technical.macd > 0.0) {
 
             score++;
 
         } else if (
-                technical.macd < 0
+                technical.macd < 0.0
         ) {
 
             score--;
         }
 
+        /*
+         * Trend
+         */
         if (trend.equals("UP")) {
 
             score++;
@@ -1202,6 +1224,12 @@ public class MainActivity extends Activity {
                         "result"
                 );
 
+        if (results.length() == 0) {
+            throw new Exception(
+                    "Gold data unavailable"
+            );
+        }
+
         JSONObject result =
                 results.getJSONObject(0);
 
@@ -1223,7 +1251,7 @@ public class MainActivity extends Activity {
                         "close"
                 );
 
-        double latest = 0;
+        double latest = 0.0;
 
         for (int i =
                 close.length() - 1;
@@ -1237,6 +1265,12 @@ public class MainActivity extends Activity {
 
                 break;
             }
+        }
+
+        if (latest <= 0) {
+            throw new Exception(
+                    "Gold price unavailable"
+            );
         }
 
         GoldResult data =
@@ -1263,7 +1297,7 @@ public class MainActivity extends Activity {
             double value
     ) {
 
-        if (value >= 1000000000) {
+        if (value >= 1000000000.0) {
 
             return String.format(
                     Locale.US,
@@ -1272,7 +1306,7 @@ public class MainActivity extends Activity {
                     1000000000.0
             );
 
-        } else if (value >= 1000000) {
+        } else if (value >= 1000000.0) {
 
             return String.format(
                     Locale.US,
@@ -1281,7 +1315,7 @@ public class MainActivity extends Activity {
                     1000000.0
             );
 
-        } else if (value >= 1000) {
+        } else if (value >= 1000.0) {
 
             return String.format(
                     Locale.US,
@@ -1391,10 +1425,18 @@ public class MainActivity extends Activity {
                 ArrayList<Double> data
         ) {
 
-            prices =
-                    new ArrayList<>(
-                            data
-                    );
+            if (data == null) {
+
+                prices =
+                        new ArrayList<>();
+
+            } else {
+
+                prices =
+                        new ArrayList<>(
+                                data
+                        );
+            }
 
             invalidate();
         }
@@ -1466,12 +1508,10 @@ public class MainActivity extends Activity {
                     prices) {
 
                 if (value < min) {
-
                     min = value;
                 }
 
                 if (value > max) {
-
                     max = value;
                 }
             }
@@ -1480,8 +1520,7 @@ public class MainActivity extends Activity {
                     max - min;
 
             if (range <= 0) {
-
-                range = 1;
+                range = 1.0;
             }
 
             float previousX = 0;
@@ -1569,4 +1608,4 @@ public class MainActivity extends Activity {
 
         super.onDestroy();
     }
-                                }
+                    }
