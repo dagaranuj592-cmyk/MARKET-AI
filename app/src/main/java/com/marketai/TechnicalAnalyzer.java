@@ -4,39 +4,74 @@ import java.util.List;
 
 public class TechnicalAnalyzer {
 
-    // =========================================================
-    // TECHNICAL RESULT
-    // =========================================================
-
     public static class TechnicalResult {
 
         public double rsi;
         public double ema20;
+        public double ema50;
+        public double ema200;
         public double macd;
         public double atr;
+
+        public double bollingerUpper;
+        public double bollingerLower;
+
+        public double momentum;
+        public double volumeRatio;
 
         public TechnicalResult(
                 double rsi,
                 double ema20,
+                double ema50,
+                double ema200,
                 double macd,
-                double atr
+                double atr,
+                double bollingerUpper,
+                double bollingerLower,
+                double momentum,
+                double volumeRatio
         ) {
 
             this.rsi = rsi;
             this.ema20 = ema20;
+            this.ema50 = ema50;
+            this.ema200 = ema200;
             this.macd = macd;
             this.atr = atr;
+            this.bollingerUpper = bollingerUpper;
+            this.bollingerLower = bollingerLower;
+            this.momentum = momentum;
+            this.volumeRatio = volumeRatio;
         }
     }
 
     // =========================================================
-    // MAIN ANALYSIS
+    // MAIN ANALYZER
     // =========================================================
 
     public static TechnicalResult analyze(
             List<Double> close,
             List<Double> high,
             List<Double> low
+    ) {
+
+        return analyze(
+                close,
+                high,
+                low,
+                null
+        );
+    }
+
+    // =========================================================
+    // OHLCV ANALYZER
+    // =========================================================
+
+    public static TechnicalResult analyze(
+            List<Double> close,
+            List<Double> high,
+            List<Double> low,
+            List<Double> volume
     ) {
 
         if (close == null ||
@@ -46,26 +81,30 @@ public class TechnicalAnalyzer {
                     50.0,
                     0.0,
                     0.0,
-                    0.0
+                    0.0,
+                    0.0,
+                    0.0,
+                    0.0,
+                    0.0,
+                    0.0,
+                    1.0
             );
         }
 
         double ema20 =
-                calculateEMA(
-                        close,
-                        20
-                );
+                calculateEMA(close, 20);
+
+        double ema50 =
+                calculateEMA(close, 50);
+
+        double ema200 =
+                calculateEMA(close, 200);
 
         double rsi =
-                calculateRSI(
-                        close,
-                        14
-                );
+                calculateRSI(close, 14);
 
         double macd =
-                calculateMACD(
-                        close
-                );
+                calculateMACD(close);
 
         double atr =
                 calculateATR(
@@ -75,11 +114,29 @@ public class TechnicalAnalyzer {
                         14
                 );
 
+        double[] bollinger =
+                calculateBollinger(close, 20);
+
+        double momentum =
+                calculateMomentum(close, 10);
+
+        double volumeRatio =
+                calculateVolumeRatio(
+                        volume,
+                        20
+                );
+
         return new TechnicalResult(
                 rsi,
                 ema20,
+                ema50,
+                ema200,
                 macd,
-                atr
+                atr,
+                bollinger[0],
+                bollinger[1],
+                momentum,
+                volumeRatio
         );
     }
 
@@ -93,7 +150,7 @@ public class TechnicalAnalyzer {
     ) {
 
         if (prices == null ||
-                prices.size() == 0) {
+                prices.isEmpty()) {
 
             return 0.0;
         }
@@ -105,13 +162,10 @@ public class TechnicalAnalyzer {
             );
         }
 
-        int start =
-                prices.size() - period;
-
         double sum = 0.0;
 
-        for (int i = start;
-             i < prices.size();
+        for (int i = 0;
+             i < period;
              i++) {
 
             sum += prices.get(i);
@@ -124,10 +178,6 @@ public class TechnicalAnalyzer {
                 2.0 /
                 (period + 1.0);
 
-        /*
-         * Continue calculation from
-         * the first available candle.
-         */
         for (int i = period;
              i < prices.size();
              i++) {
@@ -137,8 +187,8 @@ public class TechnicalAnalyzer {
 
             ema =
                     (
-                        (price - ema)
-                        * multiplier
+                            (price - ema)
+                                    * multiplier
                     )
                     + ema;
         }
@@ -161,11 +211,11 @@ public class TechnicalAnalyzer {
             return 50.0;
         }
 
-        double gain = 0.0;
-        double loss = 0.0;
-
         int start =
                 prices.size() - period;
+
+        double gain = 0.0;
+        double loss = 0.0;
 
         for (int i = start;
              i < prices.size();
@@ -173,8 +223,7 @@ public class TechnicalAnalyzer {
 
             double change =
                     prices.get(i)
-                    -
-                    prices.get(i - 1);
+                            - prices.get(i - 1);
 
             if (change > 0) {
 
@@ -182,8 +231,7 @@ public class TechnicalAnalyzer {
 
             } else {
 
-                loss +=
-                        Math.abs(change);
+                loss += Math.abs(change);
             }
         }
 
@@ -204,24 +252,13 @@ public class TechnicalAnalyzer {
 
         double rs =
                 averageGain /
-                averageLoss;
+                        averageLoss;
 
-        double rsi =
-                100.0 -
+        return 100.0 -
                 (
-                    100.0 /
-                    (1.0 + rs)
+                        100.0 /
+                                (1.0 + rs)
                 );
-
-        if (rsi < 0.0) {
-            rsi = 0.0;
-        }
-
-        if (rsi > 100.0) {
-            rsi = 100.0;
-        }
-
-        return rsi;
     }
 
     // =========================================================
@@ -288,7 +325,7 @@ public class TechnicalAnalyzer {
         int start =
                 size - period;
 
-        double trSum = 0.0;
+        double total = 0.0;
 
         for (int i = start;
              i < size;
@@ -304,19 +341,18 @@ public class TechnicalAnalyzer {
                     close.get(i - 1);
 
             double range1 =
-                    currentHigh -
-                    currentLow;
+                    currentHigh - currentLow;
 
             double range2 =
                     Math.abs(
-                            currentHigh -
-                            previousClose
+                            currentHigh
+                                    - previousClose
                     );
 
             double range3 =
                     Math.abs(
-                            currentLow -
-                            previousClose
+                            currentLow
+                                    - previousClose
                     );
 
             double trueRange =
@@ -328,9 +364,162 @@ public class TechnicalAnalyzer {
                             )
                     );
 
-            trSum += trueRange;
+            total += trueRange;
         }
 
-        return trSum / period;
+        return total / period;
+    }
+
+    // =========================================================
+    // BOLLINGER BANDS
+    // =========================================================
+
+    private static double[] calculateBollinger(
+            List<Double> prices,
+            int period
+    ) {
+
+        if (prices == null ||
+                prices.size() < period) {
+
+            return new double[]{
+                    0.0,
+                    0.0
+            };
+        }
+
+        int start =
+                prices.size() - period;
+
+        double sum = 0.0;
+
+        for (int i = start;
+             i < prices.size();
+             i++) {
+
+            sum += prices.get(i);
+        }
+
+        double mean =
+                sum / period;
+
+        double variance = 0.0;
+
+        for (int i = start;
+             i < prices.size();
+             i++) {
+
+            double difference =
+                    prices.get(i) - mean;
+
+            variance +=
+                    difference * difference;
+        }
+
+        variance =
+                variance / period;
+
+        double standardDeviation =
+                Math.sqrt(variance);
+
+        double upper =
+                mean
+                        + (2.0 * standardDeviation);
+
+        double lower =
+                mean
+                        - (2.0 * standardDeviation);
+
+        return new double[]{
+                upper,
+                lower
+        };
+    }
+
+    // =========================================================
+    // MOMENTUM
+    // =========================================================
+
+    private static double calculateMomentum(
+            List<Double> prices,
+            int period
+    ) {
+
+        if (prices == null ||
+                prices.size() <= period) {
+
+            return 0.0;
+        }
+
+        int currentIndex =
+                prices.size() - 1;
+
+        int oldIndex =
+                prices.size() - 1 - period;
+
+        double oldPrice =
+                prices.get(oldIndex);
+
+        if (oldPrice == 0.0) {
+            return 0.0;
+        }
+
+        return (
+                (
+                        prices.get(currentIndex)
+                                - oldPrice
+                )
+                        / oldPrice
+        ) * 100.0;
+    }
+
+    // =========================================================
+    // VOLUME RATIO
+    // =========================================================
+
+    private static double calculateVolumeRatio(
+            List<Double> volume,
+            int period
+    ) {
+
+        if (volume == null ||
+                volume.size() < 2) {
+
+            return 1.0;
+        }
+
+        int size =
+                volume.size();
+
+        int start =
+                Math.max(
+                        0,
+                        size - period
+                );
+
+        double sum = 0.0;
+        int count = 0;
+
+        for (int i = start;
+             i < size;
+             i++) {
+
+            sum += volume.get(i);
+            count++;
+        }
+
+        if (count == 0 ||
+                sum <= 0) {
+
+            return 1.0;
+        }
+
+        double average =
+                sum / count;
+
+        double current =
+                volume.get(size - 1);
+
+        return current / average;
     }
     }
