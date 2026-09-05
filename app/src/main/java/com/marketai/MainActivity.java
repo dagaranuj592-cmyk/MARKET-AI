@@ -21,6 +21,7 @@ import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.ArrayList;
+import java.util.Locale;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -32,6 +33,13 @@ public class MainActivity extends Activity {
     private TextView resistanceCard;
     private TextView trendCard;
     private TextView volumeCard;
+
+    private TextView rsiCard;
+    private TextView emaCard;
+    private TextView macdCard;
+    private TextView atrCard;
+
+    private TextView signalCard;
     private TextView status;
 
     private PriceChart chartView;
@@ -86,7 +94,7 @@ public class MainActivity extends Activity {
         TextView tv =
                 makeText(
                         title + "\n" + value,
-                        15,
+                        14,
                         true
                 );
 
@@ -97,7 +105,7 @@ public class MainActivity extends Activity {
         LinearLayout.LayoutParams params =
                 new LinearLayout.LayoutParams(
                         0,
-                        dp(95),
+                        dp(90),
                         1
                 );
 
@@ -245,6 +253,103 @@ public class MainActivity extends Activity {
 
         root.addView(row2);
 
+        TextView technicalHeading =
+                makeText(
+                        "TECHNICAL ANALYSIS",
+                        20,
+                        true
+                );
+
+        technicalHeading.setGravity(
+                Gravity.CENTER_VERTICAL
+        );
+
+        technicalHeading.setPadding(
+                dp(5),
+                dp(22),
+                dp(5),
+                dp(8)
+        );
+
+        root.addView(technicalHeading);
+
+        LinearLayout technicalRow1 =
+                new LinearLayout(this);
+
+        technicalRow1.setOrientation(
+                LinearLayout.HORIZONTAL
+        );
+
+        rsiCard =
+                makeCard(
+                        "RSI",
+                        "Calculating..."
+                );
+
+        emaCard =
+                makeCard(
+                        "EMA 20",
+                        "Calculating..."
+                );
+
+        technicalRow1.addView(rsiCard);
+        technicalRow1.addView(emaCard);
+
+        root.addView(technicalRow1);
+
+        LinearLayout technicalRow2 =
+                new LinearLayout(this);
+
+        technicalRow2.setOrientation(
+                LinearLayout.HORIZONTAL
+        );
+
+        macdCard =
+                makeCard(
+                        "MACD",
+                        "Calculating..."
+                );
+
+        atrCard =
+                makeCard(
+                        "ATR",
+                        "Calculating..."
+                );
+
+        technicalRow2.addView(macdCard);
+        technicalRow2.addView(atrCard);
+
+        root.addView(technicalRow2);
+
+        signalCard =
+                makeCard(
+                        "TECHNICAL SIGNAL",
+                        "Calculating..."
+                );
+
+        LinearLayout.LayoutParams signalParams =
+                new LinearLayout.LayoutParams(
+                        LinearLayout.LayoutParams.MATCH_PARENT,
+                        dp(85)
+                );
+
+        signalParams.setMargins(
+                dp(4),
+                dp(8),
+                dp(4),
+                dp(4)
+        );
+
+        signalCard.setLayoutParams(
+                signalParams
+        );
+
+        signalCard.setBackgroundColor(
+                Color.rgb(30, 40, 50)
+        );
+
+        root.addView(signalCard);
+
         TextView chartTitle =
                 makeText(
                         "PRICE CHART",
@@ -335,7 +440,7 @@ public class MainActivity extends Activity {
 
         status.setText(
                 "ENGINE STATUS: RUNNING\n"
-                + "Downloading market data..."
+                + "Downloading BTC market data..."
         );
 
         loadBTC();
@@ -400,13 +505,54 @@ public class MainActivity extends Activity {
                                                     )
                                             );
 
+                                            rsiCard.setText(
+                                                    "RSI\n"
+                                                    + String.format(
+                                                        Locale.US,
+                                                        "%.2f",
+                                                        result.rsi
+                                                    )
+                                            );
+
+                                            emaCard.setText(
+                                                    "EMA 20\n$ "
+                                                    + format(
+                                                        result.ema20
+                                                    )
+                                            );
+
+                                            macdCard.setText(
+                                                    "MACD\n"
+                                                    + String.format(
+                                                        Locale.US,
+                                                        "%.2f",
+                                                        result.macd
+                                                    )
+                                            );
+
+                                            atrCard.setText(
+                                                    "ATR\n"
+                                                    + format(
+                                                        result.atr
+                                                    )
+                                            );
+
+                                            signalCard.setText(
+                                                    "TECHNICAL SIGNAL\n"
+                                                    + result.signal
+                                                    + "\n"
+                                                    + "Score: "
+                                                    + result.score
+                                                    + "/4"
+                                            );
+
                                             chartView.setPrices(
                                                     result.prices
                                             );
 
                                             status.setText(
                                                     "ENGINE STATUS: READY\n"
-                                                    + "BTC live + chart data loaded"
+                                                    + "BTC technical analysis loaded"
                                             );
                                         }
                                     }
@@ -546,6 +692,7 @@ public class MainActivity extends Activity {
                 (line = reader.readLine())
                         != null
         ) {
+
             response.append(line);
         }
 
@@ -555,12 +702,6 @@ public class MainActivity extends Activity {
 
         return response.toString();
     }
-
-    /*
-     * =====================================================
-     * BTC ANALYSIS ENGINE
-     * =====================================================
-     */
 
     private BTCResult analyzeBTC(
             String json
@@ -611,7 +752,7 @@ public class MainActivity extends Activity {
         int size =
                 priceList.size();
 
-        if (size < 20) {
+        if (size < 30) {
 
             throw new Exception(
                     "Not enough market data"
@@ -621,129 +762,235 @@ public class MainActivity extends Activity {
         double currentPrice =
                 priceList.get(size - 1);
 
-        /*
-         * -------------------------------------------------
-         * RECENT SWING LEVELS
-         * -------------------------------------------------
-         */
-
-        int lookback =
-                Math.min(
-                        90,
-                        size
+        double support =
+                calculateSupport(
+                        priceList,
+                        currentPrice
                 );
 
+        double resistance =
+                calculateResistance(
+                        priceList,
+                        currentPrice
+                );
+
+        String trend =
+                calculateTrend(
+                        priceList
+                );
+
+        double averageVolume =
+                calculateAverageVolume(
+                        volumeList
+                );
+
+        TechnicalAnalyzer.TechnicalResult technical =
+                TechnicalAnalyzer.analyze(
+                        priceList
+                );
+
+        int score =
+                calculateTechnicalScore(
+                        currentPrice,
+                        trend,
+                        technical
+                );
+
+        String signal =
+                calculateSignal(score);
+
+        BTCResult result =
+                new BTCResult();
+
+        result.price =
+                currentPrice;
+
+        result.support =
+                support;
+
+        result.resistance =
+                resistance;
+
+        result.trend =
+                trend;
+
+        result.volume =
+                averageVolume;
+
+        result.rsi =
+                technical.rsi;
+
+        result.ema20 =
+                technical.ema20;
+
+        result.macd =
+                technical.macd;
+
+        result.atr =
+                technical.atr;
+
+        result.score =
+                score;
+
+        result.signal =
+                signal;
+
+        result.prices =
+                priceList;
+
+        return result;
+    }
+
+    private double calculateSupport(
+            ArrayList<Double> prices,
+            double currentPrice
+    ) {
+
+        int size =
+                prices.size();
+
         int start =
-                size - lookback;
+                Math.max(
+                        2,
+                        size - 90
+                );
 
-        ArrayList<Double>
-                supportCandidates =
+        ArrayList<Double> candidates =
                 new ArrayList<>();
 
-        ArrayList<Double>
-                resistanceCandidates =
-                new ArrayList<>();
-
-        for (int i = start + 2;
+        for (int i = start;
              i < size - 2;
              i++) {
 
             double p =
-                    priceList.get(i);
-
-            double left1 =
-                    priceList.get(i - 1);
-
-            double left2 =
-                    priceList.get(i - 2);
-
-            double right1 =
-                    priceList.get(i + 1);
-
-            double right2 =
-                    priceList.get(i + 2);
+                    prices.get(i);
 
             boolean swingLow =
-                    p < left1 &&
-                    p < left2 &&
-                    p < right1 &&
-                    p < right2;
-
-            boolean swingHigh =
-                    p > left1 &&
-                    p > left2 &&
-                    p > right1 &&
-                    p > right2;
+                    p < prices.get(i - 1) &&
+                    p < prices.get(i - 2) &&
+                    p < prices.get(i + 1) &&
+                    p < prices.get(i + 2);
 
             double distance =
                     Math.abs(
                             p - currentPrice
                     ) / currentPrice;
 
-            /*
-             * Ignore extremely distant levels.
-             */
+            if (swingLow &&
+                    p < currentPrice &&
+                    distance <= 0.15) {
 
-            if (distance <= 0.15) {
-
-                if (swingLow &&
-                        p < currentPrice) {
-
-                    supportCandidates.add(p);
-                }
-
-                if (swingHigh &&
-                        p > currentPrice) {
-
-                    resistanceCandidates.add(p);
-                }
+                candidates.add(p);
             }
         }
 
-        /*
-         * -------------------------------------------------
-         * NEAREST SUPPORT / RESISTANCE
-         * -------------------------------------------------
-         */
+        double nearest =
+                0;
 
-        double support =
-                findNearestLevel(
-                        supportCandidates,
-                        currentPrice,
-                        true
-                );
+        double distance =
+                Double.MAX_VALUE;
 
-        double resistance =
-                findNearestLevel(
-                        resistanceCandidates,
-                        currentPrice,
-                        false
-                );
+        for (double level :
+                candidates) {
 
-        /*
-         * -------------------------------------------------
-         * FALLBACK
-         * -------------------------------------------------
-         */
+            double d =
+                    currentPrice - level;
 
-        if (support <= 0 ||
-                support >= currentPrice) {
+            if (d > 0 &&
+                    d < distance) {
 
-            support =
+                distance = d;
+                nearest = level;
+            }
+        }
+
+        if (nearest <= 0) {
+
+            nearest =
                     currentPrice * 0.97;
         }
 
-        if (resistance <= currentPrice) {
+        return nearest;
+    }
 
-            resistance =
+    private double calculateResistance(
+            ArrayList<Double> prices,
+            double currentPrice
+    ) {
+
+        int size =
+                prices.size();
+
+        int start =
+                Math.max(
+                        2,
+                        size - 90
+                );
+
+        ArrayList<Double> candidates =
+                new ArrayList<>();
+
+        for (int i = start;
+             i < size - 2;
+             i++) {
+
+            double p =
+                    prices.get(i);
+
+            boolean swingHigh =
+                    p > prices.get(i - 1) &&
+                    p > prices.get(i - 2) &&
+                    p > prices.get(i + 1) &&
+                    p > prices.get(i + 2);
+
+            double distance =
+                    Math.abs(
+                            p - currentPrice
+                    ) / currentPrice;
+
+            if (swingHigh &&
+                    p > currentPrice &&
+                    distance <= 0.15) {
+
+                candidates.add(p);
+            }
+        }
+
+        double nearest =
+                0;
+
+        double distance =
+                Double.MAX_VALUE;
+
+        for (double level :
+                candidates) {
+
+            double d =
+                    level - currentPrice;
+
+            if (d > 0 &&
+                    d < distance) {
+
+                distance = d;
+                nearest = level;
+            }
+        }
+
+        if (nearest <= currentPrice) {
+
+            nearest =
                     currentPrice * 1.03;
         }
 
-        /*
-         * -------------------------------------------------
-         * TREND
-         * -------------------------------------------------
-         */
+        return nearest;
+    }
+
+    private String calculateTrend(
+            ArrayList<Double> prices
+    ) {
+
+        int size =
+                prices.size();
 
         int recentPeriod =
                 Math.min(
@@ -767,7 +1014,7 @@ public class MainActivity extends Activity {
                 i++) {
 
             recentSum +=
-                    priceList.get(i);
+                    prices.get(i);
         }
 
         int previousStart =
@@ -788,173 +1035,155 @@ public class MainActivity extends Activity {
                 i++) {
 
             previousSum +=
-                    priceList.get(i);
+                    prices.get(i);
         }
 
-        double sma20 =
+        double recentSMA =
                 recentSum /
                 recentPeriod;
 
-        int previousCount =
+        int count =
                 previousEnd -
                 previousStart;
 
-        double previousSMA;
-
-        if (previousCount > 0) {
-
-            previousSMA =
-                    previousSum /
-                    previousCount;
-
-        } else {
-
-            previousSMA =
-                    sma20;
+        if (count <= 0) {
+            return "NEUTRAL";
         }
 
-        String trend =
-                "NEUTRAL";
+        double previousSMA =
+                previousSum /
+                count;
 
-        if (sma20 > previousSMA) {
+        if (recentSMA >
+                previousSMA * 1.002) {
 
-            trend = "UP";
+            return "UP";
 
-        } else if (sma20 < previousSMA) {
+        } else if (
+                recentSMA <
+                previousSMA * 0.998
+        ) {
 
-            trend = "DOWN";
+            return "DOWN";
         }
 
-        /*
-         * -------------------------------------------------
-         * VOLUME
-         * -------------------------------------------------
-         */
-
-        double volumeSum = 0;
-
-        int volumeCount = 0;
-
-        int volumeStart =
-                Math.max(
-                        0,
-                        size - 30
-                );
-
-        for (int i =
-                volumeStart;
-                i < volumeList.size();
-                i++) {
-
-            double volume =
-                    volumeList.get(i);
-
-            if (volume > 0) {
-
-                volumeSum += volume;
-                volumeCount++;
-            }
-        }
-
-        double averageVolume =
-                volumeCount > 0
-                        ? volumeSum /
-                          volumeCount
-                        : 0;
-
-        /*
-         * -------------------------------------------------
-         * RESULT
-         * -------------------------------------------------
-         */
-
-        BTCResult result =
-                new BTCResult();
-
-        result.price =
-                currentPrice;
-
-        result.support =
-                support;
-
-        result.resistance =
-                resistance;
-
-        result.trend =
-                trend;
-
-        result.volume =
-                averageVolume;
-
-        result.prices =
-                priceList;
-
-        return result;
+        return "NEUTRAL";
     }
 
-    /*
-     * Find the closest valid level to current price.
-     */
-
-    private double findNearestLevel(
-            ArrayList<Double> candidates,
-            double currentPrice,
-            boolean support
+    private double calculateAverageVolume(
+            ArrayList<Double> volumes
     ) {
 
-        if (candidates == null ||
-                candidates.size() == 0) {
-
+        if (volumes.size() == 0) {
             return 0;
         }
 
-        double best =
-                0;
+        int start =
+                Math.max(
+                        0,
+                        volumes.size() - 30
+                );
 
-        double bestDistance =
-                Double.MAX_VALUE;
+        double sum = 0;
 
-        for (double level :
-                candidates) {
+        int count = 0;
 
-            if (support) {
+        for (int i = start;
+             i < volumes.size();
+             i++) {
 
-                if (level >= currentPrice) {
-                    continue;
-                }
+            double v =
+                    volumes.get(i);
 
-            } else {
+            if (v > 0) {
 
-                if (level <= currentPrice) {
-                    continue;
-                }
-            }
-
-            double distance =
-                    Math.abs(
-                            currentPrice -
-                            level
-                    );
-
-            if (distance <
-                    bestDistance) {
-
-                bestDistance =
-                        distance;
-
-                best =
-                        level;
+                sum += v;
+                count++;
             }
         }
 
-        return best;
+        if (count == 0) {
+            return 0;
+        }
+
+        return sum / count;
     }
 
-    /*
-     * =====================================================
-     * GOLD
-     * =====================================================
-     */
+    private int calculateTechnicalScore(
+            double currentPrice,
+            String trend,
+            TechnicalAnalyzer.TechnicalResult technical
+    ) {
+
+        int score = 0;
+
+        if (technical.rsi >= 50 &&
+                technical.rsi <= 70) {
+
+            score++;
+
+        } else if (technical.rsi < 30) {
+
+            score++;
+
+        } else if (technical.rsi > 70) {
+
+            score--;
+        }
+
+        if (currentPrice >
+                technical.ema20) {
+
+            score++;
+
+        } else if (
+                currentPrice <
+                technical.ema20
+        ) {
+
+            score--;
+        }
+
+        if (technical.macd > 0) {
+
+            score++;
+
+        } else if (
+                technical.macd < 0
+        ) {
+
+            score--;
+        }
+
+        if (trend.equals("UP")) {
+
+            score++;
+
+        } else if (
+                trend.equals("DOWN")
+        ) {
+
+            score--;
+        }
+
+        return score;
+    }
+
+    private String calculateSignal(
+            int score
+    ) {
+
+        if (score >= 3) {
+
+            return "BUY BIAS";
+
+        } else if (score <= -3) {
+
+            return "SELL BIAS";
+        }
+
+        return "NEUTRAL";
+    }
 
     private GoldResult analyzeGold(
             String json
@@ -1019,17 +1248,12 @@ public class MainActivity extends Activity {
         return data;
     }
 
-    /*
-     * =====================================================
-     * FORMATTERS
-     * =====================================================
-     */
-
     private String format(
             double value
     ) {
 
         return String.format(
+                Locale.US,
                 "%,.2f",
                 value
         );
@@ -1042,6 +1266,7 @@ public class MainActivity extends Activity {
         if (value >= 1000000000) {
 
             return String.format(
+                    Locale.US,
                     "%.2fB",
                     value /
                     1000000000.0
@@ -1050,6 +1275,7 @@ public class MainActivity extends Activity {
         } else if (value >= 1000000) {
 
             return String.format(
+                    Locale.US,
                     "%.2fM",
                     value /
                     1000000.0
@@ -1058,6 +1284,7 @@ public class MainActivity extends Activity {
         } else if (value >= 1000) {
 
             return String.format(
+                    Locale.US,
                     "%.2fK",
                     value /
                     1000.0
@@ -1065,16 +1292,11 @@ public class MainActivity extends Activity {
         }
 
         return String.format(
+                Locale.US,
                 "%.0f",
                 value
         );
     }
-
-    /*
-     * =====================================================
-     * DATA CLASSES
-     * =====================================================
-     */
 
     private static class BTCResult {
 
@@ -1083,7 +1305,15 @@ public class MainActivity extends Activity {
         double resistance;
         double volume;
 
+        double rsi;
+        double ema20;
+        double macd;
+        double atr;
+
+        int score;
+
         String trend;
+        String signal;
 
         ArrayList<Double> prices;
     }
@@ -1092,12 +1322,6 @@ public class MainActivity extends Activity {
 
         double price;
     }
-
-    /*
-     * =====================================================
-     * PRICE CHART
-     * =====================================================
-     */
 
     private class PriceChart
             extends View {
@@ -1200,10 +1424,6 @@ public class MainActivity extends Activity {
             float bottom =
                     height - dp(15);
 
-            /*
-             * Grid
-             */
-
             for (int i = 0;
                  i <= 4;
                  i++) {
@@ -1303,42 +1523,27 @@ public class MainActivity extends Activity {
                 previousY = y;
             }
 
-            /*
-             * Latest price
-             */
-
             double latest =
                     prices.get(
                             prices.size() - 1
                     );
 
             canvas.drawText(
-                    "$ "
-                    + format(latest),
+                    "$ " + format(latest),
                     left,
                     top + dp(12),
                     textPaint
             );
 
-            /*
-             * Low
-             */
-
             canvas.drawText(
-                    "Low "
-                    + format(min),
+                    "Low " + format(min),
                     left,
                     bottom,
                     textPaint
             );
 
-            /*
-             * High
-             */
-
             String highText =
-                    "High "
-                    + format(max);
+                    "High " + format(max);
 
             float textWidth =
                     textPaint.measureText(
@@ -1361,4 +1566,4 @@ public class MainActivity extends Activity {
 
         super.onDestroy();
     }
-            }
+                    }
