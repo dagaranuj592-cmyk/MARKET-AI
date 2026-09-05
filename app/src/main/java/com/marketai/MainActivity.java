@@ -63,7 +63,9 @@ public class MainActivity extends Activity {
             float size,
             boolean bold
     ) {
-        TextView tv = new TextView(this);
+
+        TextView tv =
+                new TextView(this);
 
         tv.setText(value);
         tv.setTextColor(Color.WHITE);
@@ -91,6 +93,7 @@ public class MainActivity extends Activity {
             String title,
             String value
     ) {
+
         TextView tv =
                 makeText(
                         title + "\n" + value,
@@ -125,6 +128,7 @@ public class MainActivity extends Activity {
     protected void onCreate(
             Bundle savedInstanceState
     ) {
+
         super.onCreate(savedInstanceState);
 
         LinearLayout root =
@@ -405,6 +409,7 @@ public class MainActivity extends Activity {
 
         button.setOnClickListener(
                 new View.OnClickListener() {
+
                     @Override
                     public void onClick(View v) {
                         loadAllData();
@@ -440,7 +445,7 @@ public class MainActivity extends Activity {
 
         status.setText(
                 "ENGINE STATUS: RUNNING\n"
-                + "Downloading BTC market data..."
+                + "Downloading market data..."
         );
 
         loadBTC();
@@ -451,6 +456,7 @@ public class MainActivity extends Activity {
 
         executor.execute(
                 new Runnable() {
+
                     @Override
                     public void run() {
 
@@ -469,6 +475,7 @@ public class MainActivity extends Activity {
 
                             handler.post(
                                     new Runnable() {
+
                                         @Override
                                         public void run() {
 
@@ -562,6 +569,7 @@ public class MainActivity extends Activity {
 
                             handler.post(
                                     new Runnable() {
+
                                         @Override
                                         public void run() {
 
@@ -587,6 +595,7 @@ public class MainActivity extends Activity {
 
         executor.execute(
                 new Runnable() {
+
                     @Override
                     public void run() {
 
@@ -604,6 +613,7 @@ public class MainActivity extends Activity {
 
                             handler.post(
                                     new Runnable() {
+
                                         @Override
                                         public void run() {
 
@@ -621,6 +631,7 @@ public class MainActivity extends Activity {
 
                             handler.post(
                                     new Runnable() {
+
                                         @Override
                                         public void run() {
 
@@ -711,7 +722,9 @@ public class MainActivity extends Activity {
                 new JSONObject(json);
 
         JSONArray prices =
-                root.getJSONArray("prices");
+                root.getJSONArray(
+                        "prices"
+                );
 
         JSONArray volumes =
                 root.getJSONArray(
@@ -724,16 +737,30 @@ public class MainActivity extends Activity {
         ArrayList<Double> volumeList =
                 new ArrayList<>();
 
+        /*
+         * CoinGecko market_chart gives
+         * price data but not candle high/low.
+         *
+         * We create conservative high/low
+         * proxy values for the TechnicalAnalyzer.
+         */
+
+        ArrayList<Double> highList =
+                new ArrayList<>();
+
+        ArrayList<Double> lowList =
+                new ArrayList<>();
+
         for (int i = 0;
              i < prices.length();
              i++) {
 
-            double price =
+            double close =
                     prices
                             .getJSONArray(i)
                             .getDouble(1);
 
-            priceList.add(price);
+            priceList.add(close);
 
             if (i < volumes.length()) {
 
@@ -747,6 +774,33 @@ public class MainActivity extends Activity {
 
                 volumeList.add(0.0);
             }
+
+            double high =
+                    close;
+
+            double low =
+                    close;
+
+            if (i > 0) {
+
+                double previous =
+                        priceList.get(i - 1);
+
+                high =
+                        Math.max(
+                                close,
+                                previous
+                        );
+
+                low =
+                        Math.min(
+                                close,
+                                previous
+                        );
+            }
+
+            highList.add(high);
+            lowList.add(low);
         }
 
         int size =
@@ -760,7 +814,9 @@ public class MainActivity extends Activity {
         }
 
         double currentPrice =
-                priceList.get(size - 1);
+                priceList.get(
+                        size - 1
+                );
 
         double support =
                 calculateSupport(
@@ -784,9 +840,20 @@ public class MainActivity extends Activity {
                         volumeList
                 );
 
+        /*
+         * IMPORTANT:
+         * TechnicalAnalyzer needs:
+         *
+         * close list
+         * high list
+         * low list
+         */
+
         TechnicalAnalyzer.TechnicalResult technical =
                 TechnicalAnalyzer.analyze(
-                        priceList
+                        priceList,
+                        highList,
+                        lowList
                 );
 
         int score =
@@ -855,8 +922,11 @@ public class MainActivity extends Activity {
                         size - 90
                 );
 
-        ArrayList<Double> candidates =
-                new ArrayList<>();
+        double nearest =
+                0;
+
+        double distance =
+                Double.MAX_VALUE;
 
         for (int i = start;
              i < size - 2;
@@ -871,36 +941,27 @@ public class MainActivity extends Activity {
                     p < prices.get(i + 1) &&
                     p < prices.get(i + 2);
 
-            double distance =
+            double d =
                     Math.abs(
                             p - currentPrice
                     ) / currentPrice;
 
             if (swingLow &&
                     p < currentPrice &&
-                    distance <= 0.15) {
+                    d <= 0.15) {
 
-                candidates.add(p);
-            }
-        }
+                double actualDistance =
+                        currentPrice - p;
 
-        double nearest =
-                0;
+                if (actualDistance <
+                        distance) {
 
-        double distance =
-                Double.MAX_VALUE;
+                    distance =
+                            actualDistance;
 
-        for (double level :
-                candidates) {
-
-            double d =
-                    currentPrice - level;
-
-            if (d > 0 &&
-                    d < distance) {
-
-                distance = d;
-                nearest = level;
+                    nearest =
+                            p;
+                }
             }
         }
 
@@ -927,8 +988,11 @@ public class MainActivity extends Activity {
                         size - 90
                 );
 
-        ArrayList<Double> candidates =
-                new ArrayList<>();
+        double nearest =
+                0;
+
+        double distance =
+                Double.MAX_VALUE;
 
         for (int i = start;
              i < size - 2;
@@ -943,36 +1007,27 @@ public class MainActivity extends Activity {
                     p > prices.get(i + 1) &&
                     p > prices.get(i + 2);
 
-            double distance =
+            double d =
                     Math.abs(
                             p - currentPrice
                     ) / currentPrice;
 
             if (swingHigh &&
                     p > currentPrice &&
-                    distance <= 0.15) {
+                    d <= 0.15) {
 
-                candidates.add(p);
-            }
-        }
+                double actualDistance =
+                        p - currentPrice;
 
-        double nearest =
-                0;
+                if (actualDistance <
+                        distance) {
 
-        double distance =
-                Double.MAX_VALUE;
+                    distance =
+                            actualDistance;
 
-        for (double level :
-                candidates) {
-
-            double d =
-                    level - currentPrice;
-
-            if (d > 0 &&
-                    d < distance) {
-
-                distance = d;
-                nearest = level;
+                    nearest =
+                            p;
+                }
             }
         }
 
@@ -1004,9 +1059,11 @@ public class MainActivity extends Activity {
                         size
                 );
 
-        double recentSum = 0;
+        double recentSum =
+                0;
 
-        double previousSum = 0;
+        double previousSum =
+                0;
 
         for (int i =
                 size - recentPeriod;
@@ -1047,6 +1104,7 @@ public class MainActivity extends Activity {
                 previousStart;
 
         if (count <= 0) {
+
             return "NEUTRAL";
         }
 
@@ -1075,6 +1133,7 @@ public class MainActivity extends Activity {
     ) {
 
         if (volumes.size() == 0) {
+
             return 0;
         }
 
@@ -1084,25 +1143,28 @@ public class MainActivity extends Activity {
                         volumes.size() - 30
                 );
 
-        double sum = 0;
+        double sum =
+                0;
 
-        int count = 0;
+        int count =
+                0;
 
         for (int i = start;
              i < volumes.size();
              i++) {
 
-            double v =
+            double value =
                     volumes.get(i);
 
-            if (v > 0) {
+            if (value > 0) {
 
-                sum += v;
+                sum += value;
                 count++;
             }
         }
 
         if (count == 0) {
+
             return 0;
         }
 
@@ -1115,21 +1177,34 @@ public class MainActivity extends Activity {
             TechnicalAnalyzer.TechnicalResult technical
     ) {
 
-        int score = 0;
+        int score =
+                0;
+
+        /*
+         * RSI
+         */
 
         if (technical.rsi >= 50 &&
                 technical.rsi <= 70) {
 
             score++;
 
-        } else if (technical.rsi < 30) {
+        } else if (
+                technical.rsi < 30
+        ) {
 
             score++;
 
-        } else if (technical.rsi > 70) {
+        } else if (
+                technical.rsi > 70
+        ) {
 
             score--;
         }
+
+        /*
+         * EMA
+         */
 
         if (currentPrice >
                 technical.ema20) {
@@ -1144,6 +1219,10 @@ public class MainActivity extends Activity {
             score--;
         }
 
+        /*
+         * MACD
+         */
+
         if (technical.macd > 0) {
 
             score++;
@@ -1154,6 +1233,10 @@ public class MainActivity extends Activity {
 
             score--;
         }
+
+        /*
+         * TREND
+         */
 
         if (trend.equals("UP")) {
 
@@ -1223,7 +1306,8 @@ public class MainActivity extends Activity {
                         "close"
                 );
 
-        double latest = 0;
+        double latest =
+                0;
 
         for (int i =
                 close.length() - 1;
@@ -1268,26 +1352,27 @@ public class MainActivity extends Activity {
             return String.format(
                     Locale.US,
                     "%.2fB",
-                    value /
-                    1000000000.0
+                    value / 1000000000.0
             );
 
-        } else if (value >= 1000000) {
+        } else if (
+                value >= 1000000
+        ) {
 
             return String.format(
                     Locale.US,
                     "%.2fM",
-                    value /
-                    1000000.0
+                    value / 1000000.0
             );
 
-        } else if (value >= 1000) {
+        } else if (
+                value >= 1000
+        ) {
 
             return String.format(
                     Locale.US,
                     "%.2fK",
-                    value /
-                    1000.0
+                    value / 1000.0
             );
         }
 
@@ -1466,10 +1551,12 @@ public class MainActivity extends Activity {
                     prices) {
 
                 if (value < min) {
+
                     min = value;
                 }
 
                 if (value > max) {
+
                     max = value;
                 }
             }
@@ -1478,11 +1565,15 @@ public class MainActivity extends Activity {
                     max - min;
 
             if (range <= 0) {
+
                 range = 1;
             }
 
-            float previousX = 0;
-            float previousY = 0;
+            float previousX =
+                    0;
+
+            float previousY =
+                    0;
 
             for (int i = 0;
                  i < prices.size();
@@ -1566,4 +1657,4 @@ public class MainActivity extends Activity {
 
         super.onDestroy();
     }
-                    }
+                     }
