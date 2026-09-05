@@ -1,5 +1,6 @@
 package com.marketai;
 
+import android.app.Activity;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
@@ -9,9 +10,8 @@ import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
 
-import androidx.appcompat.app.AppCompatActivity;
-
 import org.json.JSONArray;
+import org.json.JSONObject;
 
 import java.io.BufferedReader;
 import java.io.InputStream;
@@ -22,7 +22,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 
-public class MainActivity extends AppCompatActivity {
+public class MainActivity extends Activity {
 
     private LinearLayout container;
 
@@ -44,6 +44,7 @@ public class MainActivity extends AppCompatActivity {
         container.setBackgroundColor(Color.rgb(11, 15, 20));
 
         scrollView.addView(container);
+
         setContentView(scrollView);
 
         showTitle("MARKET AI");
@@ -56,6 +57,10 @@ public class MainActivity extends AppCompatActivity {
 
         loadMarketData(loading);
     }
+
+    // =========================================================
+    // LOAD MARKET DATA
+    // =========================================================
 
     private void loadMarketData(TextView loading) {
 
@@ -82,12 +87,14 @@ public class MainActivity extends AppCompatActivity {
                         );
 
                 double support = calculateSupport();
+
                 double resistance = calculateResistance();
 
-                String trend = getTrend(
-                        btcPrices,
-                        technical.ema20
-                );
+                String trend =
+                        getTrend(
+                                btcPrices,
+                                technical.ema20
+                        );
 
                 double averageVolume =
                         calculateAverageVolume();
@@ -110,9 +117,11 @@ public class MainActivity extends AppCompatActivity {
 
                     addMetric(
                             "Bitcoin",
-                            "$" + format(btcPrices.get(
-                                    btcPrices.size() - 1
-                            ))
+                            "$" + format(
+                                    btcPrices.get(
+                                            btcPrices.size() - 1
+                                    )
+                            )
                     );
 
                     addMetric(
@@ -181,17 +190,23 @@ public class MainActivity extends AppCompatActivity {
 
                     addMetric(
                             "BUY Probability",
-                            format(probability.buyProbability) + "%"
+                            format(
+                                    probability.buyProbability
+                            ) + "%"
                     );
 
                     addMetric(
                             "SELL Probability",
-                            format(probability.sellProbability) + "%"
+                            format(
+                                    probability.sellProbability
+                            ) + "%"
                     );
 
                     addMetric(
                             "NEUTRAL Probability",
-                            format(probability.neutralProbability) + "%"
+                            format(
+                                    probability.neutralProbability
+                            ) + "%"
                     );
 
                     addMetric(
@@ -214,11 +229,11 @@ public class MainActivity extends AppCompatActivity {
                     addSpace();
 
                     addText(
-                            "Historical/model estimate only — not a guarantee of future price movement.",
+                            "Historical/model estimate only. "
+                                    + "It is not a guarantee of future price movement.",
                             12,
                             Color.GRAY
                     );
-
                 });
 
             } catch (Exception e) {
@@ -251,7 +266,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     // =========================================================
-    // BTC DATA - BINANCE DAILY OHLCV
+    // BTC - REAL DAILY OHLCV
     // =========================================================
 
     private void fetchBTC() throws Exception {
@@ -262,12 +277,14 @@ public class MainActivity extends AppCompatActivity {
                         + "&interval=1d"
                         + "&limit=180";
 
-        URL url = new URL(urlString);
+        URL url =
+                new URL(urlString);
 
         HttpURLConnection connection =
                 (HttpURLConnection) url.openConnection();
 
         connection.setRequestMethod("GET");
+
         connection.setConnectTimeout(15000);
         connection.setReadTimeout(15000);
 
@@ -277,7 +294,7 @@ public class MainActivity extends AppCompatActivity {
         if (responseCode != 200) {
 
             throw new Exception(
-                    "BTC data server error: "
+                    "BTC server error: "
                             + responseCode
             );
         }
@@ -298,11 +315,13 @@ public class MainActivity extends AppCompatActivity {
         String line;
 
         while ((line = reader.readLine()) != null) {
+
             response.append(line);
         }
 
         reader.close();
         inputStream.close();
+
         connection.disconnect();
 
         JSONArray candles =
@@ -316,7 +335,9 @@ public class MainActivity extends AppCompatActivity {
         btcPrices.clear();
         btcVolume.clear();
 
-        for (int i = 0; i < candles.length(); i++) {
+        for (int i = 0;
+             i < candles.length();
+             i++) {
 
             JSONArray candle =
                     candles.getJSONArray(i);
@@ -362,7 +383,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     // =========================================================
-    // GOLD DATA
+    // GOLD
     // =========================================================
 
     private double fetchGold() throws Exception {
@@ -372,12 +393,14 @@ public class MainActivity extends AppCompatActivity {
                         + "?range=6mo"
                         + "&interval=1d";
 
-        URL url = new URL(urlString);
+        URL url =
+                new URL(urlString);
 
         HttpURLConnection connection =
                 (HttpURLConnection) url.openConnection();
 
         connection.setRequestMethod("GET");
+
         connection.setConnectTimeout(15000);
         connection.setReadTimeout(15000);
 
@@ -392,7 +415,7 @@ public class MainActivity extends AppCompatActivity {
         if (responseCode != 200) {
 
             throw new Exception(
-                    "Gold data server error: "
+                    "Gold server error: "
                             + responseCode
             );
         }
@@ -413,19 +436,21 @@ public class MainActivity extends AppCompatActivity {
         String line;
 
         while ((line = reader.readLine()) != null) {
+
             response.append(line);
         }
 
         reader.close();
         inputStream.close();
+
         connection.disconnect();
 
-        org.json.JSONObject root =
-                new org.json.JSONObject(
+        JSONObject root =
+                new JSONObject(
                         response.toString()
                 );
 
-        org.json.JSONObject chart =
+        JSONObject chart =
                 root.getJSONObject("chart");
 
         JSONArray results =
@@ -438,10 +463,10 @@ public class MainActivity extends AppCompatActivity {
             );
         }
 
-        org.json.JSONObject result =
+        JSONObject result =
                 results.getJSONObject(0);
 
-        org.json.JSONObject indicators =
+        JSONObject indicators =
                 result.getJSONObject(
                         "indicators"
                 );
@@ -449,7 +474,7 @@ public class MainActivity extends AppCompatActivity {
         JSONArray quote =
                 indicators.getJSONArray("quote");
 
-        org.json.JSONObject quoteData =
+        JSONObject quoteData =
                 quote.getJSONObject(0);
 
         JSONArray closeArray =
@@ -486,7 +511,8 @@ public class MainActivity extends AppCompatActivity {
 
     private double calculateSupport() {
 
-        int size = btcLow.size();
+        int size =
+                btcLow.size();
 
         int start =
                 Math.max(
@@ -497,11 +523,14 @@ public class MainActivity extends AppCompatActivity {
         double support =
                 Double.MAX_VALUE;
 
-        for (int i = start; i < size; i++) {
+        for (int i = start;
+             i < size;
+             i++) {
 
             if (btcLow.get(i) < support) {
 
-                support = btcLow.get(i);
+                support =
+                        btcLow.get(i);
             }
         }
 
@@ -514,7 +543,8 @@ public class MainActivity extends AppCompatActivity {
 
     private double calculateResistance() {
 
-        int size = btcHigh.size();
+        int size =
+                btcHigh.size();
 
         int start =
                 Math.max(
@@ -525,11 +555,14 @@ public class MainActivity extends AppCompatActivity {
         double resistance =
                 Double.MIN_VALUE;
 
-        for (int i = start; i < size; i++) {
+        for (int i = start;
+             i < size;
+             i++) {
 
             if (btcHigh.get(i) > resistance) {
 
-                resistance = btcHigh.get(i);
+                resistance =
+                        btcHigh.get(i);
             }
         }
 
@@ -587,14 +620,17 @@ public class MainActivity extends AppCompatActivity {
 
         int score = 0;
 
+        double currentPrice =
+                btcPrices.get(
+                        btcPrices.size() - 1
+                );
+
         if (result.rsi > 50) {
             score++;
         }
 
         if (result.ema20 > 0 &&
-                btcPrices.get(
-                        btcPrices.size() - 1
-                ) > result.ema20) {
+                currentPrice > result.ema20) {
 
             score++;
         }
@@ -603,7 +639,7 @@ public class MainActivity extends AppCompatActivity {
             score++;
         }
 
-        if (trend.equals("UP")) {
+        if ("UP".equals(trend)) {
             score++;
         }
 
@@ -653,32 +689,59 @@ public class MainActivity extends AppCompatActivity {
     }
 
     // =========================================================
-    // UI HELPERS
+    // UI
     // =========================================================
 
-    private void showTitle(String text) {
+    private void showTitle(
+            String text
+    ) {
 
         TextView title =
                 new TextView(this);
 
         title.setText(text);
+
         title.setTextSize(28);
-        title.setTextColor(Color.WHITE);
-        title.setGravity(Gravity.CENTER);
-        title.setPadding(0, 10, 0, 10);
+
+        title.setTextColor(
+                Color.WHITE
+        );
+
+        title.setGravity(
+                Gravity.CENTER
+        );
+
+        title.setPadding(
+                0,
+                10,
+                0,
+                10
+        );
 
         container.addView(title);
     }
 
-    private void addSection(String text) {
+    private void addSection(
+            String text
+    ) {
 
         TextView section =
                 new TextView(this);
 
         section.setText(text);
+
         section.setTextSize(17);
-        section.setTextColor(Color.WHITE);
-        section.setPadding(0, 20, 0, 10);
+
+        section.setTextColor(
+                Color.WHITE
+        );
+
+        section.setPadding(
+                0,
+                20,
+                0,
+                10
+        );
 
         container.addView(section);
     }
@@ -696,8 +759,17 @@ public class MainActivity extends AppCompatActivity {
         );
 
         metric.setTextSize(16);
-        metric.setTextColor(Color.LTGRAY);
-        metric.setPadding(0, 8, 0, 8);
+
+        metric.setTextColor(
+                Color.LTGRAY
+        );
+
+        metric.setPadding(
+                0,
+                8,
+                0,
+                8
+        );
 
         container.addView(metric);
     }
@@ -712,9 +784,17 @@ public class MainActivity extends AppCompatActivity {
                 new TextView(this);
 
         view.setText(text);
+
         view.setTextSize(size);
+
         view.setTextColor(color);
-        view.setPadding(0, 8, 0, 8);
+
+        view.setPadding(
+                0,
+                8,
+                0,
+                8
+        );
 
         container.addView(view);
 
@@ -727,12 +807,20 @@ public class MainActivity extends AppCompatActivity {
                 new TextView(this);
 
         space.setText("");
-        space.setPadding(0, 10, 0, 10);
+
+        space.setPadding(
+                0,
+                10,
+                0,
+                10
+        );
 
         container.addView(space);
     }
 
-    private String format(double value) {
+    private String format(
+            double value
+    ) {
 
         return String.format(
                 Locale.US,
@@ -740,4 +828,4 @@ public class MainActivity extends AppCompatActivity {
                 value
         );
     }
-             }
+}
