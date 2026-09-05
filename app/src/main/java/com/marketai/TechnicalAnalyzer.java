@@ -4,35 +4,13 @@ import java.util.List;
 
 public class TechnicalAnalyzer {
 
-    public static class TechnicalResult {
-
-        public double rsi;
-        public double ema20;
-        public double macd;
-        public double atr;
-
-        public TechnicalResult(
-                double rsi,
-                double ema20,
-                double macd,
-                double atr
-        ) {
-            this.rsi = rsi;
-            this.ema20 = ema20;
-            this.macd = macd;
-            this.atr = atr;
-        }
-    }
-
     public static TechnicalResult analyze(
             List<Double> close,
             List<Double> high,
             List<Double> low
     ) {
 
-        if (close == null ||
-                close.size() < 30) {
-
+        if (close == null || close.size() < 30) {
             return new TechnicalResult(
                     50.0,
                     0.0,
@@ -41,30 +19,18 @@ public class TechnicalAnalyzer {
             );
         }
 
-        double ema20 =
-                calculateEMA(
-                        close,
-                        20
-                );
+        double ema20 = calculateEMA(close, 20);
 
-        double rsi =
-                calculateRSI(
-                        close,
-                        14
-                );
+        double rsi = calculateRSI(close, 14);
 
-        double macd =
-                calculateMACD(
-                        close
-                );
+        double macd = calculateMACD(close);
 
-        double atr =
-                calculateATR(
-                        close,
-                        high,
-                        low,
-                        14
-                );
+        double atr = calculateATR(
+                close,
+                high,
+                low,
+                14
+        );
 
         return new TechnicalResult(
                 rsi,
@@ -79,44 +45,35 @@ public class TechnicalAnalyzer {
             int period
     ) {
 
-        if (prices.size() < period) {
-
-            return prices.get(
-                    prices.size() - 1
-            );
+        if (prices == null || prices.size() == 0) {
+            return 0.0;
         }
 
-        double sum = 0;
+        if (prices.size() < period) {
+            return prices.get(prices.size() - 1);
+        }
 
-        int start =
-                prices.size() - period;
+        double sum = 0.0;
 
-        for (int i = start;
-             i < prices.size();
-             i++) {
+        int start = prices.size() - period;
 
+        for (int i = start; i < prices.size(); i++) {
             sum += prices.get(i);
         }
 
-        double ema =
-                sum / period;
+        double ema = sum / period;
 
         double multiplier =
-                2.0 /
-                (period + 1.0);
+                2.0 / (period + 1.0);
 
-        for (int i = period;
+        for (int i = start + period;
              i < prices.size();
              i++) {
 
-            double price =
-                    prices.get(i);
+            double price = prices.get(i);
 
             ema =
-                    (
-                        (price - ema)
-                        * multiplier
-                    )
+                    ((price - ema) * multiplier)
                     + ema;
         }
 
@@ -128,16 +85,16 @@ public class TechnicalAnalyzer {
             int period
     ) {
 
-        if (prices.size() <= period) {
+        if (prices == null ||
+                prices.size() <= period) {
 
             return 50.0;
         }
 
-        double gain = 0;
-        double loss = 0;
+        double gain = 0.0;
+        double loss = 0.0;
 
-        int start =
-                prices.size() - period;
+        int start = prices.size() - period;
 
         for (int i = start;
              i < prices.size();
@@ -149,13 +106,9 @@ public class TechnicalAnalyzer {
                     prices.get(i - 1);
 
             if (change > 0) {
-
                 gain += change;
-
             } else {
-
-                loss +=
-                        Math.abs(change);
+                loss += Math.abs(change);
             }
         }
 
@@ -165,8 +118,7 @@ public class TechnicalAnalyzer {
         double averageLoss =
                 loss / period;
 
-        if (averageLoss == 0) {
-
+        if (averageLoss == 0.0) {
             return 100.0;
         }
 
@@ -185,7 +137,8 @@ public class TechnicalAnalyzer {
             List<Double> prices
     ) {
 
-        if (prices.size() < 26) {
+        if (prices == null ||
+                prices.size() < 26) {
 
             return 0.0;
         }
@@ -229,14 +182,12 @@ public class TechnicalAnalyzer {
                 );
 
         if (size < period + 1) {
-
             return 0.0;
         }
 
-        int start =
-                size - period;
+        int start = size - period;
 
-        double trSum = 0;
+        double trSum = 0.0;
 
         for (int i = start;
              i < size;
@@ -257,28 +208,49 @@ public class TechnicalAnalyzer {
 
             double range2 =
                     Math.abs(
-                        currentHigh -
-                        previousClose
+                            currentHigh -
+                            previousClose
                     );
 
             double range3 =
                     Math.abs(
-                        currentLow -
-                        previousClose
+                            currentLow -
+                            previousClose
                     );
 
             double trueRange =
                     Math.max(
-                        range1,
-                        Math.max(
-                            range2,
-                            range3
-                        )
+                            range1,
+                            Math.max(
+                                    range2,
+                                    range3
+                            )
                     );
 
             trSum += trueRange;
         }
 
         return trSum / period;
+    }
+
+    public static class TechnicalResult {
+
+        public double rsi;
+        public double ema20;
+        public double macd;
+        public double atr;
+
+        public TechnicalResult(
+                double rsi,
+                double ema20,
+                double macd,
+                double atr
+        ) {
+
+            this.rsi = rsi;
+            this.ema20 = ema20;
+            this.macd = macd;
+            this.atr = atr;
+        }
     }
 }
