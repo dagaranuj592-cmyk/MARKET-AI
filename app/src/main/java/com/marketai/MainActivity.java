@@ -1,11 +1,15 @@
-package com.example.marketai;
+package com.marketai;
 
+import android.app.Activity;
 import android.os.Bundle;
-import android.widget.*;
+import android.os.Handler;
+import android.os.Looper;
 import android.graphics.Color;
+import android.graphics.Typeface;
 import android.view.Gravity;
-
-import androidx.appcompat.app.AppCompatActivity;
+import android.view.View;
+import android.widget.LinearLayout;
+import android.widget.TextView;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -14,259 +18,371 @@ import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Locale;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-public class MainActivity extends AppCompatActivity {
+public class MainActivity extends Activity {
 
-    LinearLayout root;
-    TextView btcPrice, goldPrice;
-    TextView supportText, resistanceText;
-    TextView trendText, volumeText;
-    TextView statusText;
+    private LinearLayout root;
+    private TextView btcCard;
+    private TextView goldCard;
+    private TextView supportCard;
+    private TextView resistanceCard;
+    private TextView trendCard;
+    private TextView volumeCard;
+    private TextView status;
 
-    ExecutorService executor = Executors.newSingleThreadExecutor();
+    private final ExecutorService executor =
+            Executors.newSingleThreadExecutor();
+
+    private final Handler handler =
+            new Handler(Looper.getMainLooper());
+
+    private int dp(float value) {
+        return (int) (value *
+                getResources().getDisplayMetrics().density + 0.5f);
+    }
+
+    private TextView makeText(
+            String value,
+            float size,
+            boolean bold
+    ) {
+        TextView tv = new TextView(this);
+
+        tv.setText(value);
+        tv.setTextColor(Color.WHITE);
+        tv.setTextSize(size);
+        tv.setGravity(Gravity.CENTER);
+
+        if (bold) {
+            tv.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
+        }
+
+        tv.setPadding(
+                dp(10),
+                dp(10),
+                dp(10),
+                dp(10)
+        );
+
+        return tv;
+    }
+
+    private TextView makeCard(
+            String title,
+            String value
+    ) {
+
+        TextView tv = makeText(
+                title + "\n" + value,
+                15,
+                true
+        );
+
+        tv.setBackgroundColor(
+                Color.rgb(24, 31, 40)
+        );
+
+        LinearLayout.LayoutParams params =
+                new LinearLayout.LayoutParams(
+                        0,
+                        dp(95),
+                        1
+                );
+
+        params.setMargins(
+                dp(4),
+                dp(4),
+                dp(4),
+                dp(4)
+        );
+
+        tv.setLayoutParams(params);
+
+        return tv;
+    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+
         super.onCreate(savedInstanceState);
 
-        buildUI();
-        loadMarketData();
-    }
-
-    private void buildUI() {
-
         root = new LinearLayout(this);
-        root.setOrientation(LinearLayout.VERTICAL);
-        root.setPadding(24, 35, 24, 25);
-        root.setBackgroundColor(Color.rgb(12, 18, 30));
+        root.setOrientation(
+                LinearLayout.VERTICAL
+        );
 
-        ScrollView scroll = new ScrollView(this);
-        scroll.addView(root);
+        root.setPadding(
+                dp(12),
+                dp(18),
+                dp(12),
+                dp(12)
+        );
 
-        TextView title = text(
-                "MARKET AI",
-                30,
-                Color.WHITE,
-                Gravity.CENTER
+        root.setBackgroundColor(
+                Color.rgb(8, 12, 18)
+        );
+
+        TextView title =
+                makeText("MARKET AI", 28, true);
+
+        title.setPadding(
+                0,
+                dp(5),
+                0,
+                dp(18)
         );
 
         root.addView(title);
 
-        TextView subtitle = text(
-                "BTC  •  GOLD\nMarket Analysis Engine",
-                20,
-                Color.LTGRAY,
-                Gravity.CENTER
+        LinearLayout assets =
+                new LinearLayout(this);
+
+        assets.setOrientation(
+                LinearLayout.HORIZONTAL
         );
 
-        root.addView(subtitle);
+        btcCard =
+                makeCard("₿ BTC", "Loading...");
 
-        LinearLayout assets = new LinearLayout(this);
-        assets.setOrientation(LinearLayout.HORIZONTAL);
+        goldCard =
+                makeCard("GOLD", "Loading...");
 
-        btcPrice = card("₿ BTC\nLoading...");
-        goldPrice = card("GOLD\nLoading...");
-
-        assets.addView(btcPrice,
-                new LinearLayout.LayoutParams(0, 180, 1));
-
-        assets.addView(goldPrice,
-                new LinearLayout.LayoutParams(0, 180, 1));
+        assets.addView(btcCard);
+        assets.addView(goldCard);
 
         root.addView(assets);
 
-        TextView heading = text(
-                "\nMARKET ANALYSIS",
-                22,
-                Color.WHITE,
-                Gravity.LEFT
+        TextView heading =
+                makeText(
+                        "MARKET ANALYSIS",
+                        20,
+                        true
+                );
+
+        heading.setGravity(
+                Gravity.CENTER_VERTICAL
+        );
+
+        heading.setPadding(
+                dp(5),
+                dp(22),
+                dp(5),
+                dp(8)
         );
 
         root.addView(heading);
 
-        LinearLayout analysis = new LinearLayout(this);
-        analysis.setOrientation(LinearLayout.VERTICAL);
+        LinearLayout row1 =
+                new LinearLayout(this);
 
-        supportText = card("SUPPORT\nCalculating...");
-        resistanceText = card("RESISTANCE\nCalculating...");
-        trendText = card("TREND\nWaiting...");
-        volumeText = card("VOLUME\nWaiting...");
-
-        analysis.addView(supportText);
-        analysis.addView(resistanceText);
-        analysis.addView(trendText);
-        analysis.addView(volumeText);
-
-        root.addView(analysis);
-
-        TextView chart = text(
-                "\nPRICE DATA\n\nHistorical + Live Market Data\n\n" +
-                "BTC and Gold analysis engine",
-                20,
-                Color.WHITE,
-                Gravity.CENTER
+        row1.setOrientation(
+                LinearLayout.HORIZONTAL
         );
 
-        chart.setPadding(10, 50, 10, 50);
-        root.addView(chart);
-
-        Button analyse = new Button(this);
-        analyse.setText("🔍  RUN FULL ANALYSIS");
-        analyse.setTextSize(18);
-
-        analyse.setOnClickListener(v -> loadMarketData());
-
-        root.addView(analyse);
-
-        statusText = text(
-                "\nENGINE STATUS: READY\nConnecting to market data...",
-                16,
-                Color.LTGRAY,
-                Gravity.CENTER
-        );
-
-        root.addView(statusText);
-    }
-
-    private TextView text(
-            String value,
-            float size,
-            int color,
-            int gravity
-    ) {
-        TextView t = new TextView(this);
-
-        t.setText(value);
-        t.setTextSize(size);
-        t.setTextColor(color);
-        t.setGravity(gravity);
-        t.setPadding(10, 15, 10, 15);
-
-        return t;
-    }
-
-    private TextView card(String value) {
-
-        TextView t = text(
-                value,
-                18,
-                Color.WHITE,
-                Gravity.CENTER
-        );
-
-        t.setBackgroundColor(Color.rgb(30, 43, 65));
-        t.setPadding(15, 35, 15, 35);
-
-        LinearLayout.LayoutParams p =
-                new LinearLayout.LayoutParams(
-                        -1,
-                        170
+        supportCard =
+                makeCard(
+                        "SUPPORT",
+                        "Calculating..."
                 );
 
-        p.setMargins(5, 8, 5, 8);
+        resistanceCard =
+                makeCard(
+                        "RESISTANCE",
+                        "Calculating..."
+                );
 
-        t.setLayoutParams(p);
+        row1.addView(supportCard);
+        row1.addView(resistanceCard);
 
-        return t;
+        root.addView(row1);
+
+        LinearLayout row2 =
+                new LinearLayout(this);
+
+        row2.setOrientation(
+                LinearLayout.HORIZONTAL
+        );
+
+        trendCard =
+                makeCard(
+                        "TREND",
+                        "Loading..."
+                );
+
+        volumeCard =
+                makeCard(
+                        "VOLUME",
+                        "Loading..."
+                );
+
+        row2.addView(trendCard);
+        row2.addView(volumeCard);
+
+        root.addView(row2);
+
+        TextView chart =
+                makeText(
+                        "PRICE CHART\n\n"
+                        + "Historical + Live Market Data",
+                        17,
+                        true
+                );
+
+        chart.setBackgroundColor(
+                Color.rgb(17, 23, 31)
+        );
+
+        LinearLayout.LayoutParams chartParams =
+                new LinearLayout.LayoutParams(
+                        LinearLayout.LayoutParams.MATCH_PARENT,
+                        dp(210)
+                );
+
+        chartParams.setMargins(
+                0,
+                dp(15),
+                0,
+                dp(15)
+        );
+
+        chart.setLayoutParams(chartParams);
+
+        root.addView(chart);
+
+        TextView button =
+                makeText(
+                        "🔍  RUN FULL ANALYSIS",
+                        17,
+                        true
+                );
+
+        button.setBackgroundColor(
+                Color.rgb(0, 150, 80)
+        );
+
+        button.setOnClickListener(
+                new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        loadMarketData();
+                    }
+                }
+        );
+
+        root.addView(button);
+
+        status =
+                makeText(
+                        "ENGINE STATUS: READY\n"
+                        + "Live data engine: READY",
+                        14,
+                        false
+                );
+
+        status.setPadding(
+                0,
+                dp(18),
+                0,
+                0
+        );
+
+        root.addView(status);
+
+        setContentView(root);
+
+        loadMarketData();
     }
 
     private void loadMarketData() {
 
-        statusText.setText(
-                "ENGINE STATUS: RUNNING\nFetching live market data..."
+        status.setText(
+                "ENGINE STATUS: RUNNING\n"
+                + "Downloading market data..."
         );
 
-        executor.execute(() -> {
+        executor.execute(
+                new Runnable() {
+                    @Override
+                    public void run() {
 
-            try {
+                        try {
 
-                MarketData btc =
-                        getMarketData("BTC-USD");
+                            String btc =
+                                    getMarketData("BTC-USD");
 
-                MarketData gold =
-                        getMarketData("GC%3DF");
+                            String gold =
+                                    getMarketData("GC=F");
 
-                runOnUiThread(() -> {
+                            final String btcResult =
+                                    analyze(btc);
 
-                    if (btc != null) {
+                            final String goldResult =
+                                    analyze(gold);
 
-                        btcPrice.setText(
-                                "₿ BTC\n$" +
-                                format(btc.price)
-                        );
+                            handler.post(
+                                    new Runnable() {
+                                        @Override
+                                        public void run() {
 
-                        supportText.setText(
-                                "SUPPORT\n$" +
-                                format(btc.support)
-                        );
+                                            updateBTC(
+                                                    btcResult
+                                            );
 
-                        resistanceText.setText(
-                                "RESISTANCE\n$" +
-                                format(btc.resistance)
-                        );
+                                            updateGold(
+                                                    goldResult
+                                            );
 
-                        trendText.setText(
-                                "TREND\n" + btc.trend
-                        );
+                                            status.setText(
+                                                    "ENGINE STATUS: READY\n"
+                                                    + "Live analysis completed"
+                                            );
+                                        }
+                                    }
+                            );
 
-                        volumeText.setText(
-                                "VOLUME\n" +
-                                formatVolume(btc.volume)
-                        );
+                        } catch (Exception e) {
+
+                            handler.post(
+                                    new Runnable() {
+                                        @Override
+                                        public void run() {
+
+                                            status.setText(
+                                                    "ENGINE STATUS: ERROR\n"
+                                                    + "Could not load market data"
+                                            );
+                                        }
+                                    }
+                            );
+                        }
                     }
-
-                    if (gold != null) {
-
-                        goldPrice.setText(
-                                "GOLD\n$" +
-                                format(gold.price)
-                        );
-                    }
-
-                    statusText.setText(
-                            "ENGINE STATUS: READY\n" +
-                            "Live market data connected"
-                    );
-                });
-
-            } catch (Exception e) {
-
-                runOnUiThread(() ->
-                        statusText.setText(
-                                "ENGINE STATUS: ERROR\n" +
-                                "Could not load market data"
-                        )
-                );
-            }
-        });
+                }
+        );
     }
 
-    private MarketData getMarketData(String symbol)
-            throws Exception {
+    private String getMarketData(
+            String symbol
+    ) throws Exception {
 
-        long now = System.currentTimeMillis() / 1000;
-        long weekAgo = now - (7 * 24 * 60 * 60);
+        String encoded =
+                symbol.replace("=", "%3D");
 
-        String api =
+        String urlString =
                 "https://query1.finance.yahoo.com/v8/finance/chart/"
-                        + symbol
-                        + "?period1="
-                        + weekAgo
-                        + "&period2="
-                        + now
-                        + "&interval=1h";
+                + encoded
+                + "?range=6mo&interval=1d";
 
-        URL url = new URL(api);
+        URL url =
+                new URL(urlString);
 
         HttpURLConnection connection =
-                (HttpURLConnection) url.openConnection();
+                (HttpURLConnection)
+                        url.openConnection();
 
         connection.setRequestMethod("GET");
+
         connection.setConnectTimeout(10000);
         connection.setReadTimeout(10000);
 
@@ -277,7 +393,8 @@ public class MainActivity extends AppCompatActivity {
                         )
                 );
 
-        StringBuilder response = new StringBuilder();
+        StringBuilder response =
+                new StringBuilder();
 
         String line;
 
@@ -287,221 +404,232 @@ public class MainActivity extends AppCompatActivity {
 
         reader.close();
 
-        JSONObject json =
-                new JSONObject(response.toString());
+        connection.disconnect();
+
+        return response.toString();
+    }
+
+    private String analyze(
+            String json
+    ) throws Exception {
+
+        JSONObject root =
+                new JSONObject(json);
+
+        JSONObject chart =
+                root.getJSONObject("chart");
+
+        JSONArray results =
+                chart.getJSONArray("result");
 
         JSONObject result =
-                json.getJSONObject("chart")
-                        .getJSONArray("result")
-                        .getJSONObject(0);
+                results.getJSONObject(0);
 
         JSONObject indicators =
                 result.getJSONObject("indicators");
 
         JSONArray quote =
                 indicators
-                        .getJSONArray("quote")
-                        .getJSONObject(0)
-                        .getJSONArray("close");
+                        .getJSONArray("quote");
 
-        JSONArray volumes =
-                indicators
-                        .getJSONArray("quote")
-                        .getJSONObject(0)
-                        .getJSONArray("volume");
+        JSONObject q =
+                quote.getJSONObject(0);
 
-        List<Double> prices =
-                new ArrayList<>();
+        JSONArray close =
+                q.getJSONArray("close");
 
-        List<Double> volumeList =
-                new ArrayList<>();
-
-        for (int i = 0; i < quote.length(); i++) {
-
-            if (!quote.isNull(i)) {
-                prices.add(quote.getDouble(i));
-            }
-
-            if (!volumes.isNull(i)) {
-                volumeList.add(
-                        volumes.getDouble(i)
-                );
-            }
-        }
-
-        if (prices.size() < 5) {
-            return null;
-        }
-
-        double current =
-                prices.get(prices.size() - 1);
-
-        double support =
-                findSupport(prices);
-
-        double resistance =
-                findResistance(prices);
-
-        String trend =
-                calculateTrend(prices);
-
-        double averageVolume =
-                average(volumeList);
-
-        MarketData data = new MarketData();
-
-        data.price = current;
-        data.support = support;
-        data.resistance = resistance;
-        data.trend = trend;
-        data.volume = averageVolume;
-
-        return data;
-    }
-
-    private double findSupport(List<Double> prices) {
-
-        int start =
-                Math.max(0, prices.size() - 50);
+        JSONArray volume =
+                q.optJSONArray("volume");
 
         double lowest =
                 Double.MAX_VALUE;
 
-        for (int i = start; i < prices.size(); i++) {
-
-            if (prices.get(i) < lowest) {
-                lowest = prices.get(i);
-            }
-        }
-
-        return lowest;
-    }
-
-    private double findResistance(List<Double> prices) {
-
-        int start =
-                Math.max(0, prices.size() - 50);
-
         double highest =
-                Double.MIN_VALUE;
+                -Double.MAX_VALUE;
 
-        for (int i = start; i < prices.size(); i++) {
+        double sumVolume = 0;
 
-            if (prices.get(i) > highest) {
-                highest = prices.get(i);
+        int count = 0;
+
+        for (int i = 0;
+             i < close.length();
+             i++) {
+
+            if (close.isNull(i)) {
+                continue;
+            }
+
+            double price =
+                    close.getDouble(i);
+
+            if (price < lowest) {
+                lowest = price;
+            }
+
+            if (price > highest) {
+                highest = price;
+            }
+
+            if (volume != null
+                    && !volume.isNull(i)) {
+
+                sumVolume +=
+                        volume.getDouble(i);
+            }
+
+            count++;
+        }
+
+        double averageVolume =
+                count > 0
+                        ? sumVolume / count
+                        : 0;
+
+        double last =
+                close.getDouble(
+                        close.length() - 1
+                );
+
+        String trend =
+                "NEUTRAL";
+
+        if (close.length() >= 20) {
+
+            double recentSum = 0;
+            double oldSum = 0;
+
+            int start =
+                    Math.max(
+                            0,
+                            close.length() - 20
+                    );
+
+            for (int i = start;
+                 i < close.length();
+                 i++) {
+
+                if (!close.isNull(i)) {
+                    recentSum +=
+                            close.getDouble(i);
+                }
+            }
+
+            int recentCount =
+                    close.length() - start;
+
+            double sma20 =
+                    recentSum /
+                    Math.max(
+                            recentCount,
+                            1
+                    );
+
+            int oldStart =
+                    Math.max(
+                            0,
+                            close.length() - 50
+                    );
+
+            int oldEnd =
+                    Math.max(
+                            0,
+                            close.length() - 20
+                    );
+
+            for (int i = oldStart;
+                 i < oldEnd;
+                 i++) {
+
+                if (!close.isNull(i)) {
+                    oldSum +=
+                            close.getDouble(i);
+                }
+            }
+
+            int oldCount =
+                    oldEnd - oldStart;
+
+            if (oldCount > 0) {
+
+                double smaOld =
+                        oldSum / oldCount;
+
+                if (sma20 > smaOld) {
+                    trend = "UP";
+                } else if (sma20 < smaOld) {
+                    trend = "DOWN";
+                }
             }
         }
-
-        return highest;
-    }
-
-    private String calculateTrend(List<Double> prices) {
-
-        int shortPeriod =
-                Math.min(20, prices.size());
-
-        int longPeriod =
-                Math.min(50, prices.size());
-
-        double shortAverage = 0;
-        double longAverage = 0;
-
-        for (int i =
-             prices.size() - shortPeriod;
-             i < prices.size();
-             i++) {
-
-            shortAverage += prices.get(i);
-        }
-
-        for (int i =
-             prices.size() - longPeriod;
-             i < prices.size();
-             i++) {
-
-            longAverage += prices.get(i);
-        }
-
-        shortAverage /= shortPeriod;
-        longAverage /= longPeriod;
-
-        if (shortAverage > longAverage) {
-            return "BULLISH";
-        }
-
-        if (shortAverage < longAverage) {
-            return "BEARISH";
-        }
-
-        return "SIDEWAYS";
-    }
-
-    private double average(List<Double> values) {
-
-        if (values.isEmpty()) {
-            return 0;
-        }
-
-        double total = 0;
-
-        for (double value : values) {
-            total += value;
-        }
-
-        return total / values.size();
-    }
-
-    private String format(double value) {
 
         return String.format(
-                Locale.US,
-                "%,.2f",
-                value
+                "%.2f|%.2f|%.2f|%s|%.0f",
+                last,
+                lowest,
+                highest,
+                trend,
+                averageVolume
         );
     }
 
-    private String formatVolume(double value) {
+    private void updateBTC(
+            String result
+    ) {
 
-        if (value >= 1_000_000_000) {
-            return String.format(
-                    Locale.US,
-                    "%.2f B",
-                    value / 1_000_000_000
-            );
+        String[] data =
+                result.split("\\|");
+
+        if (data.length < 5) {
+            return;
         }
 
-        if (value >= 1_000_000) {
-            return String.format(
-                    Locale.US,
-                    "%.2f M",
-                    value / 1_000_000
-            );
-        }
+        btcCard.setText(
+                "₿ BTC\n$ "
+                + data[0]
+        );
 
-        if (value >= 1_000) {
-            return String.format(
-                    Locale.US,
-                    "%.2f K",
-                    value / 1_000
-            );
-        }
+        supportCard.setText(
+                "SUPPORT\n"
+                + data[1]
+        );
 
-        return format(value);
+        resistanceCard.setText(
+                "RESISTANCE\n"
+                + data[2]
+        );
+
+        trendCard.setText(
+                "TREND\n"
+                + data[3]
+        );
+
+        volumeCard.setText(
+                "VOLUME\n"
+                + data[4]
+        );
     }
 
-    static class MarketData {
+    private void updateGold(
+            String result
+    ) {
 
-        double price;
-        double support;
-        double resistance;
-        double volume;
-        String trend;
+        String[] data =
+                result.split("\\|");
+
+        if (data.length < 5) {
+            return;
+        }
+
+        goldCard.setText(
+                "GOLD FUTURES\n$ "
+                + data[0]
+        );
     }
 
     @Override
     protected void onDestroy() {
 
-        executor.shutdown();
+        executor.shutdownNow();
 
         super.onDestroy();
     }
