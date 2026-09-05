@@ -76,11 +76,6 @@ public class ProbabilityEngine {
             return defaultResult();
         }
 
-        /*
-         * Use only the common portion of the
-         * three OHLC lists.
-         */
-
         List<Double> p =
                 new ArrayList<>(
                         prices.subList(
@@ -105,11 +100,6 @@ public class ProbabilityEngine {
                         )
                 );
 
-        /*
-         * Keep the most recent 80% as validation.
-         * Older data is used for historical matching.
-         */
-
         int trainingEnd =
                 (int) (size * 0.80);
 
@@ -130,13 +120,6 @@ public class ProbabilityEngine {
 
         int matchedSamples = 0;
 
-        /*
-         * Evaluate historical situations.
-         *
-         * Each historical candle is compared with
-         * the current market's technical state.
-         */
-
         TechnicalAnalyzer.TechnicalResult currentTechnical =
                 TechnicalAnalyzer.analyze(
                         p,
@@ -148,6 +131,10 @@ public class ProbabilityEngine {
                 p.get(
                         p.size() - 1
                 );
+
+        // =====================================================
+        // STRICT HISTORICAL MATCH
+        // =====================================================
 
         for (int i = 30;
              i < trainingEnd - 5;
@@ -184,26 +171,20 @@ public class ProbabilityEngine {
                             historicalLows
                     );
 
+            double historicalPrice =
+                    historicalPrices.get(
+                            historicalPrices.size() - 1
+                    );
+
             double distance =
                     calculateTechnicalDistance(
                             currentTechnical,
                             historicalTechnical,
                             currentPrice,
-                            historicalPrices.get(
-                                    historicalPrices.size() - 1
-                            )
+                            historicalPrice
                     );
 
-            /*
-             * Strict historical match.
-             */
-
             if (distance <= 1.0) {
-
-                double oldPrice =
-                        historicalPrices.get(
-                                historicalPrices.size() - 1
-                        );
 
                 double futurePrice =
                         p.get(i + 5);
@@ -211,9 +192,9 @@ public class ProbabilityEngine {
                 double movement =
                         (
                                 futurePrice
-                                        - oldPrice
+                                        - historicalPrice
                         )
-                        / oldPrice
+                        / historicalPrice
                         * 100.0;
 
                 if (movement >= 1.0) {
@@ -233,10 +214,9 @@ public class ProbabilityEngine {
             }
         }
 
-        /*
-         * If strict matching is too small,
-         * use a wider historical distance.
-         */
+        // =====================================================
+        // WIDE MATCH IF TOO FEW SAMPLES
+        // =====================================================
 
         if (matchedSamples < 8) {
 
@@ -281,22 +261,20 @@ public class ProbabilityEngine {
                                 historicalLows
                         );
 
+                double historicalPrice =
+                        historicalPrices.get(
+                                historicalPrices.size() - 1
+                        );
+
                 double distance =
                         calculateTechnicalDistance(
                                 currentTechnical,
                                 historicalTechnical,
                                 currentPrice,
-                                historicalPrices.get(
-                                        historicalPrices.size() - 1
-                                )
+                                historicalPrice
                         );
 
                 if (distance <= 2.0) {
-
-                    double oldPrice =
-                            historicalPrices.get(
-                                    historicalPrices.size() - 1
-                            );
 
                     double futurePrice =
                             p.get(i + 5);
@@ -304,9 +282,9 @@ public class ProbabilityEngine {
                     double movement =
                             (
                                     futurePrice
-                                            - oldPrice
+                                            - historicalPrice
                             )
-                            / oldPrice
+                            / historicalPrice
                             * 100.0;
 
                     if (movement >= 1.0) {
@@ -327,12 +305,9 @@ public class ProbabilityEngine {
             }
         }
 
-        /*
-         * Validation stage.
-         *
-         * This gives us a basic out-of-sample
-         * quality check.
-         */
+        // =====================================================
+        // VALIDATION
+        // =====================================================
 
         int validationSamples = 0;
         int validationCorrect = 0;
@@ -411,6 +386,7 @@ public class ProbabilityEngine {
                 }
 
                 if (predicted.equals(actual)) {
+
                     validationCorrect++;
                 }
 
@@ -418,12 +394,17 @@ public class ProbabilityEngine {
             }
         }
 
+        // =====================================================
+        // PROBABILITIES
+        // =====================================================
+
         double total =
                 buyScore
                         + sellScore
                         + neutralScore;
 
         if (total <= 0) {
+
             return defaultResult();
         }
 
@@ -480,7 +461,7 @@ public class ProbabilityEngine {
     }
 
     // =========================================================
-    // TECHNICAL DISTANCE
+    // DISTANCE
     // =========================================================
 
     private static double calculateTechnicalDistance(
@@ -491,10 +472,6 @@ public class ProbabilityEngine {
     ) {
 
         double distance = 0.0;
-
-        /*
-         * RSI difference
-         */
 
         double rsiDifference =
                 Math.abs(
@@ -507,25 +484,19 @@ public class ProbabilityEngine {
             distance += 1.0;
         }
 
-        /*
-         * EMA relationship
-         */
-
         boolean currentAboveEMA =
-                currentPrice > current.ema20;
+                currentPrice >
+                        current.ema20;
 
         boolean historicalAboveEMA =
-                historicalPrice > historical.ema20;
+                historicalPrice >
+                        historical.ema20;
 
         if (currentAboveEMA !=
                 historicalAboveEMA) {
 
             distance += 1.0;
         }
-
-        /*
-         * MACD direction
-         */
 
         boolean currentMACDPositive =
                 current.macd > 0;
@@ -539,16 +510,12 @@ public class ProbabilityEngine {
             distance += 1.0;
         }
 
-        /*
-         * ATR regime
-         */
-
         if (current.atr > 0 &&
                 historical.atr > 0) {
 
             double atrRatio =
-                    current.atr
-                            / historical.atr;
+                    current.atr /
+                            historical.atr;
 
             if (atrRatio > 1.75 ||
                     atrRatio < 0.57) {
@@ -561,7 +528,7 @@ public class ProbabilityEngine {
     }
 
     // =========================================================
-    // TECHNICAL DIRECTION
+    // DIRECTION
     // =========================================================
 
     private static String technicalDirection(
@@ -653,12 +620,10 @@ public class ProbabilityEngine {
         if (validationSamples > 0) {
 
             validationAccuracy =
-                    (
-                            validationCorrect
-                                    / (double)
-                                    validationSamples
-                    )
-                    * 100.0;
+                    validationCorrect
+                            / (double)
+                            validationSamples
+                            * 100.0;
         }
 
         if (matchedSamples >= 20 &&
@@ -705,4 +670,4 @@ public class ProbabilityEngine {
                 value * 100.0
         ) / 100.0;
     }
-                            }
+                    }
