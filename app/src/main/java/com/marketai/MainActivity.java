@@ -651,7 +651,9 @@ public class MainActivity extends Activity {
                 (HttpURLConnection)
                         url.openConnection();
 
-        connection.setRequestMethod("GET");
+        connection.setRequestMethod(
+                "GET"
+        );
 
         connection.setRequestProperty(
                 "User-Agent",
@@ -712,7 +714,9 @@ public class MainActivity extends Activity {
                 new JSONObject(json);
 
         JSONArray prices =
-                root.getJSONArray("prices");
+                root.getJSONArray(
+                        "prices"
+                );
 
         JSONArray volumes =
                 root.getJSONArray(
@@ -817,7 +821,7 @@ public class MainActivity extends Activity {
                         volumeList
                 );
 
-        TechnicalAnalyzer.TechnicalResult technical =
+        TechnicalResult technical =
                 TechnicalAnalyzer.analyze(
                         priceList,
                         highList,
@@ -832,7 +836,9 @@ public class MainActivity extends Activity {
                 );
 
         String signal =
-                calculateSignal(score);
+                calculateSignal(
+                        score
+                );
 
         BTCResult result =
                 new BTCResult();
@@ -994,10 +1000,16 @@ public class MainActivity extends Activity {
                 prices.size();
 
         int recentPeriod =
-                Math.min(20, size);
+                Math.min(
+                        20,
+                        size
+                );
 
         int previousPeriod =
-                Math.min(50, size);
+                Math.min(
+                        50,
+                        size
+                );
 
         double recentSum = 0;
         double previousSum = 0;
@@ -1038,6 +1050,7 @@ public class MainActivity extends Activity {
                 previousStart;
 
         if (count <= 0) {
+
             return "NEUTRAL";
         }
 
@@ -1089,6 +1102,7 @@ public class MainActivity extends Activity {
         }
 
         if (count == 0) {
+
             return 0;
         }
 
@@ -1098,7 +1112,7 @@ public class MainActivity extends Activity {
     private int calculateTechnicalScore(
             double currentPrice,
             String trend,
-            TechnicalAnalyzer.TechnicalResult technical
+            TechnicalResult technical
     ) {
 
         int score = 0;
@@ -1179,10 +1193,14 @@ public class MainActivity extends Activity {
                 new JSONObject(json);
 
         JSONObject chart =
-                root.getJSONObject("chart");
+                root.getJSONObject(
+                        "chart"
+                );
 
         JSONArray results =
-                chart.getJSONArray("result");
+                chart.getJSONArray(
+                        "result"
+                );
 
         JSONObject result =
                 results.getJSONObject(0);
@@ -1193,7 +1211,9 @@ public class MainActivity extends Activity {
                 );
 
         JSONArray quote =
-                indicators.getJSONArray("quote");
+                indicators.getJSONArray(
+                        "quote"
+                );
 
         JSONObject q =
                 quote.getJSONObject(0);
@@ -1246,7 +1266,8 @@ public class MainActivity extends Activity {
             return String.format(
                     Locale.US,
                     "%.2fB",
-                    value / 1000000000.0
+                    value /
+                    1000000000.0
             );
 
         } else if (value >= 1000000) {
@@ -1254,7 +1275,8 @@ public class MainActivity extends Activity {
             return String.format(
                     Locale.US,
                     "%.2fM",
-                    value / 1000000.0
+                    value /
+                    1000000.0
             );
 
         } else if (value >= 1000) {
@@ -1262,7 +1284,8 @@ public class MainActivity extends Activity {
             return String.format(
                     Locale.US,
                     "%.2fK",
-                    value / 1000.0
+                    value /
+                    1000.0
             );
         }
 
@@ -1298,7 +1321,8 @@ public class MainActivity extends Activity {
         double price;
     }
 
-    private class PriceChart extends View {
+    private class PriceChart
+            extends View {
 
         private final Paint linePaint =
                 new Paint(
@@ -1440,10 +1464,12 @@ public class MainActivity extends Activity {
                     prices) {
 
                 if (value < min) {
+
                     min = value;
                 }
 
                 if (value > max) {
+
                     max = value;
                 }
             }
@@ -1452,6 +1478,7 @@ public class MainActivity extends Activity {
                     max - min;
 
             if (range <= 0) {
+
                 range = 1;
             }
 
@@ -1540,4 +1567,4 @@ public class MainActivity extends Activity {
 
         super.onDestroy();
     }
-            }
+                                }
