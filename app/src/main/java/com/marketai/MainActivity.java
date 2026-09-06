@@ -32,11 +32,35 @@ public class MainActivity extends Activity {
 
     private boolean isRefreshing = false;
 
+    // =========================================================
+    // DAILY BTC DATA
+    // =========================================================
+
     private final List<Double> btcOpen = new ArrayList<>();
     private final List<Double> btcHigh = new ArrayList<>();
     private final List<Double> btcLow = new ArrayList<>();
     private final List<Double> btcPrices = new ArrayList<>();
     private final List<Double> btcVolume = new ArrayList<>();
+
+    // =========================================================
+    // 15 MINUTE BTC DATA
+    // =========================================================
+
+    private final List<Double> btc15Open = new ArrayList<>();
+    private final List<Double> btc15High = new ArrayList<>();
+    private final List<Double> btc15Low = new ArrayList<>();
+    private final List<Double> btc15Prices = new ArrayList<>();
+    private final List<Double> btc15Volume = new ArrayList<>();
+
+    // =========================================================
+    // 5 MINUTE BTC DATA
+    // =========================================================
+
+    private final List<Double> btc5Open = new ArrayList<>();
+    private final List<Double> btc5High = new ArrayList<>();
+    private final List<Double> btc5Low = new ArrayList<>();
+    private final List<Double> btc5Prices = new ArrayList<>();
+    private final List<Double> btc5Volume = new ArrayList<>();
 
 
     @Override
@@ -106,7 +130,6 @@ public class MainActivity extends Activity {
                                 float distance =
                                         endY - startY;
 
-
                                 if (
                                         scrollView.getScrollY() == 0
                                                 &&
@@ -148,7 +171,7 @@ public class MainActivity extends Activity {
 
 
     // =========================================================
-    // REFRESH BUTTON ACTION
+    // REFRESH
     // =========================================================
 
     private void refreshMarketData() {
@@ -166,7 +189,7 @@ public class MainActivity extends Activity {
         );
 
         addText(
-                "Refreshing market data...",
+                "Refreshing BTC 1D / 15M / 5M market data...",
                 17,
                 Color.LTGRAY
         );
@@ -178,7 +201,7 @@ public class MainActivity extends Activity {
 
 
     // =========================================================
-    // LOAD MARKET DATA
+    // LOAD ALL MARKET DATA
     // =========================================================
 
     private void loadMarketData() {
@@ -189,14 +212,44 @@ public class MainActivity extends Activity {
                     try {
 
                         // =================================================
-                        // FETCH BTC
+                        // BTC DAILY
                         // =================================================
 
                         fetchBTC();
 
 
                         // =================================================
-                        // FETCH GOLD
+                        // BTC 15 MINUTE
+                        // =================================================
+
+                        fetchIntradayBTC(
+                                "15m",
+                                1000,
+                                btc15Open,
+                                btc15High,
+                                btc15Low,
+                                btc15Prices,
+                                btc15Volume
+                        );
+
+
+                        // =================================================
+                        // BTC 5 MINUTE
+                        // =================================================
+
+                        fetchIntradayBTC(
+                                "5m",
+                                1000,
+                                btc5Open,
+                                btc5High,
+                                btc5Low,
+                                btc5Prices,
+                                btc5Volume
+                        );
+
+
+                        // =================================================
+                        // GOLD
                         // =================================================
 
                         double goldPrice =
@@ -204,7 +257,7 @@ public class MainActivity extends Activity {
 
 
                         // =================================================
-                        // TECHNICAL
+                        // DAILY TECHNICAL
                         // =================================================
 
                         TechnicalAnalyzer.TechnicalResult technical =
@@ -217,7 +270,7 @@ public class MainActivity extends Activity {
 
 
                         // =================================================
-                        // PROBABILITY
+                        // DAILY PROBABILITY
                         // =================================================
 
                         ProbabilityEngine.ProbabilityResult probability =
@@ -230,7 +283,7 @@ public class MainActivity extends Activity {
 
 
                         // =================================================
-                        // LEARNING
+                        // DAILY LEARNING
                         // =================================================
 
                         LearningEngine.LearningResult learning =
@@ -278,6 +331,34 @@ public class MainActivity extends Activity {
                                         btcHigh,
                                         btcLow,
                                         btcVolume
+                                );
+
+
+                        // =================================================
+                        // 15M MOVE DETECTOR
+                        // =================================================
+
+                        MoveDetector.MoveResult move15 =
+                                MoveDetector.analyze(
+                                        btc15Prices,
+                                        btc15High,
+                                        btc15Low,
+                                        btc15Volume,
+                                        15
+                                );
+
+
+                        // =================================================
+                        // 5M MOVE DETECTOR
+                        // =================================================
+
+                        MoveDetector.MoveResult move5 =
+                                MoveDetector.analyze(
+                                        btc5Prices,
+                                        btc5High,
+                                        btc5Low,
+                                        btc5Volume,
+                                        5
                                 );
 
 
@@ -334,7 +415,9 @@ public class MainActivity extends Activity {
                                             learning,
                                             combined,
                                             backtest,
-                                            combinedBacktest
+                                            combinedBacktest,
+                                            move15,
+                                            move5
                                     );
                                 }
                         );
@@ -366,18 +449,30 @@ public class MainActivity extends Activity {
     // =========================================================
 
     private void showCompleteScreen(
+
             double currentPrice,
             double goldPrice,
             double support,
             double resistance,
             String trend,
             double averageVolume,
+
             TechnicalAnalyzer.TechnicalResult technical,
+
             ProbabilityEngine.ProbabilityResult probability,
+
             LearningEngine.LearningResult learning,
+
             CombinedEngine.CombinedResult combined,
+
             BacktestEngine.BacktestResult backtest,
-            CombinedBacktestEngine.Result combinedBacktest
+
+            CombinedBacktestEngine.Result combinedBacktest,
+
+            MoveDetector.MoveResult move15,
+
+            MoveDetector.MoveResult move5
+
     ) {
 
         container.removeAllViews();
@@ -458,12 +553,10 @@ public class MainActivity extends Activity {
                 "FINAL SIGNAL"
         );
 
-
         String finalSignal =
                 combined.direction;
 
 
-        // WAIT / NEUTRAL
         if (
                 "NEUTRAL".equals(
                         finalSignal
@@ -496,7 +589,7 @@ public class MainActivity extends Activity {
 
 
         addMetric(
-                "Calibrated Confidence",
+                "Confidence",
                 format(
                         combined.confidence
                 ) + "%"
@@ -541,7 +634,315 @@ public class MainActivity extends Activity {
 
 
         // =====================================================
-        // ENTRY / EXIT
+        // LARGE MOVE DETECTOR
+        // =====================================================
+
+        addSection(
+                "LARGE MOVE DETECTOR"
+        );
+
+
+        addText(
+                "Detects abnormal volatility / volume / compression conditions.",
+                12,
+                Color.GRAY
+        );
+
+
+        addSpace();
+
+
+        // =====================================================
+        // 15M MOVE
+        // =====================================================
+
+        addSection(
+                "15 MINUTE MOVE DETECTOR"
+        );
+
+
+        addMetric(
+                "Move Risk",
+                format(
+                        move15.moveRisk
+                ) + "%"
+        );
+
+
+        addMetric(
+                "Risk Level",
+                move15.riskLevel
+        );
+
+
+        addMetric(
+                "Expected Direction",
+                move15.direction
+        );
+
+
+        addMetric(
+                "Upside Probability",
+                format(
+                        move15.upsideProbability
+                ) + "%"
+        );
+
+
+        addMetric(
+                "Downside Probability",
+                format(
+                        move15.downsideProbability
+                ) + "%"
+        );
+
+
+        addMetric(
+                "Volatility Score",
+                format(
+                        move15.volatilityScore
+                )
+        );
+
+
+        addMetric(
+                "Volume Score",
+                format(
+                        move15.volumeScore
+                )
+        );
+
+
+        addMetric(
+                "Compression Score",
+                format(
+                        move15.compressionScore
+                )
+        );
+
+
+        addMetric(
+                "Momentum Score",
+                format(
+                        move15.momentumScore
+                )
+        );
+
+
+        addMetric(
+                "Volatility Expansion",
+                yesNo(
+                        move15.volatilityExpansion
+                )
+        );
+
+
+        addMetric(
+                "Volume Expansion",
+                yesNo(
+                        move15.volumeExpansion
+                )
+        );
+
+
+        addMetric(
+                "Volatility Compression",
+                yesNo(
+                        move15.volatilityCompression
+                )
+        );
+
+
+        addText(
+                "Evidence: " +
+                        move15.evidence,
+                12,
+                Color.GRAY
+        );
+
+
+        addSpace();
+
+
+        // =====================================================
+        // 5M MOVE
+        // =====================================================
+
+        addSection(
+                "5 MINUTE MOVE DETECTOR"
+        );
+
+
+        addMetric(
+                "Move Risk",
+                format(
+                        move5.moveRisk
+                ) + "%"
+        );
+
+
+        addMetric(
+                "Risk Level",
+                move5.riskLevel
+        );
+
+
+        addMetric(
+                "Expected Direction",
+                move5.direction
+        );
+
+
+        addMetric(
+                "Upside Probability",
+                format(
+                        move5.upsideProbability
+                ) + "%"
+        );
+
+
+        addMetric(
+                "Downside Probability",
+                format(
+                        move5.downsideProbability
+                ) + "%"
+        );
+
+
+        addMetric(
+                "Volatility Score",
+                format(
+                        move5.volatilityScore
+                )
+        );
+
+
+        addMetric(
+                "Volume Score",
+                format(
+                        move5.volumeScore
+                )
+        );
+
+
+        addMetric(
+                "Compression Score",
+                format(
+                        move5.compressionScore
+                )
+        );
+
+
+        addMetric(
+                "Momentum Score",
+                format(
+                        move5.momentumScore
+                )
+        );
+
+
+        addMetric(
+                "Volatility Expansion",
+                yesNo(
+                        move5.volatilityExpansion
+                )
+        );
+
+
+        addMetric(
+                "Volume Expansion",
+                yesNo(
+                        move5.volumeExpansion
+                )
+        );
+
+
+        addMetric(
+                "Volatility Compression",
+                yesNo(
+                        move5.volatilityCompression
+                )
+        );
+
+
+        addText(
+                "Evidence: " +
+                        move5.evidence,
+                12,
+                Color.GRAY
+        );
+
+
+        addSpace();
+
+
+        // =====================================================
+        // MULTI-TIMEFRAME MOVE AGREEMENT
+        // =====================================================
+
+        addSection(
+                "MULTI-TIMEFRAME MOVE VIEW"
+        );
+
+
+        String moveAgreement =
+                getMoveAgreement(
+                        move5,
+                        move15
+                );
+
+
+        addBigSignal(
+                moveAgreement,
+                getMoveAgreementColor(
+                        moveAgreement
+                )
+        );
+
+
+        addMetric(
+                "5M Direction",
+                move5.direction
+        );
+
+
+        addMetric(
+                "15M Direction",
+                move15.direction
+        );
+
+
+        addMetric(
+                "5M Risk",
+                format(
+                        move5.moveRisk
+                ) + "%"
+        );
+
+
+        addMetric(
+                "15M Risk",
+                format(
+                        move15.moveRisk
+                ) + "%"
+        );
+
+
+        addText(
+                getMoveExplanation(
+                        move5,
+                        move15
+                ),
+                13,
+                Color.GRAY
+        );
+
+
+        addSpace();
+
+
+        // =====================================================
+        // TRADE REFERENCE
         // =====================================================
 
         addSection(
@@ -1307,28 +1708,221 @@ public class MainActivity extends Activity {
 
 
         // =====================================================
-        // INFORMATION
+        // DATA INFORMATION
         // =====================================================
 
         addText(
-                "Historical Data: ~2 Years BTC Daily Candles",
+                "BTC Daily Data: ~2 Years",
                 12,
                 Color.GRAY
         );
 
 
         addText(
-                "Combined Backtest uses the Technical + Probability + Learning engines.",
+                "BTC 15M Data: 1000 candles",
                 12,
                 Color.GRAY
         );
 
 
         addText(
-                "Historical backtests and model probabilities are research results and do not guarantee future results.",
+                "BTC 5M Data: 1000 candles",
                 12,
                 Color.GRAY
         );
+
+
+        addText(
+                "Move Detector identifies abnormal-move conditions; direction probabilities are estimates, not guarantees.",
+                12,
+                Color.GRAY
+        );
+
+
+        addText(
+                "Historical backtests and model probabilities do not guarantee future results.",
+                12,
+                Color.GRAY
+        );
+    }
+
+
+    // =========================================================
+    // MOVE AGREEMENT
+    // =========================================================
+
+    private String getMoveAgreement(
+            MoveDetector.MoveResult move5,
+            MoveDetector.MoveResult move15
+    ) {
+
+        if (
+                move5 == null ||
+                move15 == null
+        ) {
+            return "UNCERTAIN";
+        }
+
+
+        boolean highRisk =
+                move5.moveRisk >= 55.0
+                        ||
+                move15.moveRisk >= 55.0;
+
+
+        if (
+                move5.direction.equals("UP")
+                        &&
+                move15.direction.equals("UP")
+                        &&
+                highRisk
+        ) {
+
+            return "LARGE MOVE → UP";
+        }
+
+
+        if (
+                move5.direction.equals("DOWN")
+                        &&
+                move15.direction.equals("DOWN")
+                        &&
+                highRisk
+        ) {
+
+            return "LARGE MOVE → DOWN";
+        }
+
+
+        if (
+                move5.direction.equals("UP")
+                        &&
+                move15.direction.equals("UP")
+        ) {
+
+            return "UP BIAS";
+        }
+
+
+        if (
+                move5.direction.equals("DOWN")
+                        &&
+                move15.direction.equals("DOWN")
+        ) {
+
+            return "DOWN BIAS";
+        }
+
+
+        return "UNCERTAIN";
+    }
+
+
+    // =========================================================
+    // MOVE AGREEMENT COLOR
+    // =========================================================
+
+    private int getMoveAgreementColor(
+            String value
+    ) {
+
+        if (
+                value.contains("UP")
+        ) {
+            return Color.GREEN;
+        }
+
+
+        if (
+                value.contains("DOWN")
+        ) {
+            return Color.RED;
+        }
+
+
+        return Color.YELLOW;
+    }
+
+
+    // =========================================================
+    // MOVE EXPLANATION
+    // =========================================================
+
+    private String getMoveExplanation(
+            MoveDetector.MoveResult move5,
+            MoveDetector.MoveResult move15
+    ) {
+
+        if (
+                move5 == null ||
+                move15 == null
+        ) {
+
+            return "Move detector data unavailable.";
+        }
+
+
+        if (
+                move5.direction.equals("UP")
+                        &&
+                move15.direction.equals("UP")
+                        &&
+                (
+                        move5.moveRisk >= 55.0
+                                ||
+                        move15.moveRisk >= 55.0
+                )
+        ) {
+
+            return "Both short-term timeframes point UP while move-risk is elevated. This is an early-warning condition for a potentially larger upward move, not a guarantee.";
+        }
+
+
+        if (
+                move5.direction.equals("DOWN")
+                        &&
+                move15.direction.equals("DOWN")
+                        &&
+                (
+                        move5.moveRisk >= 55.0
+                                ||
+                        move15.moveRisk >= 55.0
+                )
+        ) {
+
+            return "Both short-term timeframes point DOWN while move-risk is elevated. This is an early-warning condition for a potentially larger downward move, not a guarantee.";
+        }
+
+
+        if (
+                move5.direction.equals(
+                        "UNCERTAIN"
+                )
+                ||
+                move15.direction.equals(
+                        "UNCERTAIN"
+                )
+        ) {
+
+            return "Short-term direction is not sufficiently aligned yet.";
+        }
+
+
+        return "5M and 15M signals are not strongly aligned. No large directional move is confirmed.";
+    }
+
+
+    // =========================================================
+    // YES / NO
+    // =========================================================
+
+    private String yesNo(
+            boolean value
+    ) {
+
+        return value
+                ? "YES"
+                : "NO";
     }
 
 
@@ -1437,7 +2031,7 @@ public class MainActivity extends Activity {
 
 
     // =========================================================
-    // BTC DATA
+    // BTC DAILY DATA
     // =========================================================
 
     private void fetchBTC()
@@ -1448,6 +2042,103 @@ public class MainActivity extends Activity {
                         + "?symbol=BTCUSDT"
                         + "&interval=1d"
                         + "&limit=730";
+
+
+        fetchCandleData(
+                urlString,
+                btcOpen,
+                btcHigh,
+                btcLow,
+                btcPrices,
+                btcVolume
+        );
+
+
+        if (
+                btcPrices.size() < 700
+        ) {
+
+            throw new Exception(
+                    "Not enough BTC daily data. Received: "
+                            +
+                    btcPrices.size()
+                            +
+                    " candles"
+            );
+        }
+    }
+
+
+    // =========================================================
+    // BTC INTRADAY DATA
+    // =========================================================
+
+    private void fetchIntradayBTC(
+            String interval,
+            int limit,
+
+            List<Double> openList,
+            List<Double> highList,
+            List<Double> lowList,
+            List<Double> closeList,
+            List<Double> volumeList
+
+    ) throws Exception {
+
+
+        String urlString =
+                "https://api.binance.com/api/v3/klines"
+                        + "?symbol=BTCUSDT"
+                        + "&interval="
+                        + interval
+                        + "&limit="
+                        + limit;
+
+
+        fetchCandleData(
+                urlString,
+                openList,
+                highList,
+                lowList,
+                closeList,
+                volumeList
+        );
+
+
+        if (
+                closeList.size() < 1000
+        ) {
+
+            throw new Exception(
+                    "Not enough BTC "
+                            +
+                    interval
+                            +
+                    " data. Received: "
+                            +
+                    closeList.size()
+                            +
+                    " candles"
+            );
+        }
+    }
+
+
+    // =========================================================
+    // GENERIC CANDLE FETCHER
+    // =========================================================
+
+    private void fetchCandleData(
+
+            String urlString,
+
+            List<Double> openList,
+            List<Double> highList,
+            List<Double> lowList,
+            List<Double> closeList,
+            List<Double> volumeList
+
+    ) throws Exception {
 
 
         URL url =
@@ -1473,6 +2164,12 @@ public class MainActivity extends Activity {
 
         connection.setReadTimeout(
                 15000
+        );
+
+
+        connection.setRequestProperty(
+                "User-Agent",
+                "MarketAI/1.0"
         );
 
 
@@ -1523,6 +2220,7 @@ public class MainActivity extends Activity {
 
 
         reader.close();
+
         input.close();
 
         connection.disconnect();
@@ -1534,11 +2232,11 @@ public class MainActivity extends Activity {
                 );
 
 
-        btcOpen.clear();
-        btcHigh.clear();
-        btcLow.clear();
-        btcPrices.clear();
-        btcVolume.clear();
+        openList.clear();
+        highList.clear();
+        lowList.clear();
+        closeList.clear();
+        volumeList.clear();
 
 
         for (
@@ -1583,25 +2281,15 @@ public class MainActivity extends Activity {
                     );
 
 
-            btcOpen.add(open);
-            btcHigh.add(high);
-            btcLow.add(low);
-            btcPrices.add(close);
-            btcVolume.add(volume);
-        }
+            openList.add(open);
 
+            highList.add(high);
 
-        if (
-                btcPrices.size() < 700
-        ) {
+            lowList.add(low);
 
-            throw new Exception(
-                    "Not enough BTC historical data. Received: "
-                            +
-                    btcPrices.size()
-                            +
-                    " candles"
-            );
+            closeList.add(close);
+
+            volumeList.add(volume);
         }
     }
 
@@ -1698,6 +2386,7 @@ public class MainActivity extends Activity {
 
 
         reader.close();
+
         input.close();
 
         connection.disconnect();
@@ -1888,6 +2577,7 @@ public class MainActivity extends Activity {
     ) {
 
         int bullish = 0;
+
         int bearish = 0;
 
 
@@ -1986,6 +2676,7 @@ public class MainActivity extends Activity {
     ) {
 
         int bullish = 0;
+
         int bearish = 0;
 
 
@@ -2218,7 +2909,7 @@ public class MainActivity extends Activity {
 
 
     // =========================================================
-    // BIG FINAL SIGNAL
+    // BIG SIGNAL
     // =========================================================
 
     private void addBigSignal(
@@ -2238,7 +2929,7 @@ public class MainActivity extends Activity {
 
 
         view.setTextSize(
-                40
+                32
         );
 
 
@@ -2462,4 +3153,4 @@ public class MainActivity extends Activity {
                 value
         );
     }
-                    }
+                            }
