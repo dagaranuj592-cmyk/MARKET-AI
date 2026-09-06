@@ -348,25 +348,25 @@ public class MainActivity extends Activity {
                     // =================================================
 
                     addSection(
-                            "BACKTEST"
+                            "BACKTEST V2"
                     );
 
                     addMetric(
-                            "Total Signals",
+                            "Total Trades",
                             String.valueOf(
                                     backtest.totalTrades
                             )
                     );
 
                     addMetric(
-                            "Correct Signals",
+                            "Correct Trades",
                             String.valueOf(
                                     backtest.correctTrades
                             )
                     );
 
                     addMetric(
-                            "Wrong Signals",
+                            "Wrong Trades",
                             String.valueOf(
                                     backtest.wrongTrades
                             )
@@ -442,7 +442,107 @@ public class MainActivity extends Activity {
                             ) + "%"
                     );
 
+                    // =================================================
+                    // V2 RISK METRICS
+                    // =================================================
+
                     addSpace();
+
+                    addSection(
+                            "V2 RISK ANALYSIS"
+                    );
+
+                    addMetric(
+                            "Stop Loss Trades",
+                            String.valueOf(
+                                    backtest.stopLossTrades
+                            )
+                    );
+
+                    addMetric(
+                            "Take Profit Trades",
+                            String.valueOf(
+                                    backtest.takeProfitTrades
+                            )
+                    );
+
+                    addMetric(
+                            "Time Exit Trades",
+                            String.valueOf(
+                                    backtest.timeExitTrades
+                            )
+                    );
+
+                    addMetric(
+                            "Profit Factor",
+                            format(
+                                    backtest.profitFactor
+                            )
+                    );
+
+                    addMetric(
+                            "Gross Profit",
+                            format(
+                                    backtest.grossProfit
+                            ) + "%"
+                    );
+
+                    addMetric(
+                            "Gross Loss",
+                            format(
+                                    backtest.grossLoss
+                            ) + "%"
+                    );
+
+                    addMetric(
+                            "Maximum Drawdown",
+                            format(
+                                    backtest.maxDrawdown
+                            ) + "%"
+                    );
+
+                    addMetric(
+                            "BUY Average Return",
+                            format(
+                                    backtest.buyAverageReturn
+                            ) + "%"
+                    );
+
+                    addMetric(
+                            "SELL Average Return",
+                            format(
+                                    backtest.sellAverageReturn
+                            ) + "%"
+                    );
+
+                    addMetric(
+                            "BUY Total Return",
+                            format(
+                                    backtest.buyTotalReturn
+                            ) + "%"
+                    );
+
+                    addMetric(
+                            "SELL Total Return",
+                            format(
+                                    backtest.sellTotalReturn
+                            ) + "%"
+                    );
+
+                    addMetric(
+                            "BTC Buy & Hold",
+                            format(
+                                    backtest.buyHoldReturn
+                            ) + "%"
+                    );
+
+                    addSpace();
+
+                    addText(
+                            "Backtest uses approximately 2 years of BTC daily historical data.",
+                            12,
+                            Color.GRAY
+                    );
 
                     addText(
                             "Backtest is a historical simulation. It does not guarantee future results.",
@@ -484,7 +584,7 @@ public class MainActivity extends Activity {
     }
 
     // =========================================================
-    // BTC DATA
+    // BTC DATA - 2 YEARS
     // =========================================================
 
     private void fetchBTC()
@@ -494,7 +594,7 @@ public class MainActivity extends Activity {
                 "https://api.binance.com/api/v3/klines"
                         + "?symbol=BTCUSDT"
                         + "&interval=1d"
-                        + "&limit=365";
+                        + "&limit=730";
 
         URL url =
                 new URL(urlString);
@@ -602,10 +702,14 @@ public class MainActivity extends Activity {
             btcVolume.add(volume);
         }
 
-        if (btcPrices.size() < 250) {
+        // Require approximately 2 years of data
+        if (btcPrices.size() < 700) {
 
             throw new Exception(
-                    "Not enough BTC historical data"
+                    "Not enough BTC historical data. "
+                            + "Received: "
+                            + btcPrices.size()
+                            + " candles"
             );
         }
     }
@@ -1120,4 +1224,4 @@ public class MainActivity extends Activity {
                 value
         );
     }
-                    }
+                        }
