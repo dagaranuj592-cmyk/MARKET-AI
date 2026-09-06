@@ -2,19 +2,33 @@ package com.marketai;
 
 import java.util.List;
 
-public class CombinedBacktestEngine {
+public class BacktestEngine {
 
-    private static final int MIN_HISTORY = 220;
-    private static final int FORWARD_DAYS = 5;
+    // =========================================================
+    // V3 SETTINGS
+    // =========================================================
 
-    private static final double COST = 0.30;
+    private static final int LOOKBACK = 220;
+    private static final int MAX_HOLD_DAYS = 5;
 
-    public static class Result {
+    private static final double MIN_STOP_PERCENT = 1.0;
+    private static final double REWARD_RISK_RATIO = 1.5;
 
-        public int totalSignals;
-        public int correctSignals;
-        public int wrongSignals;
-        public int neutralSignals;
+    // Approximate round-trip cost assumption.
+    private static final double FEE_PER_SIDE = 0.10;
+    private static final double SLIPPAGE_PER_SIDE = 0.05;
+
+
+    // =========================================================
+    // RESULT
+    // =========================================================
+
+    public static class BacktestResult {
+
+        public int totalTrades;
+        public int correctTrades;
+        public int wrongTrades;
+        public int neutralTrades;
 
         public int buySignals;
         public int sellSignals;
@@ -29,9 +43,14 @@ public class CombinedBacktestEngine {
         public double averageReturn;
         public double totalReturn;
 
+        public int stopLossTrades;
+        public int takeProfitTrades;
+        public int timeExitTrades;
+
         public double profitFactor;
         public double grossProfit;
         public double grossLoss;
+
         public double maxDrawdown;
 
         public double buyAverageReturn;
@@ -42,18 +61,12 @@ public class CombinedBacktestEngine {
 
         public double buyHoldReturn;
 
-        public int buyAgreementSignals;
-        public int sellAgreementSignals;
 
-        public int strongSignals;
-        public int moderateSignals;
-        public int weakSignals;
-
-        public Result(
-                int totalSignals,
-                int correctSignals,
-                int wrongSignals,
-                int neutralSignals,
+        public BacktestResult(
+                int totalTrades,
+                int correctTrades,
+                int wrongTrades,
+                int neutralTrades,
                 int buySignals,
                 int sellSignals,
                 int buyCorrect,
@@ -63,6 +76,9 @@ public class CombinedBacktestEngine {
                 double sellAccuracy,
                 double averageReturn,
                 double totalReturn,
+                int stopLossTrades,
+                int takeProfitTrades,
+                int timeExitTrades,
                 double profitFactor,
                 double grossProfit,
                 double grossLoss,
@@ -71,17 +87,13 @@ public class CombinedBacktestEngine {
                 double sellAverageReturn,
                 double buyTotalReturn,
                 double sellTotalReturn,
-                double buyHoldReturn,
-                int buyAgreementSignals,
-                int sellAgreementSignals,
-                int strongSignals,
-                int moderateSignals,
-                int weakSignals
+                double buyHoldReturn
         ) {
-            this.totalSignals = totalSignals;
-            this.correctSignals = correctSignals;
-            this.wrongSignals = wrongSignals;
-            this.neutralSignals = neutralSignals;
+
+            this.totalTrades = totalTrades;
+            this.correctTrades = correctTrades;
+            this.wrongTrades = wrongTrades;
+            this.neutralTrades = neutralTrades;
 
             this.buySignals = buySignals;
             this.sellSignals = sellSignals;
@@ -96,9 +108,14 @@ public class CombinedBacktestEngine {
             this.averageReturn = averageReturn;
             this.totalReturn = totalReturn;
 
+            this.stopLossTrades = stopLossTrades;
+            this.takeProfitTrades = takeProfitTrades;
+            this.timeExitTrades = timeExitTrades;
+
             this.profitFactor = profitFactor;
             this.grossProfit = grossProfit;
             this.grossLoss = grossLoss;
+
             this.maxDrawdown = maxDrawdown;
 
             this.buyAverageReturn = buyAverageReturn;
@@ -108,52 +125,60 @@ public class CombinedBacktestEngine {
             this.sellTotalReturn = sellTotalReturn;
 
             this.buyHoldReturn = buyHoldReturn;
-
-            this.buyAgreementSignals = buyAgreementSignals;
-            this.sellAgreementSignals = sellAgreementSignals;
-
-            this.strongSignals = strongSignals;
-            this.moderateSignals = moderateSignals;
-            this.weakSignals = weakSignals;
         }
     }
 
 
-    public static Result run(
-            List<Double> close,
-            List<Double> high,
-            List<Double> low,
-            List<Double> volume
+    // =========================================================
+    // MAIN BACKTEST
+    // =========================================================
+
+    public static BacktestResult run(
+            List<Double> prices,
+            List<Double> highs,
+            List<Double> lows,
+            List<Double> volumes
     ) {
 
-        if (
-                close == null ||
-                high == null ||
-                low == null ||
-                volume == null
-        ) {
+        if (prices == null ||
+                highs == null ||
+                lows == null) {
+
             return emptyResult();
         }
 
-        int size = Math.min(
-                close.size(),
+
+        int size =
                 Math.min(
-                        high.size(),
+                        prices.size(),
                         Math.min(
-                                low.size(),
-                                volume.size()
+                                highs.size(),
+                                lows.size()
                         )
-                )
-        );
+                );
 
-        if (size < MIN_HISTORY + FORWARD_DAYS + 1) {
+
+        if (volumes != null) {
+
+            size =
+                    Math.min(
+                            size,
+                            volumes.size()
+                    );
+        }
+
+
+        if (size <
+                LOOKBACK + MAX_HOLD_DAYS + 1) {
+
             return emptyResult();
         }
 
-        int totalSignals = 0;
-        int correctSignals = 0;
-        int wrongSignals = 0;
-        int neutralSignals = 0;
+
+        int totalTrades = 0;
+        int correctTrades = 0;
+        int wrongTrades = 0;
+        int neutralTrades = 0;
 
         int buySignals = 0;
         int sellSignals = 0;
@@ -161,257 +186,422 @@ public class CombinedBacktestEngine {
         int buyCorrect = 0;
         int sellCorrect = 0;
 
-        int buyAgreementSignals = 0;
-        int sellAgreementSignals = 0;
+        int stopLossTrades = 0;
+        int takeProfitTrades = 0;
+        int timeExitTrades = 0;
 
-        int strongSignals = 0;
-        int moderateSignals = 0;
-        int weakSignals = 0;
 
         double totalReturn = 0.0;
-        double grossProfit = 0.0;
-        double grossLoss = 0.0;
 
         double buyTotalReturn = 0.0;
         double sellTotalReturn = 0.0;
+
+        double grossProfit = 0.0;
+        double grossLoss = 0.0;
+
 
         double equity = 100.0;
         double peakEquity = 100.0;
         double maxDrawdown = 0.0;
 
-        int returnCount = 0;
+
+        // =====================================================
+        // WALK FORWARD
+        // =====================================================
+
+        int i = LOOKBACK;
 
 
-        for (
-                int i = MIN_HISTORY;
-                i + FORWARD_DAYS < size;
-                i++
-        ) {
+        while (i < size - MAX_HOLD_DAYS) {
 
-            List<Double> pastClose =
-                    close.subList(0, i + 1);
+            List<Double> historicalPrices =
+                    prices.subList(
+                            0,
+                            i + 1
+                    );
 
-            List<Double> pastHigh =
-                    high.subList(0, i + 1);
+            List<Double> historicalHighs =
+                    highs.subList(
+                            0,
+                            i + 1
+                    );
 
-            List<Double> pastLow =
-                    low.subList(0, i + 1);
-
-            List<Double> pastVolume =
-                    volume.subList(0, i + 1);
-
-
-            CombinedEngine.CombinedResult result;
-
-            try {
-
-                result =
-                        CombinedEngine.analyze(
-                                pastClose,
-                                pastHigh,
-                                pastLow,
-                                pastVolume
-                        );
-
-            } catch (Exception e) {
-
-                neutralSignals++;
-                continue;
-            }
-
-
-            if (result == null) {
-                neutralSignals++;
-                continue;
-            }
-
-
-            String direction =
-                    result.direction;
-
-
-            if (result.signalStrength != null) {
-
-                if (
-                        result.signalStrength.equalsIgnoreCase(
-                                "STRONG"
-                        )
-                ) {
-                    strongSignals++;
-
-                } else if (
-                        result.signalStrength.equalsIgnoreCase(
-                                "MODERATE"
-                        )
-                ) {
-                    moderateSignals++;
-
-                } else {
-                    weakSignals++;
-                }
-
-            } else {
-                weakSignals++;
-            }
-
-
-            if (result.agreement != null) {
-
-                if (
-                        result.agreement
-                                .toUpperCase()
-                                .startsWith("BUY")
-                ) {
-                    buyAgreementSignals++;
-
-                } else if (
-                        result.agreement
-                                .toUpperCase()
-                                .startsWith("SELL")
-                ) {
-                    sellAgreementSignals++;
-                }
-            }
-
-
-            if (
-                    direction == null ||
-                    direction.equalsIgnoreCase("NEUTRAL")
-            ) {
-
-                neutralSignals++;
-                continue;
-            }
-
-
-            double entry =
-                    close.get(i);
-
-            double future =
-                    close.get(
-                            i + FORWARD_DAYS
+            List<Double> historicalLows =
+                    lows.subList(
+                            0,
+                            i + 1
                     );
 
 
-            if (
-                    entry <= 0.0 ||
-                    future <= 0.0
-            ) {
+            List<Double> historicalVolumes = null;
 
-                neutralSignals++;
+            if (volumes != null) {
+
+                historicalVolumes =
+                        volumes.subList(
+                                0,
+                                i + 1
+                        );
+            }
+
+
+            TechnicalAnalyzer.TechnicalResult technical =
+                    TechnicalAnalyzer.analyze(
+                            historicalPrices,
+                            historicalHighs,
+                            historicalLows,
+                            historicalVolumes
+                    );
+
+
+            double entryPrice =
+                    prices.get(i);
+
+
+            String signal =
+                    getV3Signal(
+                            technical,
+                            entryPrice
+                    );
+
+
+            // =================================================
+            // NEUTRAL
+            // =================================================
+
+            if (signal.equals("NEUTRAL")) {
+
+                neutralTrades++;
+
+                i++;
+
                 continue;
             }
 
 
-            double rawReturn;
+            // =================================================
+            // ATR STOP
+            // =================================================
 
+            double atrPercent = 0.0;
 
-            if (
-                    direction.equalsIgnoreCase("BUY")
-            ) {
+            if (technical.atr > 0.0 &&
+                    entryPrice > 0.0) {
 
-                rawReturn =
-                        (
-                                future - entry
-                        )
-                                /
-                        entry
-                                *
-                        100.0;
-
-            } else if (
-                    direction.equalsIgnoreCase("SELL")
-            ) {
-
-                rawReturn =
-                        (
-                                entry - future
-                        )
-                                /
-                        entry
-                                *
-                        100.0;
-
-            } else {
-
-                neutralSignals++;
-                continue;
+                atrPercent =
+                        technical.atr
+                                / entryPrice
+                                * 100.0;
             }
 
 
-            double netReturn =
-                    rawReturn - COST;
+            double stopPercent =
+                    Math.max(
+                            MIN_STOP_PERCENT,
+                            atrPercent
+                    );
 
 
-            totalSignals++;
-
-            totalReturn +=
-                    netReturn;
-
-            returnCount++;
+            double targetPercent =
+                    stopPercent
+                            * REWARD_RISK_RATIO;
 
 
-            if (
-                    netReturn > 0.0
-            ) {
+            double tradeReturn = 0.0;
 
-                correctSignals++;
+            boolean stopHit = false;
+            boolean targetHit = false;
 
-                grossProfit +=
-                        netReturn;
+            int exitIndex =
+                    i + MAX_HOLD_DAYS;
 
-            } else {
 
-                wrongSignals++;
+            // =================================================
+            // TRADE SIMULATION
+            // =================================================
 
-                grossLoss +=
-                        Math.abs(netReturn);
+            for (int j = i + 1;
+                 j <= i + MAX_HOLD_DAYS;
+                 j++) {
+
+                double high =
+                        highs.get(j);
+
+                double low =
+                        lows.get(j);
+
+
+                // =================================================
+                // BUY
+                // =================================================
+
+                if (signal.equals("BUY")) {
+
+                    double stopPrice =
+                            entryPrice
+                                    * (
+                                    1.0
+                                            - stopPercent
+                                            / 100.0
+                            );
+
+
+                    double targetPrice =
+                            entryPrice
+                                    * (
+                                    1.0
+                                            + targetPercent
+                                            / 100.0
+                            );
+
+
+                    boolean hitStop =
+                            low <= stopPrice;
+
+                    boolean hitTarget =
+                            high >= targetPrice;
+
+
+                    // Conservative assumption:
+                    // if both are touched in same candle,
+                    // count STOP first.
+                    if (hitStop && hitTarget) {
+
+                        tradeReturn =
+                                -stopPercent;
+
+                        stopHit = true;
+                        exitIndex = j;
+
+                        break;
+                    }
+
+
+                    if (hitStop) {
+
+                        tradeReturn =
+                                -stopPercent;
+
+                        stopHit = true;
+                        exitIndex = j;
+
+                        break;
+                    }
+
+
+                    if (hitTarget) {
+
+                        tradeReturn =
+                                targetPercent;
+
+                        targetHit = true;
+                        exitIndex = j;
+
+                        break;
+                    }
+                }
+
+
+                // =================================================
+                // SELL
+                // =================================================
+
+                else {
+
+                    double stopPrice =
+                            entryPrice
+                                    * (
+                                    1.0
+                                            + stopPercent
+                                            / 100.0
+                            );
+
+
+                    double targetPrice =
+                            entryPrice
+                                    * (
+                                    1.0
+                                            - targetPercent
+                                            / 100.0
+                            );
+
+
+                    boolean hitStop =
+                            high >= stopPrice;
+
+                    boolean hitTarget =
+                            low <= targetPrice;
+
+
+                    if (hitStop && hitTarget) {
+
+                        tradeReturn =
+                                -stopPercent;
+
+                        stopHit = true;
+                        exitIndex = j;
+
+                        break;
+                    }
+
+
+                    if (hitStop) {
+
+                        tradeReturn =
+                                -stopPercent;
+
+                        stopHit = true;
+                        exitIndex = j;
+
+                        break;
+                    }
+
+
+                    if (hitTarget) {
+
+                        tradeReturn =
+                                targetPercent;
+
+                        targetHit = true;
+                        exitIndex = j;
+
+                        break;
+                    }
+                }
             }
 
 
-            if (
-                    direction.equalsIgnoreCase("BUY")
-            ) {
+            // =================================================
+            // TIME EXIT
+            // =================================================
+
+            if (!stopHit &&
+                    !targetHit) {
+
+                double exitPrice =
+                        prices.get(exitIndex);
+
+
+                if (signal.equals("BUY")) {
+
+                    tradeReturn =
+                            (
+                                    exitPrice
+                                            - entryPrice
+                            )
+                                    / entryPrice
+                                    * 100.0;
+
+                } else {
+
+                    tradeReturn =
+                            (
+                                    entryPrice
+                                            - exitPrice
+                            )
+                                    / entryPrice
+                                    * 100.0;
+                }
+
+
+                timeExitTrades++;
+            }
+
+
+            // =================================================
+            // COSTS
+            // =================================================
+
+            double transactionCost =
+                    (
+                            FEE_PER_SIDE * 2.0
+                    )
+                            +
+                            (
+                                    SLIPPAGE_PER_SIDE * 2.0
+                            );
+
+
+            tradeReturn -=
+                    transactionCost;
+
+
+            // =================================================
+            // COUNTERS
+            // =================================================
+
+            totalTrades++;
+
+
+            if (signal.equals("BUY")) {
 
                 buySignals++;
 
                 buyTotalReturn +=
-                        netReturn;
-
-                if (
-                        netReturn > 0.0
-                ) {
-                    buyCorrect++;
-                }
+                        tradeReturn;
 
             } else {
 
                 sellSignals++;
 
                 sellTotalReturn +=
-                        netReturn;
-
-                if (
-                        netReturn > 0.0
-                ) {
-                    sellCorrect++;
-                }
+                        tradeReturn;
             }
 
 
-            equity =
-                    equity
-                            *
-                    (
-                            1.0
-                                    +
-                            netReturn / 100.0
-                    );
+            totalReturn +=
+                    tradeReturn;
 
 
-            if (
-                    equity > peakEquity
-            ) {
+            if (stopHit) {
+
+                stopLossTrades++;
+
+            } else if (targetHit) {
+
+                takeProfitTrades++;
+            }
+
+
+            // =================================================
+            // RESULT
+            // =================================================
+
+            if (tradeReturn > 0.0) {
+
+                correctTrades++;
+
+                if (signal.equals("BUY")) {
+
+                    buyCorrect++;
+
+                } else {
+
+                    sellCorrect++;
+                }
+
+                grossProfit +=
+                        tradeReturn;
+
+            } else {
+
+                wrongTrades++;
+
+                grossLoss +=
+                        Math.abs(tradeReturn);
+            }
+
+
+            // =================================================
+            // EQUITY
+            // =================================================
+
+            equity *=
+                    1.0
+                            + tradeReturn / 100.0;
+
+
+            if (equity > peakEquity) {
 
                 peakEquity =
                         equity;
@@ -420,98 +610,135 @@ public class CombinedBacktestEngine {
 
             double drawdown =
                     (
-                            peakEquity - equity
+                            peakEquity
+                                    - equity
                     )
-                            /
-                    peakEquity
-                            *
-                    100.0;
+                            / peakEquity
+                            * 100.0;
 
 
-            if (
-                    drawdown > maxDrawdown
-            ) {
+            if (drawdown > maxDrawdown) {
 
                 maxDrawdown =
                         drawdown;
             }
+
+
+            // =================================================
+            // NO OVERLAPPING POSITIONS
+            // =================================================
+
+            i =
+                    exitIndex + 1;
         }
 
 
-        double accuracy =
-                percentage(
-                        correctSignals,
-                        totalSignals
-                );
+        // =====================================================
+        // METRICS
+        // =====================================================
+
+        double accuracy = 0.0;
+
+        if (totalTrades > 0) {
+
+            accuracy =
+                    correctTrades
+                            / (double) totalTrades
+                            * 100.0;
+        }
 
 
-        double buyAccuracy =
-                percentage(
-                        buyCorrect,
-                        buySignals
-                );
+        double buyAccuracy = 0.0;
+
+        if (buySignals > 0) {
+
+            buyAccuracy =
+                    buyCorrect
+                            / (double) buySignals
+                            * 100.0;
+        }
 
 
-        double sellAccuracy =
-                percentage(
-                        sellCorrect,
-                        sellSignals
-                );
+        double sellAccuracy = 0.0;
+
+        if (sellSignals > 0) {
+
+            sellAccuracy =
+                    sellCorrect
+                            / (double) sellSignals
+                            * 100.0;
+        }
 
 
-        double averageReturn =
-                returnCount == 0
-                        ? 0.0
-                        :
-                        totalReturn / returnCount;
+        double averageReturn = 0.0;
+
+        if (totalTrades > 0) {
+
+            averageReturn =
+                    totalReturn
+                            / totalTrades;
+        }
 
 
-        double profitFactor =
-                grossLoss > 0.0
-                        ? grossProfit / grossLoss
-                        : 0.0;
+        double buyAverageReturn = 0.0;
+
+        if (buySignals > 0) {
+
+            buyAverageReturn =
+                    buyTotalReturn
+                            / buySignals;
+        }
 
 
-        double buyAverageReturn =
-                buySignals > 0
-                        ? buyTotalReturn / buySignals
-                        : 0.0;
+        double sellAverageReturn = 0.0;
+
+        if (sellSignals > 0) {
+
+            sellAverageReturn =
+                    sellTotalReturn
+                            / sellSignals;
+        }
 
 
-        double sellAverageReturn =
-                sellSignals > 0
-                        ? sellTotalReturn / sellSignals
-                        : 0.0;
+        double profitFactor = 0.0;
+
+        if (grossLoss > 0.0) {
+
+            profitFactor =
+                    grossProfit
+                            / grossLoss;
+
+        } else if (grossProfit > 0.0) {
+
+            profitFactor =
+                    999.0;
+        }
 
 
-        double firstPrice =
-                close.get(MIN_HISTORY);
+        // =====================================================
+        // BUY & HOLD
+        // =====================================================
+
+        double buyHoldReturn = 0.0;
+
+        if (prices.get(0) > 0.0) {
+
+            buyHoldReturn =
+                    (
+                            prices.get(size - 1)
+                                    - prices.get(0)
+                    )
+                            / prices.get(0)
+                            * 100.0;
+        }
 
 
-        double lastPrice =
-                close.get(size - 1);
+        return new BacktestResult(
 
-
-        double buyHoldReturn =
-                firstPrice > 0.0
-                        ?
-                        (
-                                lastPrice - firstPrice
-                        )
-                                /
-                        firstPrice
-                                *
-                        100.0
-                        :
-                        0.0;
-
-
-        return new Result(
-
-                totalSignals,
-                correctSignals,
-                wrongSignals,
-                neutralSignals,
+                totalTrades,
+                correctTrades,
+                wrongTrades,
+                neutralTrades,
 
                 buySignals,
                 sellSignals,
@@ -526,8 +753,11 @@ public class CombinedBacktestEngine {
                 round(averageReturn),
                 round(totalReturn),
 
-                round(profitFactor),
+                stopLossTrades,
+                takeProfitTrades,
+                timeExitTrades,
 
+                round(profitFactor),
                 round(grossProfit),
                 round(grossLoss),
 
@@ -539,82 +769,319 @@ public class CombinedBacktestEngine {
                 round(buyTotalReturn),
                 round(sellTotalReturn),
 
-                round(buyHoldReturn),
-
-                buyAgreementSignals,
-                sellAgreementSignals,
-
-                strongSignals,
-                moderateSignals,
-                weakSignals
+                round(buyHoldReturn)
         );
     }
 
 
-    private static Result emptyResult() {
+    // =========================================================
+    // V3 SIGNAL ENGINE
+    // =========================================================
 
-        return new Result(
-                0,
-                0,
-                0,
-                0,
-
-                0,
-                0,
-
-                0,
-                0,
-
-                0.0,
-                0.0,
-                0.0,
-
-                0.0,
-                0.0,
-
-                0.0,
-
-                0.0,
-                0.0,
-
-                0.0,
-
-                0.0,
-                0.0,
-
-                0.0,
-                0.0,
-
-                0.0,
-
-                0,
-                0,
-
-                0,
-                0,
-                0
-        );
-    }
-
-
-    private static double percentage(
-            int numerator,
-            int denominator
+    private static String getV3Signal(
+            TechnicalAnalyzer.TechnicalResult result,
+            double price
     ) {
 
-        if (denominator <= 0) {
-            return 0.0;
+        if (result == null ||
+                price <= 0.0) {
+
+            return "NEUTRAL";
         }
 
-        return (
-                (double) numerator
-                        /
-                denominator
-        )
-                *
-                100.0;
+
+        int bullishScore = 0;
+        int bearishScore = 0;
+
+
+        // =====================================================
+        // 1. EMA TREND STRUCTURE
+        // =====================================================
+
+        boolean above20 =
+                result.ema20 > 0 &&
+                        price > result.ema20;
+
+        boolean above50 =
+                result.ema50 > 0 &&
+                        price > result.ema50;
+
+        boolean above200 =
+                result.ema200 > 0 &&
+                        price > result.ema200;
+
+
+        boolean bullAlignment =
+                result.ema20 > result.ema50 &&
+                        result.ema50 > result.ema200;
+
+
+        boolean bearAlignment =
+                result.ema20 < result.ema50 &&
+                        result.ema50 < result.ema200;
+
+
+        if (bullAlignment) {
+
+            bullishScore += 3;
+
+        } else if (bearAlignment) {
+
+            bearishScore += 3;
+        }
+
+
+        // Price relative to long-term trend
+        if (above200) {
+
+            bullishScore += 2;
+
+        } else if (result.ema200 > 0) {
+
+            bearishScore += 2;
+        }
+
+
+        // Price relative to medium trend
+        if (above50) {
+
+            bullishScore++;
+
+        } else if (result.ema50 > 0) {
+
+            bearishScore++;
+        }
+
+
+        // =====================================================
+        // 2. RSI
+        // =====================================================
+
+        if (result.rsi >= 55.0 &&
+                result.rsi <= 70.0) {
+
+            bullishScore += 2;
+
+        } else if (result.rsi <= 45.0 &&
+                result.rsi >= 30.0) {
+
+            bearishScore += 2;
+        }
+
+
+        // Avoid blindly buying extreme RSI
+        if (result.rsi > 75.0) {
+
+            bullishScore -= 2;
+        }
+
+
+        // Avoid blindly selling extreme RSI
+        if (result.rsi < 25.0) {
+
+            bearishScore -= 2;
+        }
+
+
+        // =====================================================
+        // 3. MACD
+        // =====================================================
+
+        if (result.macd > 0.0) {
+
+            bullishScore += 2;
+
+        } else if (result.macd < 0.0) {
+
+            bearishScore += 2;
+        }
+
+
+        // =====================================================
+        // 4. MOMENTUM
+        // =====================================================
+
+        if (result.momentum >= 1.0) {
+
+            bullishScore += 2;
+
+        } else if (result.momentum <= -1.0) {
+
+            bearishScore += 2;
+
+        } else if (result.momentum > 0.0) {
+
+            bullishScore++;
+
+        } else if (result.momentum < 0.0) {
+
+            bearishScore++;
+        }
+
+
+        // =====================================================
+        // 5. BOLLINGER POSITION
+        // =====================================================
+
+        if (result.bollingerUpper > 0.0 &&
+                result.bollingerLower > 0.0) {
+
+            double middle =
+                    (
+                            result.bollingerUpper
+                                    + result.bollingerLower
+                    )
+                            / 2.0;
+
+
+            double range =
+                    result.bollingerUpper
+                            - result.bollingerLower;
+
+
+            if (range > 0.0) {
+
+                double position =
+                        (
+                                price
+                                        - result.bollingerLower
+                        )
+                                / range;
+
+
+                if (position > 0.55 &&
+                        position < 0.90) {
+
+                    bullishScore++;
+
+                } else if (position < 0.45 &&
+                        position > 0.10) {
+
+                    bearishScore++;
+                }
+            }
+        }
+
+
+        // =====================================================
+        // 6. VOLUME CONFIRMATION
+        // =====================================================
+
+        if (result.volumeRatio >= 1.20) {
+
+            if (bullishScore > bearishScore) {
+
+                bullishScore++;
+
+            } else if (bearishScore > bullishScore) {
+
+                bearishScore++;
+            }
+        }
+
+
+        // =====================================================
+        // 7. MARKET REGIME
+        // =====================================================
+
+        int trendStrength =
+                Math.abs(
+                        bullishScore
+                                - bearishScore
+                );
+
+
+        // Strong directional trend
+        if (bullishScore >= 9 &&
+                bullishScore > bearishScore &&
+                trendStrength >= 3) {
+
+            return "BUY";
+        }
+
+
+        if (bearishScore >= 9 &&
+                bearishScore > bullishScore &&
+                trendStrength >= 3) {
+
+            return "SELL";
+        }
+
+
+        // Medium trend:
+        // require stronger confirmation
+        if (bullishScore >= 11 &&
+                bullishScore > bearishScore) {
+
+            return "BUY";
+        }
+
+
+        if (bearishScore >= 11 &&
+                bearishScore > bullishScore) {
+
+            return "SELL";
+        }
+
+
+        // =====================================================
+        // SIDEWAYS / CONFLICTING MARKET
+        // =====================================================
+
+        return "NEUTRAL";
     }
 
+
+    // =========================================================
+    // EMPTY RESULT
+    // =========================================================
+
+    private static BacktestResult emptyResult() {
+
+        return new BacktestResult(
+
+                0,
+                0,
+                0,
+                0,
+
+                0,
+                0,
+
+                0,
+                0,
+
+                0.0,
+                0.0,
+                0.0,
+
+                0.0,
+                0.0,
+
+                0,
+                0,
+                0,
+
+                0.0,
+                0.0,
+                0.0,
+
+                0.0,
+
+                0.0,
+                0.0,
+
+                0.0,
+                0.0,
+
+                0.0
+        );
+    }
+
+
+    // =========================================================
+    // ROUND
+    // =========================================================
 
     private static double round(
             double value
@@ -622,8 +1089,6 @@ public class CombinedBacktestEngine {
 
         return Math.round(
                 value * 100.0
-        )
-                /
-                100.0;
+        ) / 100.0;
     }
-}
+            }
