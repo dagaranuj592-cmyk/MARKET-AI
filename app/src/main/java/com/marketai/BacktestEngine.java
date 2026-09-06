@@ -5,30 +5,17 @@ import java.util.List;
 public class BacktestEngine {
 
     // =========================================================
-    // BACKTEST SETTINGS
+    // V3 SETTINGS
     // =========================================================
 
     private static final int LOOKBACK = 220;
-
-    // Maximum number of candles a trade can remain open
     private static final int MAX_HOLD_DAYS = 5;
 
-    // Minimum movement required for a signal to count as a
-    // directional success when TP/SL are not hit.
-    private static final double MIN_TARGET_PERCENT = 1.0;
-
-    // Risk settings
     private static final double MIN_STOP_PERCENT = 1.0;
-
-    // Risk : Reward = 1 : 1.5
     private static final double REWARD_RISK_RATIO = 1.5;
 
-    // Approximate round-trip trading cost.
-    // This is a configurable assumption, NOT a claim about
-    // any particular exchange's current fee.
+    // Approximate round-trip cost assumption.
     private static final double FEE_PER_SIDE = 0.10;
-
-    // Slippage assumption per side.
     private static final double SLIPPAGE_PER_SIDE = 0.05;
 
 
@@ -38,7 +25,6 @@ public class BacktestEngine {
 
     public static class BacktestResult {
 
-        // Old fields - kept for MainActivity compatibility
         public int totalTrades;
         public int correctTrades;
         public int wrongTrades;
@@ -57,8 +43,6 @@ public class BacktestEngine {
         public double averageReturn;
         public double totalReturn;
 
-
-        // New V2 metrics
         public int stopLossTrades;
         public int takeProfitTrades;
         public int timeExitTrades;
@@ -92,22 +76,17 @@ public class BacktestEngine {
                 double sellAccuracy,
                 double averageReturn,
                 double totalReturn,
-
                 int stopLossTrades,
                 int takeProfitTrades,
                 int timeExitTrades,
-
                 double profitFactor,
                 double grossProfit,
                 double grossLoss,
                 double maxDrawdown,
-
                 double buyAverageReturn,
                 double sellAverageReturn,
-
                 double buyTotalReturn,
                 double sellTotalReturn,
-
                 double buyHoldReturn
         ) {
 
@@ -128,7 +107,6 @@ public class BacktestEngine {
 
             this.averageReturn = averageReturn;
             this.totalReturn = totalReturn;
-
 
             this.stopLossTrades = stopLossTrades;
             this.takeProfitTrades = takeProfitTrades;
@@ -197,12 +175,7 @@ public class BacktestEngine {
         }
 
 
-        // =====================================================
-        // COUNTERS
-        // =====================================================
-
         int totalTrades = 0;
-
         int correctTrades = 0;
         int wrongTrades = 0;
         int neutralTrades = 0;
@@ -218,10 +191,6 @@ public class BacktestEngine {
         int timeExitTrades = 0;
 
 
-        // =====================================================
-        // RETURN TRACKING
-        // =====================================================
-
         double totalReturn = 0.0;
 
         double buyTotalReturn = 0.0;
@@ -231,18 +200,13 @@ public class BacktestEngine {
         double grossLoss = 0.0;
 
 
-        // =====================================================
-        // EQUITY TRACKING
-        // =====================================================
-
         double equity = 100.0;
         double peakEquity = 100.0;
-
         double maxDrawdown = 0.0;
 
 
         // =====================================================
-        // NON-OVERLAPPING WALK-FORWARD BACKTEST
+        // WALK FORWARD
         // =====================================================
 
         int i = LOOKBACK;
@@ -295,7 +259,7 @@ public class BacktestEngine {
 
 
             String signal =
-                    getSignal(
+                    getV3Signal(
                             technical,
                             entryPrice
                     );
@@ -316,7 +280,7 @@ public class BacktestEngine {
 
 
             // =================================================
-            // ATR BASED STOP
+            // ATR STOP
             // =================================================
 
             double atrPercent = 0.0;
@@ -343,21 +307,18 @@ public class BacktestEngine {
                             * REWARD_RISK_RATIO;
 
 
-            // =================================================
-            // FUTURE TRADE SIMULATION
-            // =================================================
+            double tradeReturn = 0.0;
 
-            double tradeReturn =
-                    0.0;
-
-            boolean closedByStop = false;
-            boolean closedByTarget = false;
-            boolean closedByTime = false;
-
+            boolean stopHit = false;
+            boolean targetHit = false;
 
             int exitIndex =
                     i + MAX_HOLD_DAYS;
 
+
+            // =================================================
+            // TRADE SIMULATION
+            // =================================================
 
             for (int j = i + 1;
                  j <= i + MAX_HOLD_DAYS;
@@ -370,9 +331,9 @@ public class BacktestEngine {
                         lows.get(j);
 
 
-                // =============================================
+                // =================================================
                 // BUY
-                // =============================================
+                // =================================================
 
                 if (signal.equals("BUY")) {
 
@@ -394,61 +355,58 @@ public class BacktestEngine {
                             );
 
 
-                    boolean stopHit =
+                    boolean hitStop =
                             low <= stopPrice;
 
-                    boolean targetHit =
+                    boolean hitTarget =
                             high >= targetPrice;
 
 
-                    // If both happen on the same candle,
-                    // assume STOP happened first.
-                    // This is conservative.
-                    if (stopHit && targetHit) {
+                    // Conservative assumption:
+                    // if both are touched in same candle,
+                    // count STOP first.
+                    if (hitStop && hitTarget) {
 
                         tradeReturn =
                                 -stopPercent;
 
+                        stopHit = true;
                         exitIndex = j;
-
-                        closedByStop = true;
 
                         break;
                     }
 
 
-                    if (stopHit) {
+                    if (hitStop) {
 
                         tradeReturn =
                                 -stopPercent;
 
+                        stopHit = true;
                         exitIndex = j;
-
-                        closedByStop = true;
 
                         break;
                     }
 
 
-                    if (targetHit) {
+                    if (hitTarget) {
 
                         tradeReturn =
                                 targetPercent;
 
+                        targetHit = true;
                         exitIndex = j;
-
-                        closedByTarget = true;
 
                         break;
                     }
                 }
 
 
-                // =============================================
+                // =================================================
                 // SELL
-                // =============================================
+                // =================================================
 
-                else if (signal.equals("SELL")) {
+                else {
 
                     double stopPrice =
                             entryPrice
@@ -468,48 +426,44 @@ public class BacktestEngine {
                             );
 
 
-                    boolean stopHit =
+                    boolean hitStop =
                             high >= stopPrice;
 
-                    boolean targetHit =
+                    boolean hitTarget =
                             low <= targetPrice;
 
 
-                    // Conservative assumption
-                    if (stopHit && targetHit) {
+                    if (hitStop && hitTarget) {
 
                         tradeReturn =
                                 -stopPercent;
 
+                        stopHit = true;
                         exitIndex = j;
-
-                        closedByStop = true;
 
                         break;
                     }
 
 
-                    if (stopHit) {
+                    if (hitStop) {
 
                         tradeReturn =
                                 -stopPercent;
 
+                        stopHit = true;
                         exitIndex = j;
-
-                        closedByStop = true;
 
                         break;
                     }
 
 
-                    if (targetHit) {
+                    if (hitTarget) {
 
                         tradeReturn =
                                 targetPercent;
 
+                        targetHit = true;
                         exitIndex = j;
-
-                        closedByTarget = true;
 
                         break;
                     }
@@ -521,8 +475,8 @@ public class BacktestEngine {
             // TIME EXIT
             // =================================================
 
-            if (!closedByStop &&
-                    !closedByTarget) {
+            if (!stopHit &&
+                    !targetHit) {
 
                 double exitPrice =
                         prices.get(exitIndex);
@@ -550,31 +504,30 @@ public class BacktestEngine {
                 }
 
 
-                closedByTime = true;
+                timeExitTrades++;
             }
 
 
             // =================================================
-            // TRANSACTION COST
+            // COSTS
             // =================================================
 
             double transactionCost =
                     (
-                            FEE_PER_SIDE
-                                    * 2.0
+                            FEE_PER_SIDE * 2.0
                     )
                             +
                             (
-                                    SLIPPAGE_PER_SIDE
-                                            * 2.0
+                                    SLIPPAGE_PER_SIDE * 2.0
                             );
 
 
-            tradeReturn -= transactionCost;
+            tradeReturn -=
+                    transactionCost;
 
 
             // =================================================
-            // COUNT TRADE
+            // COUNTERS
             // =================================================
 
             totalTrades++;
@@ -600,26 +553,18 @@ public class BacktestEngine {
                     tradeReturn;
 
 
-            // =================================================
-            // EXIT TYPE
-            // =================================================
-
-            if (closedByStop) {
+            if (stopHit) {
 
                 stopLossTrades++;
 
-            } else if (closedByTarget) {
+            } else if (targetHit) {
 
                 takeProfitTrades++;
-
-            } else if (closedByTime) {
-
-                timeExitTrades++;
             }
 
 
             // =================================================
-            // WIN / LOSS
+            // RESULT
             // =================================================
 
             if (tradeReturn > 0.0) {
@@ -634,7 +579,6 @@ public class BacktestEngine {
 
                     sellCorrect++;
                 }
-
 
                 grossProfit +=
                         tradeReturn;
@@ -653,11 +597,8 @@ public class BacktestEngine {
             // =================================================
 
             equity *=
-                    (
-                            1.0
-                                    + tradeReturn
-                                    / 100.0
-                    );
+                    1.0
+                            + tradeReturn / 100.0;
 
 
             if (equity > peakEquity) {
@@ -684,9 +625,7 @@ public class BacktestEngine {
 
 
             // =================================================
-            // IMPORTANT:
-            // Move directly after trade exit.
-            // This prevents overlapping trades.
+            // NO OVERLAPPING POSITIONS
             // =================================================
 
             i =
@@ -695,7 +634,7 @@ public class BacktestEngine {
 
 
         // =====================================================
-        // ACCURACY
+        // METRICS
         // =====================================================
 
         double accuracy = 0.0;
@@ -731,10 +670,6 @@ public class BacktestEngine {
         }
 
 
-        // =====================================================
-        // AVERAGE RETURN
-        // =====================================================
-
         double averageReturn = 0.0;
 
         if (totalTrades > 0) {
@@ -744,10 +679,6 @@ public class BacktestEngine {
                             / totalTrades;
         }
 
-
-        // =====================================================
-        // BUY / SELL AVERAGE
-        // =====================================================
 
         double buyAverageReturn = 0.0;
 
@@ -769,10 +700,6 @@ public class BacktestEngine {
         }
 
 
-        // =====================================================
-        // PROFIT FACTOR
-        // =====================================================
-
         double profitFactor = 0.0;
 
         if (grossLoss > 0.0) {
@@ -789,13 +716,12 @@ public class BacktestEngine {
 
 
         // =====================================================
-        // BUY & HOLD BENCHMARK
+        // BUY & HOLD
         // =====================================================
 
         double buyHoldReturn = 0.0;
 
-        if (size > 1 &&
-                prices.get(0) > 0.0) {
+        if (prices.get(0) > 0.0) {
 
             buyHoldReturn =
                     (
@@ -810,52 +736,37 @@ public class BacktestEngine {
         return new BacktestResult(
 
                 totalTrades,
-
                 correctTrades,
-
                 wrongTrades,
-
                 neutralTrades,
 
                 buySignals,
-
                 sellSignals,
 
                 buyCorrect,
-
                 sellCorrect,
 
                 round(accuracy),
-
                 round(buyAccuracy),
-
                 round(sellAccuracy),
 
                 round(averageReturn),
-
                 round(totalReturn),
 
-
                 stopLossTrades,
-
                 takeProfitTrades,
-
                 timeExitTrades,
 
                 round(profitFactor),
-
                 round(grossProfit),
-
                 round(grossLoss),
 
                 round(maxDrawdown),
 
                 round(buyAverageReturn),
-
                 round(sellAverageReturn),
 
                 round(buyTotalReturn),
-
                 round(sellTotalReturn),
 
                 round(buyHoldReturn)
@@ -864,80 +775,154 @@ public class BacktestEngine {
 
 
     // =========================================================
-    // SIGNAL ENGINE
+    // V3 SIGNAL ENGINE
     // =========================================================
 
-    private static String getSignal(
+    private static String getV3Signal(
             TechnicalAnalyzer.TechnicalResult result,
             double price
     ) {
 
-        int bullish = 0;
-        int bearish = 0;
+        if (result == null ||
+                price <= 0.0) {
 
-
-        // RSI
-        if (result.rsi >= 55.0) {
-
-            bullish++;
-
-        } else if (result.rsi <= 45.0) {
-
-            bearish++;
+            return "NEUTRAL";
         }
 
 
-        // MACD
+        int bullishScore = 0;
+        int bearishScore = 0;
+
+
+        // =====================================================
+        // 1. EMA TREND STRUCTURE
+        // =====================================================
+
+        boolean above20 =
+                result.ema20 > 0 &&
+                        price > result.ema20;
+
+        boolean above50 =
+                result.ema50 > 0 &&
+                        price > result.ema50;
+
+        boolean above200 =
+                result.ema200 > 0 &&
+                        price > result.ema200;
+
+
+        boolean bullAlignment =
+                result.ema20 > result.ema50 &&
+                        result.ema50 > result.ema200;
+
+
+        boolean bearAlignment =
+                result.ema20 < result.ema50 &&
+                        result.ema50 < result.ema200;
+
+
+        if (bullAlignment) {
+
+            bullishScore += 3;
+
+        } else if (bearAlignment) {
+
+            bearishScore += 3;
+        }
+
+
+        // Price relative to long-term trend
+        if (above200) {
+
+            bullishScore += 2;
+
+        } else if (result.ema200 > 0) {
+
+            bearishScore += 2;
+        }
+
+
+        // Price relative to medium trend
+        if (above50) {
+
+            bullishScore++;
+
+        } else if (result.ema50 > 0) {
+
+            bearishScore++;
+        }
+
+
+        // =====================================================
+        // 2. RSI
+        // =====================================================
+
+        if (result.rsi >= 55.0 &&
+                result.rsi <= 70.0) {
+
+            bullishScore += 2;
+
+        } else if (result.rsi <= 45.0 &&
+                result.rsi >= 30.0) {
+
+            bearishScore += 2;
+        }
+
+
+        // Avoid blindly buying extreme RSI
+        if (result.rsi > 75.0) {
+
+            bullishScore -= 2;
+        }
+
+
+        // Avoid blindly selling extreme RSI
+        if (result.rsi < 25.0) {
+
+            bearishScore -= 2;
+        }
+
+
+        // =====================================================
+        // 3. MACD
+        // =====================================================
+
         if (result.macd > 0.0) {
 
-            bullish++;
+            bullishScore += 2;
 
         } else if (result.macd < 0.0) {
 
-            bearish++;
+            bearishScore += 2;
         }
 
 
-        // EMA 50
-        if (result.ema50 > 0.0) {
+        // =====================================================
+        // 4. MOMENTUM
+        // =====================================================
 
-            if (price > result.ema50) {
+        if (result.momentum >= 1.0) {
 
-                bullish++;
+            bullishScore += 2;
 
-            } else {
+        } else if (result.momentum <= -1.0) {
 
-                bearish++;
-            }
+            bearishScore += 2;
+
+        } else if (result.momentum > 0.0) {
+
+            bullishScore++;
+
+        } else if (result.momentum < 0.0) {
+
+            bearishScore++;
         }
 
 
-        // EMA 200
-        if (result.ema200 > 0.0) {
+        // =====================================================
+        // 5. BOLLINGER POSITION
+        // =====================================================
 
-            if (price > result.ema200) {
-
-                bullish++;
-
-            } else {
-
-                bearish++;
-            }
-        }
-
-
-        // Momentum
-        if (result.momentum > 0.50) {
-
-            bullish++;
-
-        } else if (result.momentum < -0.50) {
-
-            bearish++;
-        }
-
-
-        // Bollinger middle
         if (result.bollingerUpper > 0.0 &&
                 result.bollingerLower > 0.0) {
 
@@ -949,34 +934,99 @@ public class BacktestEngine {
                             / 2.0;
 
 
-            if (price > middle) {
+            double range =
+                    result.bollingerUpper
+                            - result.bollingerLower;
 
-                bullish++;
 
-            } else {
+            if (range > 0.0) {
 
-                bearish++;
+                double position =
+                        (
+                                price
+                                        - result.bollingerLower
+                        )
+                                / range;
+
+
+                if (position > 0.55 &&
+                        position < 0.90) {
+
+                    bullishScore++;
+
+                } else if (position < 0.45 &&
+                        position > 0.10) {
+
+                    bearishScore++;
+                }
             }
         }
 
 
         // =====================================================
-        // STRONG SIGNAL ONLY
+        // 6. VOLUME CONFIRMATION
         // =====================================================
 
-        if (bullish >= 4 &&
-                bullish > bearish) {
+        if (result.volumeRatio >= 1.20) {
+
+            if (bullishScore > bearishScore) {
+
+                bullishScore++;
+
+            } else if (bearishScore > bullishScore) {
+
+                bearishScore++;
+            }
+        }
+
+
+        // =====================================================
+        // 7. MARKET REGIME
+        // =====================================================
+
+        int trendStrength =
+                Math.abs(
+                        bullishScore
+                                - bearishScore
+                );
+
+
+        // Strong directional trend
+        if (bullishScore >= 9 &&
+                bullishScore > bearishScore &&
+                trendStrength >= 3) {
 
             return "BUY";
         }
 
 
-        if (bearish >= 4 &&
-                bearish > bullish) {
+        if (bearishScore >= 9 &&
+                bearishScore > bullishScore &&
+                trendStrength >= 3) {
 
             return "SELL";
         }
 
+
+        // Medium trend:
+        // require stronger confirmation
+        if (bullishScore >= 11 &&
+                bullishScore > bearishScore) {
+
+            return "BUY";
+        }
+
+
+        if (bearishScore >= 11 &&
+                bearishScore > bullishScore) {
+
+            return "SELL";
+        }
+
+
+        // =====================================================
+        // SIDEWAYS / CONFLICTING MARKET
+        // =====================================================
 
         return "NEUTRAL";
     }
@@ -1007,7 +1057,6 @@ public class BacktestEngine {
 
                 0.0,
                 0.0,
-
 
                 0,
                 0,
@@ -1042,4 +1091,4 @@ public class BacktestEngine {
                 value * 100.0
         ) / 100.0;
     }
-                }
+            }
