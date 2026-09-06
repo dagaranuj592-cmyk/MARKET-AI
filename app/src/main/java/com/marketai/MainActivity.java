@@ -5,8 +5,11 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.graphics.Color;
+import android.graphics.Typeface;
 import android.view.Gravity;
 import android.view.MotionEvent;
+import android.view.View;
+import android.widget.Button;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
@@ -27,7 +30,9 @@ public class MainActivity extends Activity {
 
     private LinearLayout container;
     private ScrollView scrollView;
+
     private boolean isRefreshing = false;
+    private float downY = 0f;
 
     private final List<Double> btcOpen = new ArrayList<>();
     private final List<Double> btcHigh = new ArrayList<>();
@@ -41,13 +46,25 @@ public class MainActivity extends Activity {
 
         super.onCreate(savedInstanceState);
 
-        // =====================================================
-        // SCROLL VIEW
-        // =====================================================
+        createUI();
 
-        scrollView = new ScrollView(this);
+        loadInitialData();
+    }
 
-        container = new LinearLayout(this);
+
+    // =========================================================
+    // CREATE UI
+    // =========================================================
+
+    private void createUI() {
+
+        scrollView =
+                new ScrollView(this);
+
+        scrollView.setFillViewport(true);
+
+        container =
+                new LinearLayout(this);
 
         container.setOrientation(
                 LinearLayout.VERTICAL
@@ -57,102 +74,108 @@ public class MainActivity extends Activity {
                 32,
                 32,
                 32,
-                32
+                40
         );
 
         container.setBackgroundColor(
                 Color.rgb(11, 15, 20)
         );
 
-        scrollView.addView(container);
+        scrollView.addView(
+                container
+        );
 
-        setContentView(scrollView);
+        setContentView(
+                scrollView
+        );
 
 
         // =====================================================
-        // PULL DOWN REFRESH
+        // FIXED PULL TO REFRESH
         // =====================================================
 
         scrollView.setOnTouchListener(
                 (view, event) -> {
 
-                    switch (event.getAction()) {
+                    switch (
+                            event.getActionMasked()
+                    ) {
 
                         case MotionEvent.ACTION_DOWN:
 
-                            view.setTag(
-                                    event.getY()
-                            );
+                            downY =
+                                    event.getY();
 
-                            break;
+                            return false;
 
 
                         case MotionEvent.ACTION_UP:
 
-                            Object tag =
-                                    view.getTag();
+                            float upY =
+                                    event.getY();
 
-                            if (tag instanceof Float) {
-
-                                float startY =
-                                        (Float) tag;
-
-                                float endY =
-                                        event.getY();
-
-                                float distance =
-                                        endY - startY;
+                            float distance =
+                                    upY - downY;
 
 
-                                if (
-                                        scrollView.getScrollY() == 0
-                                                &&
-                                                distance > 180
-                                                &&
-                                                !isRefreshing
-                                ) {
+                            if (
+                                    scrollView.getScrollY() <= 0
+                                            &&
+                                    distance >= 120
+                                            &&
+                                    !isRefreshing
+                            ) {
 
-                                    isRefreshing = true;
-
-                                    TextView refreshLoading =
-                                            addText(
-                                                    "Refreshing market data...",
-                                                    15,
-                                                    Color.LTGRAY
-                                            );
-
-                                    loadMarketData(
-                                            refreshLoading
-                                    );
-                                }
+                                startRefresh();
                             }
 
-                            break;
+                            return false;
+
+
+                        case MotionEvent.ACTION_CANCEL:
+
+                            downY = 0f;
+
+                            return false;
                     }
 
                     return false;
                 }
         );
+    }
 
 
-        // =====================================================
-        // INITIAL LOAD
-        // =====================================================
+    // =========================================================
+    // INITIAL LOAD
+    // =========================================================
 
-        showTitle(
-                "MARKET AI"
+    private void loadInitialData() {
+
+        showLoadingScreen(
+                "Loading market data..."
         );
 
-        TextView loading =
-                addText(
-                        "Loading market data...",
-                        18,
-                        Color.LTGRAY
-                );
+        loadMarketData();
+    }
 
-        loadMarketData(
-                loading
+
+    // =========================================================
+    // REFRESH
+    // =========================================================
+
+    private void startRefresh() {
+
+        if (isRefreshing) {
+            return;
+        }
+
+        isRefreshing = true;
+
+        showLoadingScreen(
+                "Refreshing market data..."
         );
+
+        loadMarketData();
     }
 
 
@@ -160,18 +183,12 @@ public class MainActivity extends Activity {
     // LOAD MARKET DATA
     // =========================================================
 
-    private void loadMarketData(
-            TextView loading
-    ) {
+    private void loadMarketData() {
 
         new Thread(
                 () -> {
 
                     try {
-
-                        // =================================================
-                        // FETCH DATA
-                        // =================================================
 
                         fetchBTC();
 
@@ -180,7 +197,7 @@ public class MainActivity extends Activity {
 
 
                         // =================================================
-                        // TECHNICAL ANALYZER
+                        // TECHNICAL
                         // =================================================
 
                         TechnicalAnalyzer.TechnicalResult technical =
@@ -193,7 +210,7 @@ public class MainActivity extends Activity {
 
 
                         // =================================================
-                        // PROBABILITY ENGINE
+                        // PROBABILITY
                         // =================================================
 
                         ProbabilityEngine.ProbabilityResult probability =
@@ -206,7 +223,7 @@ public class MainActivity extends Activity {
 
 
                         // =================================================
-                        // LEARNING ENGINE
+                        // LEARNING
                         // =================================================
 
                         LearningEngine.LearningResult learning =
@@ -219,7 +236,7 @@ public class MainActivity extends Activity {
 
 
                         // =================================================
-                        // COMBINED ENGINE
+                        // COMBINED
                         // =================================================
 
                         CombinedEngine.CombinedResult combined =
@@ -232,7 +249,7 @@ public class MainActivity extends Activity {
 
 
                         // =================================================
-                        // BACKTEST V3
+                        // ORIGINAL BACKTEST
                         // =================================================
 
                         BacktestEngine.BacktestResult backtest =
@@ -245,8 +262,39 @@ public class MainActivity extends Activity {
 
 
                         // =================================================
-                        // MARKET LEVELS
+                        // COMBINED BACKTEST
                         // =================================================
+
+                        CombinedBacktestEngine.Result combinedBacktest =
+                                CombinedBacktestEngine.run(
+                                        btcPrices,
+                                        btcHigh,
+                                        btcLow,
+                                        btcVolume
+                                );
+
+
+                        // =================================================
+                        // CALIBRATION
+                        // =================================================
+
+                        CalibrationEngine.Result calibration =
+                                CalibrationEngine.run(
+                                        btcPrices,
+                                        btcHigh,
+                                        btcLow,
+                                        btcVolume
+                                );
+
+
+                        // =================================================
+                        // MARKET
+                        // =================================================
+
+                        double currentPrice =
+                                btcPrices.get(
+                                        btcPrices.size() - 1
+                                );
 
                         double support =
                                 calculateSupport();
@@ -254,29 +302,18 @@ public class MainActivity extends Activity {
                         double resistance =
                                 calculateResistance();
 
-                        double currentPrice =
-                                btcPrices.get(
-                                        btcPrices.size() - 1
-                                );
-
-
-                        // =================================================
-                        // TREND
-                        // =================================================
-
                         String trend =
                                 getTrend(
                                         currentPrice,
                                         technical
                                 );
 
-
                         double averageVolume =
                                 calculateAverageVolume();
 
 
                         // =================================================
-                        // DISPLAY RESULT
+                        // DISPLAY ON MAIN THREAD
                         // =================================================
 
                         new Handler(
@@ -287,663 +324,20 @@ public class MainActivity extends Activity {
                                     isRefreshing =
                                             false;
 
-                                    container.removeAllViews();
-
-
-                                    // =============================================
-                                    // TITLE
-                                    // =============================================
-
-                                    showTitle(
-                                            "MARKET AI"
-                                    );
-
-                                    addText(
-                                            "BTC / GOLD MARKET ANALYSIS",
-                                            14,
-                                            Color.GRAY
-                                    );
-
-                                    addText(
-                                            "Pull down from top to refresh",
-                                            12,
-                                            Color.GRAY
-                                    );
-
-                                    addSpace();
-
-
-                                    // =============================================
-                                    // MARKET
-                                    // =============================================
-
-                                    addSection(
-                                            "MARKET"
-                                    );
-
-                                    addMetric(
-                                            "Bitcoin",
-                                            "$" + format(
-                                                    currentPrice
-                                            )
-                                    );
-
-                                    addMetric(
-                                            "Gold",
-                                            "$" + format(
-                                                    goldPrice
-                                            )
-                                    );
-
-                                    addMetric(
-                                            "Support",
-                                            "$" + format(
-                                                    support
-                                            )
-                                    );
-
-                                    addMetric(
-                                            "Resistance",
-                                            "$" + format(
-                                                    resistance
-                                            )
-                                    );
-
-                                    addMetric(
-                                            "Trend",
-                                            trend
-                                    );
-
-                                    addMetric(
-                                            "Average Volume",
-                                            format(
-                                                    averageVolume
-                                            )
-                                    );
-
-                                    addSpace();
-
-
-                                    // =============================================
-                                    // TECHNICAL ANALYSIS
-                                    // =============================================
-
-                                    addSection(
-                                            "TECHNICAL ANALYSIS"
-                                    );
-
-                                    addMetric(
-                                            "RSI",
-                                            format(
-                                                    technical.rsi
-                                            )
-                                    );
-
-                                    addMetric(
-                                            "EMA 20",
-                                            "$" + format(
-                                                    technical.ema20
-                                            )
-                                    );
-
-                                    addMetric(
-                                            "EMA 50",
-                                            "$" + format(
-                                                    technical.ema50
-                                            )
-                                    );
-
-                                    addMetric(
-                                            "EMA 200",
-                                            "$" + format(
-                                                    technical.ema200
-                                            )
-                                    );
-
-                                    addMetric(
-                                            "MACD",
-                                            format(
-                                                    technical.macd
-                                            )
-                                    );
-
-                                    addMetric(
-                                            "ATR",
-                                            "$" + format(
-                                                    technical.atr
-                                            )
-                                    );
-
-                                    addMetric(
-                                            "Bollinger Upper",
-                                            "$" + format(
-                                                    technical.bollingerUpper
-                                            )
-                                    );
-
-                                    addMetric(
-                                            "Bollinger Lower",
-                                            "$" + format(
-                                                    technical.bollingerLower
-                                            )
-                                    );
-
-                                    addMetric(
-                                            "Momentum",
-                                            format(
-                                                    technical.momentum
-                                            ) + "%"
-                                    );
-
-                                    addMetric(
-                                            "Volume Ratio",
-                                            format(
-                                                    technical.volumeRatio
-                                            ) + "x"
-                                    );
-
-
-                                    String signal =
-                                            getTechnicalSignal(
-                                                    technical,
-                                                    currentPrice
-                                            );
-
-                                    addMetric(
-                                            "Technical Signal",
-                                            signal
-                                    );
-
-                                    addSpace();
-
-
-                                    // =============================================
-                                    // AI PROBABILITY
-                                    // =============================================
-
-                                    addSection(
-                                            "AI PROBABILITY"
-                                    );
-
-                                    addMetric(
-                                            "BUY Probability",
-                                            format(
-                                                    probability.buyProbability
-                                            ) + "%"
-                                    );
-
-                                    addMetric(
-                                            "SELL Probability",
-                                            format(
-                                                    probability.sellProbability
-                                            ) + "%"
-                                    );
-
-                                    addMetric(
-                                            "NEUTRAL Probability",
-                                            format(
-                                                    probability.neutralProbability
-                                            ) + "%"
-                                    );
-
-                                    addMetric(
-                                            "Direction",
-                                            probability.direction
-                                    );
-
-                                    addMetric(
-                                            "Confidence",
-                                            probability.confidence
-                                    );
-
-                                    addMetric(
-                                            "Historical Samples",
-                                            String.valueOf(
-                                                    probability.samples
-                                            )
-                                    );
-
-                                    addMetric(
-                                            "Validation Accuracy",
-                                            format(
-                                                    probability.validationAccuracy
-                                            ) + "%"
-                                    );
-
-                                    addMetric(
-                                            "Validation Samples",
-                                            String.valueOf(
-                                                    probability.validationSamples
-                                            )
-                                    );
-
-                                    addSpace();
-
-
-                                    // =============================================
-                                    // LEARNING ENGINE
-                                    // =============================================
-
-                                    addSection(
-                                            "LEARNING ENGINE"
-                                    );
-
-                                    addMetric(
-                                            "Learning Direction",
-                                            learning.direction
-                                    );
-
-                                    addMetric(
-                                            "BUY Probability",
-                                            format(
-                                                    learning.buyProbability
-                                            ) + "%"
-                                    );
-
-                                    addMetric(
-                                            "SELL Probability",
-                                            format(
-                                                    learning.sellProbability
-                                            ) + "%"
-                                    );
-
-                                    addMetric(
-                                            "NEUTRAL Probability",
-                                            format(
-                                                    learning.neutralProbability
-                                            ) + "%"
-                                    );
-
-                                    addMetric(
-                                            "Matched Samples",
-                                            String.valueOf(
-                                                    learning.matchedSamples
-                                            )
-                                    );
-
-                                    addMetric(
-                                            "BUY Samples",
-                                            String.valueOf(
-                                                    learning.buySamples
-                                            )
-                                    );
-
-                                    addMetric(
-                                            "SELL Samples",
-                                            String.valueOf(
-                                                    learning.sellSamples
-                                            )
-                                    );
-
-                                    addMetric(
-                                            "NEUTRAL Samples",
-                                            String.valueOf(
-                                                    learning.neutralSamples
-                                            )
-                                    );
-
-                                    addMetric(
-                                            "Average Future Return",
-                                            format(
-                                                    learning.averageFutureReturn
-                                            ) + "%"
-                                    );
-
-                                    addMetric(
-                                            "Unseen Test Accuracy",
-                                            format(
-                                                    learning.trainingAccuracy
-                                            ) + "%"
-                                    );
-
-                                    addMetric(
-                                            "Training Samples",
-                                            String.valueOf(
-                                                    learning.trainingSamples
-                                            )
-                                    );
-
-                                    addSpace();
-
-
-                                    // =============================================
-                                    // FINAL COMBINED AI
-                                    // =============================================
-
-                                    addSection(
-                                            "FINAL AI ANALYSIS"
-                                    );
-
-                                    addMetric(
-                                            "FINAL Direction",
-                                            combined.direction
-                                    );
-
-                                    addMetric(
-                                            "FINAL BUY Probability",
-                                            format(
-                                                    combined.buyProbability
-                                            ) + "%"
-                                    );
-
-                                    addMetric(
-                                            "FINAL SELL Probability",
-                                            format(
-                                                    combined.sellProbability
-                                            ) + "%"
-                                    );
-
-                                    addMetric(
-                                            "FINAL NEUTRAL Probability",
-                                            format(
-                                                    combined.neutralProbability
-                                            ) + "%"
-                                    );
-
-                                    addMetric(
-                                            "Combined Confidence",
-                                            format(
-                                                    combined.confidence
-                                            ) + "%"
-                                    );
-
-                                    addMetric(
-                                            "Technical BUY",
-                                            format(
-                                                    combined.technicalBuy
-                                            ) + "%"
-                                    );
-
-                                    addMetric(
-                                            "Technical SELL",
-                                            format(
-                                                    combined.technicalSell
-                                            ) + "%"
-                                    );
-
-                                    addMetric(
-                                            "Technical NEUTRAL",
-                                            format(
-                                                    combined.technicalNeutral
-                                            ) + "%"
-                                    );
-
-                                    addMetric(
-                                            "Probability BUY",
-                                            format(
-                                                    combined.probabilityBuy
-                                            ) + "%"
-                                    );
-
-                                    addMetric(
-                                            "Probability SELL",
-                                            format(
-                                                    combined.probabilitySell
-                                            ) + "%"
-                                    );
-
-                                    addMetric(
-                                            "Probability NEUTRAL",
-                                            format(
-                                                    combined.probabilityNeutral
-                                            ) + "%"
-                                    );
-
-                                    addMetric(
-                                            "Learning BUY",
-                                            format(
-                                                    combined.learningBuy
-                                            ) + "%"
-                                    );
-
-                                    addMetric(
-                                            "Learning SELL",
-                                            format(
-                                                    combined.learningSell
-                                            ) + "%"
-                                    );
-
-                                    addMetric(
-                                            "Learning NEUTRAL",
-                                            format(
-                                                    combined.learningNeutral
-                                            ) + "%"
-                                    );
-
-                                    addMetric(
-                                            "Learning Samples",
-                                            String.valueOf(
-                                                    combined.learningMatchedSamples
-                                            )
-                                    );
-
-                                    addMetric(
-                                            "Learning Test Accuracy",
-                                            format(
-                                                    combined.learningAccuracy
-                                            ) + "%"
-                                    );
-
-                                    addSpace();
-
-
-                                    // =============================================
-                                    // BACKTEST V3
-                                    // =============================================
-
-                                    addSection(
-                                            "BACKTEST V3"
-                                    );
-
-                                    addMetric(
-                                            "Total Trades",
-                                            String.valueOf(
-                                                    backtest.totalTrades
-                                            )
-                                    );
-
-                                    addMetric(
-                                            "Correct Trades",
-                                            String.valueOf(
-                                                    backtest.correctTrades
-                                            )
-                                    );
-
-                                    addMetric(
-                                            "Wrong Trades",
-                                            String.valueOf(
-                                                    backtest.wrongTrades
-                                            )
-                                    );
-
-                                    addMetric(
-                                            "Neutral Signals",
-                                            String.valueOf(
-                                                    backtest.neutralTrades
-                                            )
-                                    );
-
-                                    addMetric(
-                                            "BUY Signals",
-                                            String.valueOf(
-                                                    backtest.buySignals
-                                            )
-                                    );
-
-                                    addMetric(
-                                            "BUY Correct",
-                                            String.valueOf(
-                                                    backtest.buyCorrect
-                                            )
-                                    );
-
-                                    addMetric(
-                                            "BUY Accuracy",
-                                            format(
-                                                    backtest.buyAccuracy
-                                            ) + "%"
-                                    );
-
-                                    addMetric(
-                                            "SELL Signals",
-                                            String.valueOf(
-                                                    backtest.sellSignals
-                                            )
-                                    );
-
-                                    addMetric(
-                                            "SELL Correct",
-                                            String.valueOf(
-                                                    backtest.sellCorrect
-                                            )
-                                    );
-
-                                    addMetric(
-                                            "SELL Accuracy",
-                                            format(
-                                                    backtest.sellAccuracy
-                                            ) + "%"
-                                    );
-
-                                    addMetric(
-                                            "Overall Accuracy",
-                                            format(
-                                                    backtest.accuracy
-                                            ) + "%"
-                                    );
-
-                                    addMetric(
-                                            "Average Return",
-                                            format(
-                                                    backtest.averageReturn
-                                            ) + "%"
-                                    );
-
-                                    addMetric(
-                                            "Total Return",
-                                            format(
-                                                    backtest.totalReturn
-                                            ) + "%"
-                                    );
-
-                                    addSpace();
-
-
-                                    // =============================================
-                                    // RISK ANALYSIS
-                                    // =============================================
-
-                                    addSection(
-                                            "V3 RISK ANALYSIS"
-                                    );
-
-                                    addMetric(
-                                            "Stop Loss Trades",
-                                            String.valueOf(
-                                                    backtest.stopLossTrades
-                                            )
-                                    );
-
-                                    addMetric(
-                                            "Take Profit Trades",
-                                            String.valueOf(
-                                                    backtest.takeProfitTrades
-                                            )
-                                    );
-
-                                    addMetric(
-                                            "Time Exit Trades",
-                                            String.valueOf(
-                                                    backtest.timeExitTrades
-                                            )
-                                    );
-
-                                    addMetric(
-                                            "Profit Factor",
-                                            format(
-                                                    backtest.profitFactor
-                                            )
-                                    );
-
-                                    addMetric(
-                                            "Gross Profit",
-                                            format(
-                                                    backtest.grossProfit
-                                            ) + "%"
-                                    );
-
-                                    addMetric(
-                                            "Gross Loss",
-                                            format(
-                                                    backtest.grossLoss
-                                            ) + "%"
-                                    );
-
-                                    addMetric(
-                                            "Maximum Drawdown",
-                                            format(
-                                                    backtest.maxDrawdown
-                                            ) + "%"
-                                    );
-
-                                    addMetric(
-                                            "BUY Average Return",
-                                            format(
-                                                    backtest.buyAverageReturn
-                                            ) + "%"
-                                    );
-
-                                    addMetric(
-                                            "SELL Average Return",
-                                            format(
-                                                    backtest.sellAverageReturn
-                                            ) + "%"
-                                    );
-
-                                    addMetric(
-                                            "BUY Total Return",
-                                            format(
-                                                    backtest.buyTotalReturn
-                                            ) + "%"
-                                    );
-
-                                    addMetric(
-                                            "SELL Total Return",
-                                            format(
-                                                    backtest.sellTotalReturn
-                                            ) + "%"
-                                    );
-
-                                    addMetric(
-                                            "BTC Buy & Hold",
-                                            format(
-                                                    backtest.buyHoldReturn
-                                            ) + "%"
-                                    );
-
-                                    addSpace();
-
-
-                                    // =============================================
-                                    // INFORMATION
-                                    // =============================================
-
-                                    addText(
-                                            "Historical Data: ~2 Years BTC Daily Candles",
-                                            12,
-                                            Color.GRAY
-                                    );
-
-                                    addText(
-                                            "Three engines are combined into one final analytical result.",
-                                            12,
-                                            Color.GRAY
-                                    );
-
-                                    addText(
-                                            "Backtest and probabilities are historical research results and do not guarantee future results.",
-                                            12,
-                                            Color.GRAY
+                                    showResults(
+                                            goldPrice,
+                                            currentPrice,
+                                            support,
+                                            resistance,
+                                            trend,
+                                            averageVolume,
+                                            technical,
+                                            probability,
+                                            learning,
+                                            combined,
+                                            backtest,
+                                            combinedBacktest,
+                                            calibration
                                     );
                                 }
                         );
@@ -958,34 +352,14 @@ public class MainActivity extends Activity {
                                     isRefreshing =
                                             false;
 
-                                    container.removeAllViews();
-
-                                    showTitle(
-                                            "MARKET AI"
-                                    );
-
-                                    addText(
-                                            "Market data loading failed.",
-                                            18,
-                                            Color.RED
-                                    );
-
-                                    addSpace();
-
-                                    addText(
-                                            e.getMessage() == null
-                                                    ? "Unknown error"
-                                                    : e.getMessage(),
-                                            14,
-                                            Color.LTGRAY
-                                    );
-
-                                    addSpace();
-
-                                    addText(
-                                            "Pull down from the top to try again.",
-                                            13,
-                                            Color.GRAY
+                                    showError(
+                                            e.getMessage()
+                                                    ==
+                                            null
+                                                    ?
+                                            "Unknown error"
+                                                    :
+                                            e.getMessage()
                                     );
                                 }
                         );
@@ -997,7 +371,1077 @@ public class MainActivity extends Activity {
 
 
     // =========================================================
-    // BTC DATA - 730 CANDLES
+    // RESULTS SCREEN
+    // =========================================================
+
+    private void showResults(
+            double goldPrice,
+            double currentPrice,
+            double support,
+            double resistance,
+            String trend,
+            double averageVolume,
+            TechnicalAnalyzer.TechnicalResult technical,
+            ProbabilityEngine.ProbabilityResult probability,
+            LearningEngine.LearningResult learning,
+            CombinedEngine.CombinedResult combined,
+            BacktestEngine.BacktestResult backtest,
+            CombinedBacktestEngine.Result combinedBacktest,
+            CalibrationEngine.Result calibration
+    ) {
+
+        container.removeAllViews();
+
+
+        // =====================================================
+        // TITLE
+        // =====================================================
+
+        showTitle(
+                "MARKET AI"
+        );
+
+        addText(
+                "BTC / GOLD ANALYTICAL ENGINE",
+                13,
+                Color.GRAY
+        );
+
+
+        // =====================================================
+        // REFRESH BUTTON
+        // =====================================================
+
+        Button refreshButton =
+                new Button(this);
+
+        refreshButton.setText(
+                "↻  REFRESH MARKET DATA"
+        );
+
+        refreshButton.setTextSize(
+                14
+        );
+
+        refreshButton.setTextColor(
+                Color.WHITE
+        );
+
+        refreshButton.setOnClickListener(
+                v -> startRefresh()
+        );
+
+        container.addView(
+                refreshButton
+        );
+
+
+        addSpace();
+
+
+        // =====================================================
+        // FINAL SIGNAL
+        // =====================================================
+
+        addSection(
+                "FINAL SIGNAL"
+        );
+
+
+        String finalSignal;
+
+
+        if (
+                "BUY".equals(
+                        combined.direction
+                )
+        ) {
+
+            finalSignal =
+                    "BUY";
+
+        } else if (
+                "SELL".equals(
+                        combined.direction
+                )
+        ) {
+
+            finalSignal =
+                    "SELL";
+
+        } else {
+
+            finalSignal =
+                    "WAIT";
+        }
+
+
+        TextView signalView =
+                new TextView(this);
+
+
+        signalView.setText(
+                finalSignal
+        );
+
+        signalView.setTextSize(
+                38
+        );
+
+        signalView.setTypeface(
+                Typeface.DEFAULT_BOLD
+        );
+
+        signalView.setGravity(
+                Gravity.CENTER
+        );
+
+        signalView.setPadding(
+                0,
+                25,
+                0,
+                25
+        );
+
+
+        if (
+                "BUY".equals(
+                        finalSignal
+                )
+        ) {
+
+            signalView.setTextColor(
+                    Color.rgb(
+                            0,
+                            220,
+                            100
+                    )
+            );
+
+        } else if (
+                "SELL".equals(
+                        finalSignal
+                )
+        ) {
+
+            signalView.setTextColor(
+                    Color.rgb(
+                            255,
+                            80,
+                            80
+                    )
+            );
+
+        } else {
+
+            signalView.setTextColor(
+                    Color.LTGRAY
+            );
+        }
+
+
+        container.addView(
+                signalView
+        );
+
+
+        addMetric(
+                "Confidence",
+                format(
+                        combined.confidence
+                ) + "%"
+        );
+
+        addMetric(
+                "Signal Strength",
+                combined.signalStrength
+        );
+
+        addMetric(
+                "Engine Agreement",
+                combined.agreement
+        );
+
+
+        if (
+                combined.agreement != null
+                        &&
+                !"MIXED".equals(
+                        combined.agreement
+                )
+        ) {
+
+            addText(
+                    "Multiple analytical engines currently agree on this direction.",
+                    12,
+                    Color.GRAY
+            );
+
+        } else {
+
+            addText(
+                    "Engines are not sufficiently aligned. WAIT is safer than forcing a direction.",
+                    12,
+                    Color.GRAY
+            );
+        }
+
+
+        addSpace();
+
+
+        // =====================================================
+        // MARKET
+        // =====================================================
+
+        addSection(
+                "MARKET"
+        );
+
+        addMetric(
+                "Bitcoin",
+                "$" + format(
+                        currentPrice
+                )
+        );
+
+        addMetric(
+                "Gold",
+                "$" + format(
+                        goldPrice
+                )
+        );
+
+        addMetric(
+                "Support",
+                "$" + format(
+                        support
+                )
+        );
+
+        addMetric(
+                "Resistance",
+                "$" + format(
+                        resistance
+                )
+        );
+
+        addMetric(
+                "Trend",
+                trend
+        );
+
+        addMetric(
+                "Average Volume",
+                format(
+                        averageVolume
+                )
+        );
+
+
+        addSpace();
+
+
+        // =====================================================
+        // FINAL PROBABILITIES
+        // =====================================================
+
+        addSection(
+                "FINAL PROBABILITIES"
+        );
+
+        addMetric(
+                "BUY",
+                format(
+                        combined.buyProbability
+                ) + "%"
+        );
+
+        addMetric(
+                "SELL",
+                format(
+                        combined.sellProbability
+                ) + "%"
+        );
+
+        addMetric(
+                "WAIT / NEUTRAL",
+                format(
+                        combined.neutralProbability
+                ) + "%"
+        );
+
+
+        addSpace();
+
+
+        // =====================================================
+        // ENGINE AGREEMENT
+        // =====================================================
+
+        addSection(
+                "ENGINE AGREEMENT"
+        );
+
+        addMetric(
+                "Technical",
+                getTechnicalDirection(
+                        combined
+                )
+        );
+
+        addMetric(
+                "Historical Probability",
+                probability.direction
+        );
+
+        addMetric(
+                "Learning",
+                learning.direction
+        );
+
+        addMetric(
+                "Agreement",
+                combined.agreement
+        );
+
+        addMetric(
+                "Agreement Count",
+                String.valueOf(
+                        combined.agreementCount
+                ) + "/3"
+        );
+
+
+        addSpace();
+
+
+        // =====================================================
+        // TECHNICAL DETAILS
+        // =====================================================
+
+        addSection(
+                "TECHNICAL DETAILS"
+        );
+
+        addMetric(
+                "RSI",
+                format(
+                        technical.rsi
+                )
+        );
+
+        addMetric(
+                "EMA 20",
+                "$" + format(
+                        technical.ema20
+                )
+        );
+
+        addMetric(
+                "EMA 50",
+                "$" + format(
+                        technical.ema50
+                )
+        );
+
+        addMetric(
+                "EMA 200",
+                "$" + format(
+                        technical.ema200
+                )
+        );
+
+        addMetric(
+                "MACD",
+                format(
+                        technical.macd
+                )
+        );
+
+        addMetric(
+                "ATR",
+                "$" + format(
+                        technical.atr
+                )
+        );
+
+        addMetric(
+                "Momentum",
+                format(
+                        technical.momentum
+                ) + "%"
+        );
+
+        addMetric(
+                "Volume Ratio",
+                format(
+                        technical.volumeRatio
+                ) + "x"
+        );
+
+        addMetric(
+                "Technical Signal",
+                getTechnicalSignal(
+                        technical,
+                        currentPrice
+                )
+        );
+
+
+        addSpace();
+
+
+        // =====================================================
+        // HISTORICAL PROBABILITY
+        // =====================================================
+
+        addSection(
+                "HISTORICAL PROBABILITY"
+        );
+
+        addMetric(
+                "BUY",
+                format(
+                        probability.buyProbability
+                ) + "%"
+        );
+
+        addMetric(
+                "SELL",
+                format(
+                        probability.sellProbability
+                ) + "%"
+        );
+
+        addMetric(
+                "NEUTRAL",
+                format(
+                        probability.neutralProbability
+                ) + "%"
+        );
+
+        addMetric(
+                "Direction",
+                probability.direction
+        );
+
+        addMetric(
+                "Confidence",
+                probability.confidence
+        );
+
+        addMetric(
+                "Samples",
+                String.valueOf(
+                        probability.samples
+                )
+        );
+
+        addMetric(
+                "Validation Accuracy",
+                format(
+                        probability.validationAccuracy
+                ) + "%"
+        );
+
+        addMetric(
+                "Validation Samples",
+                String.valueOf(
+                        probability.validationSamples
+                )
+        );
+
+
+        addSpace();
+
+
+        // =====================================================
+        // LEARNING DETAILS
+        // =====================================================
+
+        addSection(
+                "LEARNING DETAILS"
+        );
+
+        addMetric(
+                "Direction",
+                learning.direction
+        );
+
+        addMetric(
+                "BUY",
+                format(
+                        learning.buyProbability
+                ) + "%"
+        );
+
+        addMetric(
+                "SELL",
+                format(
+                        learning.sellProbability
+                ) + "%"
+        );
+
+        addMetric(
+                "NEUTRAL",
+                format(
+                        learning.neutralProbability
+                ) + "%"
+        );
+
+        addMetric(
+                "Matched Samples",
+                String.valueOf(
+                        learning.matchedSamples
+                )
+        );
+
+        addMetric(
+                "BUY Samples",
+                String.valueOf(
+                        learning.buySamples
+                )
+        );
+
+        addMetric(
+                "SELL Samples",
+                String.valueOf(
+                        learning.sellSamples
+                )
+        );
+
+        addMetric(
+                "NEUTRAL Samples",
+                String.valueOf(
+                        learning.neutralSamples
+                )
+        );
+
+        addMetric(
+                "Average Future Return",
+                format(
+                        learning.averageFutureReturn
+                ) + "%"
+        );
+
+        addMetric(
+                "Unseen Test Accuracy",
+                format(
+                        learning.trainingAccuracy
+                ) + "%"
+        );
+
+        addMetric(
+                "Training Samples",
+                String.valueOf(
+                        learning.trainingSamples
+                )
+        );
+
+
+        addSpace();
+
+
+        // =====================================================
+        // COMBINED BACKTEST
+        // =====================================================
+
+        addSection(
+                "COMBINED SYSTEM BACKTEST"
+        );
+
+        addMetric(
+                "Test Signals",
+                String.valueOf(
+                        combinedBacktest.totalSignals
+                )
+        );
+
+        addMetric(
+                "Correct",
+                String.valueOf(
+                        combinedBacktest.correctSignals
+                )
+        );
+
+        addMetric(
+                "Wrong",
+                String.valueOf(
+                        combinedBacktest.wrongSignals
+                )
+        );
+
+        addMetric(
+                "Neutral",
+                String.valueOf(
+                        combinedBacktest.neutralSignals
+                )
+        );
+
+        addMetric(
+                "Overall Accuracy",
+                format(
+                        combinedBacktest.accuracy
+                ) + "%"
+        );
+
+        addMetric(
+                "BUY Accuracy",
+                format(
+                        combinedBacktest.buyAccuracy
+                ) + "%"
+        );
+
+        addMetric(
+                "SELL Accuracy",
+                format(
+                        combinedBacktest.sellAccuracy
+                ) + "%"
+        );
+
+        addMetric(
+                "Average Return",
+                format(
+                        combinedBacktest.averageReturn
+                ) + "%"
+        );
+
+        addMetric(
+                "Total Return",
+                format(
+                        combinedBacktest.totalReturn
+                ) + "%"
+        );
+
+        addMetric(
+                "Profit Factor",
+                format(
+                        combinedBacktest.profitFactor
+                )
+        );
+
+        addMetric(
+                "Maximum Drawdown",
+                format(
+                        combinedBacktest.maxDrawdown
+                ) + "%"
+        );
+
+        addMetric(
+                "BUY Agreement Signals",
+                String.valueOf(
+                        combinedBacktest.buyAgreementSignals
+                )
+        );
+
+        addMetric(
+                "SELL Agreement Signals",
+                String.valueOf(
+                        combinedBacktest.sellAgreementSignals
+                )
+        );
+
+        addMetric(
+                "Strong Signals",
+                String.valueOf(
+                        combinedBacktest.strongSignals
+                )
+        );
+
+        addMetric(
+                "Moderate Signals",
+                String.valueOf(
+                        combinedBacktest.moderateSignals
+                )
+        );
+
+        addMetric(
+                "Weak Signals",
+                String.valueOf(
+                        combinedBacktest.weakSignals
+                )
+        );
+
+        addMetric(
+                "BTC Buy & Hold",
+                format(
+                        combinedBacktest.buyHoldReturn
+                ) + "%"
+        );
+
+
+        addSpace();
+
+
+        // =====================================================
+        // CALIBRATION
+        // =====================================================
+
+        addSection(
+                "CONFIDENCE CALIBRATION"
+        );
+
+        addText(
+                "Historical accuracy of signals grouped by model confidence.",
+                12,
+                Color.GRAY
+        );
+
+        addCalibrationBucket(
+                calibration.bucket0_40
+        );
+
+        addCalibrationBucket(
+                calibration.bucket40_50
+        );
+
+        addCalibrationBucket(
+                calibration.bucket50_60
+        );
+
+        addCalibrationBucket(
+                calibration.bucket60_70
+        );
+
+        addCalibrationBucket(
+                calibration.bucket70_80
+        );
+
+        addCalibrationBucket(
+                calibration.bucket80_100
+        );
+
+        addMetric(
+                "Calibration Accuracy",
+                format(
+                        calibration.overallAccuracy
+                ) + "%"
+        );
+
+        addMetric(
+                "Calibration Avg Return",
+                format(
+                        calibration.averageReturn
+                ) + "%"
+        );
+
+
+        addSpace();
+
+
+        // =====================================================
+        // V3 BACKTEST
+        // =====================================================
+
+        addSection(
+                "V3 BACKTEST"
+        );
+
+        addMetric(
+                "Total Trades",
+                String.valueOf(
+                        backtest.totalTrades
+                )
+        );
+
+        addMetric(
+                "Correct Trades",
+                String.valueOf(
+                        backtest.correctTrades
+                )
+        );
+
+        addMetric(
+                "Wrong Trades",
+                String.valueOf(
+                        backtest.wrongTrades
+                )
+        );
+
+        addMetric(
+                "Overall Accuracy",
+                format(
+                        backtest.accuracy
+                ) + "%"
+        );
+
+        addMetric(
+                "Average Return",
+                format(
+                        backtest.averageReturn
+                ) + "%"
+        );
+
+        addMetric(
+                "Total Return",
+                format(
+                        backtest.totalReturn
+                ) + "%"
+        );
+
+        addMetric(
+                "Profit Factor",
+                format(
+                        backtest.profitFactor
+                )
+        );
+
+        addMetric(
+                "Maximum Drawdown",
+                format(
+                        backtest.maxDrawdown
+                ) + "%"
+        );
+
+
+        addSpace();
+
+
+        // =====================================================
+        // RISK
+        // =====================================================
+
+        addSection(
+                "RISK ANALYSIS"
+        );
+
+        addMetric(
+                "Stop Loss Trades",
+                String.valueOf(
+                        backtest.stopLossTrades
+                )
+        );
+
+        addMetric(
+                "Take Profit Trades",
+                String.valueOf(
+                        backtest.takeProfitTrades
+                )
+        );
+
+        addMetric(
+                "Time Exit Trades",
+                String.valueOf(
+                        backtest.timeExitTrades
+                )
+        );
+
+        addMetric(
+                "BUY Average Return",
+                format(
+                        backtest.buyAverageReturn
+                ) + "%"
+        );
+
+        addMetric(
+                "SELL Average Return",
+                format(
+                        backtest.sellAverageReturn
+                ) + "%"
+        );
+
+        addMetric(
+                "BUY Total Return",
+                format(
+                        backtest.buyTotalReturn
+                ) + "%"
+        );
+
+        addMetric(
+                "SELL Total Return",
+                format(
+                        backtest.sellTotalReturn
+                ) + "%"
+        );
+
+        addMetric(
+                "BTC Buy & Hold",
+                format(
+                        backtest.buyHoldReturn
+                ) + "%"
+        );
+
+
+        addSpace();
+
+
+        // =====================================================
+        // FOOTER
+        // =====================================================
+
+        addText(
+                "Historical data: approximately 2 years of BTC daily candles.",
+                12,
+                Color.GRAY
+        );
+
+        addText(
+                "FINAL SIGNAL is a model-based analytical result, not a guaranteed outcome.",
+                12,
+                Color.GRAY
+        );
+
+        addText(
+                "Probabilities and backtests are historical research metrics.",
+                12,
+                Color.GRAY
+        );
+    }
+
+
+    // =========================================================
+    // CALIBRATION BUCKET
+    // =========================================================
+
+    private void addCalibrationBucket(
+            CalibrationEngine.Bucket bucket
+    ) {
+
+        if (
+                bucket == null
+        ) {
+            return;
+        }
+
+        addMetric(
+                bucket.range,
+                "Accuracy "
+                        +
+                format(
+                        bucket.accuracy
+                )
+                        +
+                "% | "
+                        +
+                bucket.signals
+                        +
+                " signals"
+        );
+    }
+
+
+    // =========================================================
+    // TECHNICAL DIRECTION
+    // =========================================================
+
+    private String getTechnicalDirection(
+            CombinedEngine.CombinedResult combined
+    ) {
+
+        if (
+                combined.technicalBuy >
+                        combined.technicalSell
+                        &&
+                combined.technicalBuy >
+                        combined.technicalNeutral
+        ) {
+
+            return "BUY";
+        }
+
+        if (
+                combined.technicalSell >
+                        combined.technicalBuy
+                        &&
+                combined.technicalSell >
+                        combined.technicalNeutral
+        ) {
+
+            return "SELL";
+        }
+
+        return "NEUTRAL";
+    }
+
+
+    // =========================================================
+    // LOADING SCREEN
+    // =========================================================
+
+    private void showLoadingScreen(
+            String message
+    ) {
+
+        container.removeAllViews();
+
+        showTitle(
+                "MARKET AI"
+        );
+
+        addText(
+                message,
+                17,
+                Color.LTGRAY
+        );
+
+        addSpace();
+
+        addText(
+                "Fetching fresh BTC and Gold market data...",
+                13,
+                Color.GRAY
+        );
+    }
+
+
+    // =========================================================
+    // ERROR SCREEN
+    // =========================================================
+
+    private void showError(
+            String message
+    ) {
+
+        container.removeAllViews();
+
+        showTitle(
+                "MARKET AI"
+        );
+
+        addText(
+                "Market data loading failed.",
+                18,
+                Color.RED
+        );
+
+        addSpace();
+
+        addText(
+                message,
+                14,
+                Color.LTGRAY
+        );
+
+        addSpace();
+
+        Button retry =
+                new Button(this);
+
+        retry.setText(
+                "↻  TRY AGAIN"
+        );
+
+        retry.setOnClickListener(
+                v -> startRefresh()
+        );
+
+        container.addView(
+                retry
+        );
+
+        addSpace();
+
+        addText(
+                "You can also pull down from the top to refresh.",
+                13,
+                Color.GRAY
+        );
+    }
+
+
+    // =========================================================
+    // BTC DATA
     // =========================================================
 
     private void fetchBTC()
@@ -1005,9 +1449,12 @@ public class MainActivity extends Activity {
 
         String urlString =
                 "https://api.binance.com/api/v3/klines"
-                        + "?symbol=BTCUSDT"
-                        + "&interval=1d"
-                        + "&limit=730";
+                        +
+                "?symbol=BTCUSDT"
+                        +
+                "&interval=1d"
+                        +
+                "&limit=730";
 
 
         URL url =
@@ -1038,11 +1485,14 @@ public class MainActivity extends Activity {
                 connection.getResponseCode();
 
 
-        if (responseCode != 200) {
+        if (
+                responseCode != 200
+        ) {
 
             throw new Exception(
                     "BTC server error: "
-                            + responseCode
+                            +
+                    responseCode
             );
         }
 
@@ -1108,41 +1558,35 @@ public class MainActivity extends Activity {
                     );
 
 
-            double open =
+            btcOpen.add(
                     Double.parseDouble(
                             candle.getString(1)
-                    );
+                    )
+            );
 
-
-            double high =
+            btcHigh.add(
                     Double.parseDouble(
                             candle.getString(2)
-                    );
+                    )
+            );
 
-
-            double low =
+            btcLow.add(
                     Double.parseDouble(
                             candle.getString(3)
-                    );
+                    )
+            );
 
-
-            double close =
+            btcPrices.add(
                     Double.parseDouble(
                             candle.getString(4)
-                    );
+                    )
+            );
 
-
-            double volume =
+            btcVolume.add(
                     Double.parseDouble(
                             candle.getString(5)
-                    );
-
-
-            btcOpen.add(open);
-            btcHigh.add(high);
-            btcLow.add(low);
-            btcPrices.add(close);
-            btcVolume.add(volume);
+                    )
+            );
         }
 
 
@@ -1151,10 +1595,11 @@ public class MainActivity extends Activity {
         ) {
 
             throw new Exception(
-                    "Not enough BTC historical data. "
-                            + "Received: "
-                            + btcPrices.size()
-                            + " candles"
+                    "Not enough BTC historical data. Received: "
+                            +
+                    btcPrices.size()
+                            +
+                    " candles"
             );
         }
     }
@@ -1169,8 +1614,10 @@ public class MainActivity extends Activity {
 
         String urlString =
                 "https://query1.finance.yahoo.com/v8/finance/chart/GC=F"
-                        + "?range=6mo"
-                        + "&interval=1d";
+                        +
+                "?range=6mo"
+                        +
+                "&interval=1d";
 
 
         URL url =
@@ -1206,11 +1653,14 @@ public class MainActivity extends Activity {
                 connection.getResponseCode();
 
 
-        if (responseCode != 200) {
+        if (
+                responseCode != 200
+        ) {
 
             throw new Exception(
                     "Gold server error: "
-                            + responseCode
+                            +
+                    responseCode
             );
         }
 
@@ -1335,7 +1785,7 @@ public class MainActivity extends Activity {
 
 
         if (
-                latest <= 0
+                latest <= 0.0
         ) {
 
             throw new Exception(
@@ -1650,7 +2100,8 @@ public class MainActivity extends Activity {
 
         int start =
                 btcVolume.size()
-                        - count;
+                        -
+                count;
 
 
         double sum =
@@ -1673,7 +2124,7 @@ public class MainActivity extends Activity {
 
 
     // =========================================================
-    // UI TITLE
+    // TITLE
     // =========================================================
 
     private void showTitle(
@@ -1681,10 +2132,7 @@ public class MainActivity extends Activity {
     ) {
 
         TextView title =
-                new TextView(
-                        this
-                );
-
+                new TextView(this);
 
         title.setText(
                 text
@@ -1692,6 +2140,10 @@ public class MainActivity extends Activity {
 
         title.setTextSize(
                 28
+        );
+
+        title.setTypeface(
+                Typeface.DEFAULT_BOLD
         );
 
         title.setTextColor(
@@ -1709,7 +2161,6 @@ public class MainActivity extends Activity {
                 10
         );
 
-
         container.addView(
                 title
         );
@@ -1725,10 +2176,7 @@ public class MainActivity extends Activity {
     ) {
 
         TextView section =
-                new TextView(
-                        this
-                );
-
+                new TextView(this);
 
         section.setText(
                 text
@@ -1736,6 +2184,10 @@ public class MainActivity extends Activity {
 
         section.setTextSize(
                 17
+        );
+
+        section.setTypeface(
+                Typeface.DEFAULT_BOLD
         );
 
         section.setTextColor(
@@ -1748,7 +2200,6 @@ public class MainActivity extends Activity {
                 0,
                 10
         );
-
 
         container.addView(
                 section
@@ -1766,19 +2217,18 @@ public class MainActivity extends Activity {
     ) {
 
         TextView metric =
-                new TextView(
-                        this
-                );
-
+                new TextView(this);
 
         metric.setText(
                 name
-                        + "    "
-                        + value
+                        +
+                "    "
+                        +
+                value
         );
 
         metric.setTextSize(
-                16
+                15
         );
 
         metric.setTextColor(
@@ -1787,11 +2237,10 @@ public class MainActivity extends Activity {
 
         metric.setPadding(
                 0,
-                8,
+                7,
                 0,
-                8
+                7
         );
-
 
         container.addView(
                 metric
@@ -1810,10 +2259,7 @@ public class MainActivity extends Activity {
     ) {
 
         TextView view =
-                new TextView(
-                        this
-                );
-
+                new TextView(this);
 
         view.setText(
                 text
@@ -1829,16 +2275,14 @@ public class MainActivity extends Activity {
 
         view.setPadding(
                 0,
-                8,
+                7,
                 0,
-                8
+                7
         );
-
 
         container.addView(
                 view
         );
-
 
         return view;
     }
@@ -1851,10 +2295,7 @@ public class MainActivity extends Activity {
     private void addSpace() {
 
         TextView space =
-                new TextView(
-                        this
-                );
-
+                new TextView(this);
 
         space.setText(
                 ""
@@ -1862,11 +2303,10 @@ public class MainActivity extends Activity {
 
         space.setPadding(
                 0,
-                10,
+                8,
                 0,
-                10
+                8
         );
-
 
         container.addView(
                 space
@@ -1888,4 +2328,4 @@ public class MainActivity extends Activity {
                 value
         );
     }
-                            }
+            }
