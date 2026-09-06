@@ -8,7 +8,6 @@ import android.graphics.Color;
 import android.graphics.Typeface;
 import android.view.Gravity;
 import android.view.MotionEvent;
-import android.view.View;
 import android.widget.Button;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
@@ -42,13 +41,17 @@ public class MainActivity extends Activity {
 
 
     @Override
-    protected void onCreate(Bundle savedInstanceState) {
+    protected void onCreate(
+            Bundle savedInstanceState
+    ) {
 
-        super.onCreate(savedInstanceState);
+        super.onCreate(
+                savedInstanceState
+        );
 
         createUI();
 
-        loadInitialData();
+        loadMarketData();
     }
 
 
@@ -61,7 +64,10 @@ public class MainActivity extends Activity {
         scrollView =
                 new ScrollView(this);
 
-        scrollView.setFillViewport(true);
+        scrollView.setFillViewport(
+                true
+        );
+
 
         container =
                 new LinearLayout(this);
@@ -78,8 +84,13 @@ public class MainActivity extends Activity {
         );
 
         container.setBackgroundColor(
-                Color.rgb(11, 15, 20)
+                Color.rgb(
+                        11,
+                        15,
+                        20
+                )
         );
+
 
         scrollView.addView(
                 container
@@ -91,7 +102,7 @@ public class MainActivity extends Activity {
 
 
         // =====================================================
-        // FIXED PULL TO REFRESH
+        // PULL REFRESH
         // =====================================================
 
         scrollView.setOnTouchListener(
@@ -146,20 +157,6 @@ public class MainActivity extends Activity {
 
 
     // =========================================================
-    // INITIAL LOAD
-    // =========================================================
-
-    private void loadInitialData() {
-
-        showLoadingScreen(
-                "Loading market data..."
-        );
-
-        loadMarketData();
-    }
-
-
-    // =========================================================
     // REFRESH
     // =========================================================
 
@@ -171,7 +168,7 @@ public class MainActivity extends Activity {
 
         isRefreshing = true;
 
-        showLoadingScreen(
+        showLoading(
                 "Refreshing market data..."
         );
 
@@ -196,9 +193,9 @@ public class MainActivity extends Activity {
                                 fetchGold();
 
 
-                        // =================================================
+                        // =============================================
                         // TECHNICAL
-                        // =================================================
+                        // =============================================
 
                         TechnicalAnalyzer.TechnicalResult technical =
                                 TechnicalAnalyzer.analyze(
@@ -209,9 +206,9 @@ public class MainActivity extends Activity {
                                 );
 
 
-                        // =================================================
+                        // =============================================
                         // PROBABILITY
-                        // =================================================
+                        // =============================================
 
                         ProbabilityEngine.ProbabilityResult probability =
                                 ProbabilityEngine.calculate(
@@ -222,9 +219,9 @@ public class MainActivity extends Activity {
                                 );
 
 
-                        // =================================================
+                        // =============================================
                         // LEARNING
-                        // =================================================
+                        // =============================================
 
                         LearningEngine.LearningResult learning =
                                 LearningEngine.learn(
@@ -235,9 +232,9 @@ public class MainActivity extends Activity {
                                 );
 
 
-                        // =================================================
+                        // =============================================
                         // COMBINED
-                        // =================================================
+                        // =============================================
 
                         CombinedEngine.CombinedResult combined =
                                 CombinedEngine.analyze(
@@ -248,35 +245,9 @@ public class MainActivity extends Activity {
                                 );
 
 
-                        // =================================================
-                        // ORIGINAL BACKTEST
-                        // =================================================
-
-                        BacktestEngine.BacktestResult backtest =
-                                BacktestEngine.run(
-                                        btcPrices,
-                                        btcHigh,
-                                        btcLow,
-                                        btcVolume
-                                );
-
-
-                        // =================================================
-                        // COMBINED BACKTEST
-                        // =================================================
-
-                        CombinedBacktestEngine.Result combinedBacktest =
-                                CombinedBacktestEngine.run(
-                                        btcPrices,
-                                        btcHigh,
-                                        btcLow,
-                                        btcVolume
-                                );
-
-
-                        // =================================================
+                        // =============================================
                         // CALIBRATION
-                        // =================================================
+                        // =============================================
 
                         CalibrationEngine.Result calibration =
                                 CalibrationEngine.run(
@@ -287,20 +258,56 @@ public class MainActivity extends Activity {
                                 );
 
 
-                        // =================================================
+                        double calibratedConfidence =
+                                CalibrationEngine.calibrateConfidence(
+                                        combined,
+                                        calibration
+                                );
+
+
+                        // =============================================
+                        // BACKTEST
+                        // =============================================
+
+                        BacktestEngine.BacktestResult backtest =
+                                BacktestEngine.run(
+                                        btcPrices,
+                                        btcHigh,
+                                        btcLow,
+                                        btcVolume
+                                );
+
+
+                        // =============================================
+                        // COMBINED BACKTEST
+                        // =============================================
+
+                        CombinedBacktestEngine.Result combinedBacktest =
+                                CombinedBacktestEngine.run(
+                                        btcPrices,
+                                        btcHigh,
+                                        btcLow,
+                                        btcVolume
+                                );
+
+
+                        // =============================================
                         // MARKET
-                        // =================================================
+                        // =============================================
 
                         double currentPrice =
                                 btcPrices.get(
                                         btcPrices.size() - 1
                                 );
 
+
                         double support =
                                 calculateSupport();
 
+
                         double resistance =
                                 calculateResistance();
+
 
                         String trend =
                                 getTrend(
@@ -308,13 +315,14 @@ public class MainActivity extends Activity {
                                         technical
                                 );
 
+
                         double averageVolume =
                                 calculateAverageVolume();
 
 
-                        // =================================================
-                        // DISPLAY ON MAIN THREAD
-                        // =================================================
+                        // =============================================
+                        // MAIN THREAD
+                        // =============================================
 
                         new Handler(
                                 Looper.getMainLooper()
@@ -335,14 +343,18 @@ public class MainActivity extends Activity {
                                             probability,
                                             learning,
                                             combined,
+                                            calibratedConfidence,
+                                            calibration,
                                             backtest,
-                                            combinedBacktest,
-                                            calibration
+                                            combinedBacktest
                                     );
                                 }
                         );
 
-                    } catch (Exception e) {
+
+                    } catch (
+                            Exception e
+                    ) {
 
                         new Handler(
                                 Looper.getMainLooper()
@@ -371,7 +383,7 @@ public class MainActivity extends Activity {
 
 
     // =========================================================
-    // RESULTS SCREEN
+    // RESULTS
     // =========================================================
 
     private void showResults(
@@ -385,9 +397,10 @@ public class MainActivity extends Activity {
             ProbabilityEngine.ProbabilityResult probability,
             LearningEngine.LearningResult learning,
             CombinedEngine.CombinedResult combined,
+            double calibratedConfidence,
+            CalibrationEngine.Result calibration,
             BacktestEngine.BacktestResult backtest,
-            CombinedBacktestEngine.Result combinedBacktest,
-            CalibrationEngine.Result calibration
+            CombinedBacktestEngine.Result combinedBacktest
     ) {
 
         container.removeAllViews();
@@ -417,14 +430,6 @@ public class MainActivity extends Activity {
 
         refreshButton.setText(
                 "↻  REFRESH MARKET DATA"
-        );
-
-        refreshButton.setTextSize(
-                14
-        );
-
-        refreshButton.setTextColor(
-                Color.WHITE
         );
 
         refreshButton.setOnClickListener(
@@ -476,31 +481,31 @@ public class MainActivity extends Activity {
         }
 
 
-        TextView signalView =
+        TextView signal =
                 new TextView(this);
 
 
-        signalView.setText(
+        signal.setText(
                 finalSignal
         );
 
-        signalView.setTextSize(
-                38
+        signal.setTextSize(
+                40
         );
 
-        signalView.setTypeface(
+        signal.setTypeface(
                 Typeface.DEFAULT_BOLD
         );
 
-        signalView.setGravity(
+        signal.setGravity(
                 Gravity.CENTER
         );
 
-        signalView.setPadding(
+        signal.setPadding(
                 0,
-                25,
+                20,
                 0,
-                25
+                20
         );
 
 
@@ -510,7 +515,7 @@ public class MainActivity extends Activity {
                 )
         ) {
 
-            signalView.setTextColor(
+            signal.setTextColor(
                     Color.rgb(
                             0,
                             220,
@@ -524,7 +529,7 @@ public class MainActivity extends Activity {
                 )
         ) {
 
-            signalView.setTextColor(
+            signal.setTextColor(
                     Color.rgb(
                             255,
                             80,
@@ -534,28 +539,30 @@ public class MainActivity extends Activity {
 
         } else {
 
-            signalView.setTextColor(
+            signal.setTextColor(
                     Color.LTGRAY
             );
         }
 
 
         container.addView(
-                signalView
+                signal
         );
 
 
         addMetric(
-                "Confidence",
+                "Calibrated Confidence",
                 format(
-                        combined.confidence
+                        calibratedConfidence
                 ) + "%"
         );
+
 
         addMetric(
                 "Signal Strength",
                 combined.signalStrength
         );
+
 
         addMetric(
                 "Engine Agreement",
@@ -564,15 +571,13 @@ public class MainActivity extends Activity {
 
 
         if (
-                combined.agreement != null
-                        &&
-                !"MIXED".equals(
-                        combined.agreement
+                "WAIT".equals(
+                        finalSignal
                 )
         ) {
 
             addText(
-                    "Multiple analytical engines currently agree on this direction.",
+                    "No clear edge. The system is not forcing BUY or SELL.",
                     12,
                     Color.GRAY
             );
@@ -580,7 +585,7 @@ public class MainActivity extends Activity {
         } else {
 
             addText(
-                    "Engines are not sufficiently aligned. WAIT is safer than forcing a direction.",
+                    "Signal is based on combined historical and technical analysis.",
                     12,
                     Color.GRAY
             );
@@ -707,9 +712,7 @@ public class MainActivity extends Activity {
 
         addMetric(
                 "Agreement Count",
-                String.valueOf(
-                        combined.agreementCount
-                ) + "/3"
+                combined.agreementCount + "/3"
         );
 
 
@@ -717,7 +720,7 @@ public class MainActivity extends Activity {
 
 
         // =====================================================
-        // TECHNICAL DETAILS
+        // TECHNICAL
         // =====================================================
 
         addSection(
@@ -780,88 +783,16 @@ public class MainActivity extends Activity {
                 ) + "x"
         );
 
-        addMetric(
-                "Technical Signal",
-                getTechnicalSignal(
-                        technical,
-                        currentPrice
-                )
-        );
-
 
         addSpace();
 
 
         // =====================================================
-        // HISTORICAL PROBABILITY
+        // LEARNING
         // =====================================================
 
         addSection(
-                "HISTORICAL PROBABILITY"
-        );
-
-        addMetric(
-                "BUY",
-                format(
-                        probability.buyProbability
-                ) + "%"
-        );
-
-        addMetric(
-                "SELL",
-                format(
-                        probability.sellProbability
-                ) + "%"
-        );
-
-        addMetric(
-                "NEUTRAL",
-                format(
-                        probability.neutralProbability
-                ) + "%"
-        );
-
-        addMetric(
-                "Direction",
-                probability.direction
-        );
-
-        addMetric(
-                "Confidence",
-                probability.confidence
-        );
-
-        addMetric(
-                "Samples",
-                String.valueOf(
-                        probability.samples
-                )
-        );
-
-        addMetric(
-                "Validation Accuracy",
-                format(
-                        probability.validationAccuracy
-                ) + "%"
-        );
-
-        addMetric(
-                "Validation Samples",
-                String.valueOf(
-                        probability.validationSamples
-                )
-        );
-
-
-        addSpace();
-
-
-        // =====================================================
-        // LEARNING DETAILS
-        // =====================================================
-
-        addSection(
-                "LEARNING DETAILS"
+                "LEARNING"
         );
 
         addMetric(
@@ -898,45 +829,10 @@ public class MainActivity extends Activity {
         );
 
         addMetric(
-                "BUY Samples",
-                String.valueOf(
-                        learning.buySamples
-                )
-        );
-
-        addMetric(
-                "SELL Samples",
-                String.valueOf(
-                        learning.sellSamples
-                )
-        );
-
-        addMetric(
-                "NEUTRAL Samples",
-                String.valueOf(
-                        learning.neutralSamples
-                )
-        );
-
-        addMetric(
-                "Average Future Return",
-                format(
-                        learning.averageFutureReturn
-                ) + "%"
-        );
-
-        addMetric(
                 "Unseen Test Accuracy",
                 format(
                         learning.trainingAccuracy
                 ) + "%"
-        );
-
-        addMetric(
-                "Training Samples",
-                String.valueOf(
-                        learning.trainingSamples
-                )
         );
 
 
@@ -948,11 +844,11 @@ public class MainActivity extends Activity {
         // =====================================================
 
         addSection(
-                "COMBINED SYSTEM BACKTEST"
+                "COMBINED BACKTEST"
         );
 
         addMetric(
-                "Test Signals",
+                "Signals",
                 String.valueOf(
                         combinedBacktest.totalSignals
                 )
@@ -973,30 +869,9 @@ public class MainActivity extends Activity {
         );
 
         addMetric(
-                "Neutral",
-                String.valueOf(
-                        combinedBacktest.neutralSignals
-                )
-        );
-
-        addMetric(
-                "Overall Accuracy",
+                "Accuracy",
                 format(
                         combinedBacktest.accuracy
-                ) + "%"
-        );
-
-        addMetric(
-                "BUY Accuracy",
-                format(
-                        combinedBacktest.buyAccuracy
-                ) + "%"
-        );
-
-        addMetric(
-                "SELL Accuracy",
-                format(
-                        combinedBacktest.sellAccuracy
                 ) + "%"
         );
 
@@ -1022,51 +897,23 @@ public class MainActivity extends Activity {
         );
 
         addMetric(
-                "Maximum Drawdown",
+                "Max Drawdown",
                 format(
                         combinedBacktest.maxDrawdown
                 ) + "%"
         );
 
         addMetric(
-                "BUY Agreement Signals",
-                String.valueOf(
-                        combinedBacktest.buyAgreementSignals
-                )
-        );
-
-        addMetric(
-                "SELL Agreement Signals",
-                String.valueOf(
-                        combinedBacktest.sellAgreementSignals
-                )
-        );
-
-        addMetric(
-                "Strong Signals",
-                String.valueOf(
-                        combinedBacktest.strongSignals
-                )
-        );
-
-        addMetric(
-                "Moderate Signals",
-                String.valueOf(
-                        combinedBacktest.moderateSignals
-                )
-        );
-
-        addMetric(
-                "Weak Signals",
-                String.valueOf(
-                        combinedBacktest.weakSignals
-                )
-        );
-
-        addMetric(
-                "BTC Buy & Hold",
+                "BUY Accuracy",
                 format(
-                        combinedBacktest.buyHoldReturn
+                        combinedBacktest.buyAccuracy
+                ) + "%"
+        );
+
+        addMetric(
+                "SELL Accuracy",
+                format(
+                        combinedBacktest.sellAccuracy
                 ) + "%"
         );
 
@@ -1082,38 +929,8 @@ public class MainActivity extends Activity {
                 "CONFIDENCE CALIBRATION"
         );
 
-        addText(
-                "Historical accuracy of signals grouped by model confidence.",
-                12,
-                Color.GRAY
-        );
-
-        addCalibrationBucket(
-                calibration.bucket0_40
-        );
-
-        addCalibrationBucket(
-                calibration.bucket40_50
-        );
-
-        addCalibrationBucket(
-                calibration.bucket50_60
-        );
-
-        addCalibrationBucket(
-                calibration.bucket60_70
-        );
-
-        addCalibrationBucket(
-                calibration.bucket70_80
-        );
-
-        addCalibrationBucket(
-                calibration.bucket80_100
-        );
-
         addMetric(
-                "Calibration Accuracy",
+                "Overall Calibration Accuracy",
                 format(
                         calibration.overallAccuracy
                 ) + "%"
@@ -1124,6 +941,30 @@ public class MainActivity extends Activity {
                 format(
                         calibration.averageReturn
                 ) + "%"
+        );
+
+        addCalibration(
+                calibration.bucket0_40
+        );
+
+        addCalibration(
+                calibration.bucket40_50
+        );
+
+        addCalibration(
+                calibration.bucket50_60
+        );
+
+        addCalibration(
+                calibration.bucket60_70
+        );
+
+        addCalibration(
+                calibration.bucket70_80
+        );
+
+        addCalibration(
+                calibration.bucket80_100
         );
 
 
@@ -1146,21 +987,21 @@ public class MainActivity extends Activity {
         );
 
         addMetric(
-                "Correct Trades",
+                "Correct",
                 String.valueOf(
                         backtest.correctTrades
                 )
         );
 
         addMetric(
-                "Wrong Trades",
+                "Wrong",
                 String.valueOf(
                         backtest.wrongTrades
                 )
         );
 
         addMetric(
-                "Overall Accuracy",
+                "Accuracy",
                 format(
                         backtest.accuracy
                 ) + "%"
@@ -1188,77 +1029,9 @@ public class MainActivity extends Activity {
         );
 
         addMetric(
-                "Maximum Drawdown",
+                "Max Drawdown",
                 format(
                         backtest.maxDrawdown
-                ) + "%"
-        );
-
-
-        addSpace();
-
-
-        // =====================================================
-        // RISK
-        // =====================================================
-
-        addSection(
-                "RISK ANALYSIS"
-        );
-
-        addMetric(
-                "Stop Loss Trades",
-                String.valueOf(
-                        backtest.stopLossTrades
-                )
-        );
-
-        addMetric(
-                "Take Profit Trades",
-                String.valueOf(
-                        backtest.takeProfitTrades
-                )
-        );
-
-        addMetric(
-                "Time Exit Trades",
-                String.valueOf(
-                        backtest.timeExitTrades
-                )
-        );
-
-        addMetric(
-                "BUY Average Return",
-                format(
-                        backtest.buyAverageReturn
-                ) + "%"
-        );
-
-        addMetric(
-                "SELL Average Return",
-                format(
-                        backtest.sellAverageReturn
-                ) + "%"
-        );
-
-        addMetric(
-                "BUY Total Return",
-                format(
-                        backtest.buyTotalReturn
-                ) + "%"
-        );
-
-        addMetric(
-                "SELL Total Return",
-                format(
-                        backtest.sellTotalReturn
-                ) + "%"
-        );
-
-        addMetric(
-                "BTC Buy & Hold",
-                format(
-                        backtest.buyHoldReturn
                 ) + "%"
         );
 
@@ -1271,19 +1044,13 @@ public class MainActivity extends Activity {
         // =====================================================
 
         addText(
-                "Historical data: approximately 2 years of BTC daily candles.",
+                "Historical research only. No signal guarantees future results.",
                 12,
                 Color.GRAY
         );
 
         addText(
-                "FINAL SIGNAL is a model-based analytical result, not a guaranteed outcome.",
-                12,
-                Color.GRAY
-        );
-
-        addText(
-                "Probabilities and backtests are historical research metrics.",
+                "BTC data: approximately 2 years of daily candles.",
                 12,
                 Color.GRAY
         );
@@ -1291,10 +1058,10 @@ public class MainActivity extends Activity {
 
 
     // =========================================================
-    // CALIBRATION BUCKET
+    // CALIBRATION DISPLAY
     // =========================================================
 
-    private void addCalibrationBucket(
+    private void addCalibration(
             CalibrationEngine.Bucket bucket
     ) {
 
@@ -1304,19 +1071,20 @@ public class MainActivity extends Activity {
             return;
         }
 
+
         addMetric(
                 bucket.range,
+                bucket.signals
+                        +
+                " signals | "
+                        +
                 "Accuracy "
                         +
                 format(
                         bucket.accuracy
                 )
                         +
-                "% | "
-                        +
-                bucket.signals
-                        +
-                " signals"
+                "%"
         );
     }
 
@@ -1340,6 +1108,7 @@ public class MainActivity extends Activity {
             return "BUY";
         }
 
+
         if (
                 combined.technicalSell >
                         combined.technicalBuy
@@ -1351,15 +1120,16 @@ public class MainActivity extends Activity {
             return "SELL";
         }
 
+
         return "NEUTRAL";
     }
 
 
     // =========================================================
-    // LOADING SCREEN
+    // LOADING
     // =========================================================
 
-    private void showLoadingScreen(
+    private void showLoading(
             String message
     ) {
 
@@ -1371,7 +1141,7 @@ public class MainActivity extends Activity {
 
         addText(
                 message,
-                17,
+                18,
                 Color.LTGRAY
         );
 
@@ -1386,7 +1156,7 @@ public class MainActivity extends Activity {
 
 
     // =========================================================
-    // ERROR SCREEN
+    // ERROR
     // =========================================================
 
     private void showError(
@@ -1415,6 +1185,7 @@ public class MainActivity extends Activity {
 
         addSpace();
 
+
         Button retry =
                 new Button(this);
 
@@ -1429,19 +1200,11 @@ public class MainActivity extends Activity {
         container.addView(
                 retry
         );
-
-        addSpace();
-
-        addText(
-                "You can also pull down from the top to refresh.",
-                13,
-                Color.GRAY
-        );
     }
 
 
     // =========================================================
-    // BTC DATA
+    // FETCH BTC
     // =========================================================
 
     private void fetchBTC()
@@ -1457,15 +1220,11 @@ public class MainActivity extends Activity {
                 "&limit=730";
 
 
-        URL url =
-                new URL(
-                        urlString
-                );
-
-
         HttpURLConnection connection =
                 (HttpURLConnection)
-                        url.openConnection();
+                        new URL(
+                                urlString
+                        ).openConnection();
 
 
         connection.setRequestMethod(
@@ -1497,14 +1256,10 @@ public class MainActivity extends Activity {
         }
 
 
-        InputStream input =
-                connection.getInputStream();
-
-
         BufferedReader reader =
                 new BufferedReader(
                         new InputStreamReader(
-                                input
+                                connection.getInputStream()
                         )
                 );
 
@@ -1528,7 +1283,6 @@ public class MainActivity extends Activity {
 
 
         reader.close();
-        input.close();
 
         connection.disconnect();
 
@@ -1595,18 +1349,16 @@ public class MainActivity extends Activity {
         ) {
 
             throw new Exception(
-                    "Not enough BTC historical data. Received: "
+                    "Not enough BTC data: "
                             +
                     btcPrices.size()
-                            +
-                    " candles"
             );
         }
     }
 
 
     // =========================================================
-    // GOLD DATA
+    // FETCH GOLD
     // =========================================================
 
     private double fetchGold()
@@ -1620,15 +1372,11 @@ public class MainActivity extends Activity {
                 "&interval=1d";
 
 
-        URL url =
-                new URL(
-                        urlString
-                );
-
-
         HttpURLConnection connection =
                 (HttpURLConnection)
-                        url.openConnection();
+                        new URL(
+                                urlString
+                        ).openConnection();
 
 
         connection.setRequestMethod(
@@ -1665,14 +1413,10 @@ public class MainActivity extends Activity {
         }
 
 
-        InputStream input =
-                connection.getInputStream();
-
-
         BufferedReader reader =
                 new BufferedReader(
                         new InputStreamReader(
-                                input
+                                connection.getInputStream()
                         )
                 );
 
@@ -1696,7 +1440,6 @@ public class MainActivity extends Activity {
 
 
         reader.close();
-        input.close();
 
         connection.disconnect();
 
@@ -1707,14 +1450,10 @@ public class MainActivity extends Activity {
                 );
 
 
-        JSONObject chart =
+        JSONArray results =
                 root.getJSONObject(
                         "chart"
-                );
-
-
-        JSONArray results =
-                chart.getJSONArray(
+                ).getJSONArray(
                         "result"
                 );
 
@@ -1735,28 +1474,20 @@ public class MainActivity extends Activity {
                 );
 
 
-        JSONObject indicators =
-                result.getJSONObject(
-                        "indicators"
-                );
-
-
-        JSONArray quote =
-                indicators.getJSONArray(
-                        "quote"
-                );
-
-
-        JSONObject quoteData =
-                quote.getJSONObject(
-                        0
-                );
-
-
         JSONArray closes =
-                quoteData.getJSONArray(
-                        "close"
-                );
+                result
+                        .getJSONObject(
+                                "indicators"
+                        )
+                        .getJSONArray(
+                                "quote"
+                        )
+                        .getJSONObject(
+                                0
+                        )
+                        .getJSONArray(
+                                "close"
+                        );
 
 
         double latest =
@@ -1807,11 +1538,13 @@ public class MainActivity extends Activity {
         int size =
                 btcLow.size();
 
+
         int start =
                 Math.max(
                         0,
                         size - 30
                 );
+
 
         double support =
                 Double.MAX_VALUE;
@@ -1844,11 +1577,13 @@ public class MainActivity extends Activity {
         int size =
                 btcHigh.size();
 
+
         int start =
                 Math.max(
                         0,
                         size - 30
                 );
+
 
         double resistance =
                 Double.MIN_VALUE;
@@ -1892,11 +1627,8 @@ public class MainActivity extends Activity {
             if (
                     price > result.ema20
             ) {
-
                 bullish++;
-
             } else {
-
                 bearish++;
             }
         }
@@ -1909,11 +1641,8 @@ public class MainActivity extends Activity {
             if (
                     price > result.ema50
             ) {
-
                 bullish++;
-
             } else {
-
                 bearish++;
             }
         }
@@ -1926,11 +1655,8 @@ public class MainActivity extends Activity {
             if (
                     price > result.ema200
             ) {
-
                 bullish++;
-
             } else {
-
                 bearish++;
             }
         }
@@ -1953,7 +1679,6 @@ public class MainActivity extends Activity {
         if (
                 bullish >= 3
         ) {
-
             return "UP";
         }
 
@@ -1961,115 +1686,7 @@ public class MainActivity extends Activity {
         if (
                 bearish >= 3
         ) {
-
             return "DOWN";
-        }
-
-
-        return "NEUTRAL";
-    }
-
-
-    // =========================================================
-    // TECHNICAL SIGNAL
-    // =========================================================
-
-    private String getTechnicalSignal(
-            TechnicalAnalyzer.TechnicalResult result,
-            double price
-    ) {
-
-        int bullish = 0;
-        int bearish = 0;
-
-
-        if (
-                result.rsi > 50
-        ) {
-
-            bullish++;
-
-        } else if (
-                result.rsi < 50
-        ) {
-
-            bearish++;
-        }
-
-
-        if (
-                result.macd > 0
-        ) {
-
-            bullish++;
-
-        } else {
-
-            bearish++;
-        }
-
-
-        if (
-                result.momentum > 0
-        ) {
-
-            bullish++;
-
-        } else if (
-                result.momentum < 0
-        ) {
-
-            bearish++;
-        }
-
-
-        if (
-                result.ema50 > 0
-        ) {
-
-            if (
-                    price > result.ema50
-            ) {
-
-                bullish++;
-
-            } else {
-
-                bearish++;
-            }
-        }
-
-
-        if (
-                result.ema200 > 0
-        ) {
-
-            if (
-                    price > result.ema200
-            ) {
-
-                bullish++;
-
-            } else {
-
-                bearish++;
-            }
-        }
-
-
-        if (
-                bullish >= 4
-        ) {
-
-            return "BUY BIAS";
-        }
-
-
-        if (
-                bearish >= 4
-        ) {
-
-            return "SELL BIAS";
         }
 
 
@@ -2086,7 +1703,6 @@ public class MainActivity extends Activity {
         if (
                 btcVolume.isEmpty()
         ) {
-
             return 0.0;
         }
 
@@ -2328,4 +1944,4 @@ public class MainActivity extends Activity {
                 value
         );
     }
-            }
+                            }
