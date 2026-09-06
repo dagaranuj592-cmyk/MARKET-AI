@@ -26,31 +26,18 @@ import java.util.Locale;
 public class MainActivity extends Activity {
 
     private LinearLayout container;
-
     private ScrollView scrollView;
-
     private boolean isRefreshing = false;
 
-    private final List<Double> btcOpen =
-            new ArrayList<>();
-
-    private final List<Double> btcHigh =
-            new ArrayList<>();
-
-    private final List<Double> btcLow =
-            new ArrayList<>();
-
-    private final List<Double> btcPrices =
-            new ArrayList<>();
-
-    private final List<Double> btcVolume =
-            new ArrayList<>();
+    private final List<Double> btcOpen = new ArrayList<>();
+    private final List<Double> btcHigh = new ArrayList<>();
+    private final List<Double> btcLow = new ArrayList<>();
+    private final List<Double> btcPrices = new ArrayList<>();
+    private final List<Double> btcVolume = new ArrayList<>();
 
 
     @Override
-    protected void onCreate(
-            Bundle savedInstanceState
-    ) {
+    protected void onCreate(Bundle savedInstanceState) {
 
         super.onCreate(savedInstanceState);
 
@@ -58,11 +45,9 @@ public class MainActivity extends Activity {
         // SCROLL VIEW
         // =====================================================
 
-        scrollView =
-                new ScrollView(this);
+        scrollView = new ScrollView(this);
 
-        container =
-                new LinearLayout(this);
+        container = new LinearLayout(this);
 
         container.setOrientation(
                 LinearLayout.VERTICAL
@@ -79,13 +64,9 @@ public class MainActivity extends Activity {
                 Color.rgb(11, 15, 20)
         );
 
-        scrollView.addView(
-                container
-        );
+        scrollView.addView(container);
 
-        setContentView(
-                scrollView
-        );
+        setContentView(scrollView);
 
 
         // =====================================================
@@ -121,6 +102,7 @@ public class MainActivity extends Activity {
 
                                 float distance =
                                         endY - startY;
+
 
                                 if (
                                         scrollView.getScrollY() == 0
@@ -187,6 +169,10 @@ public class MainActivity extends Activity {
 
                     try {
 
+                        // =================================================
+                        // FETCH DATA
+                        // =================================================
+
                         fetchBTC();
 
                         double goldPrice =
@@ -194,7 +180,7 @@ public class MainActivity extends Activity {
 
 
                         // =================================================
-                        // TECHNICAL ANALYSIS
+                        // TECHNICAL ANALYZER
                         // =================================================
 
                         TechnicalAnalyzer.TechnicalResult technical =
@@ -207,7 +193,7 @@ public class MainActivity extends Activity {
 
 
                         // =================================================
-                        // AI PROBABILITY ENGINE
+                        // PROBABILITY ENGINE
                         // =================================================
 
                         ProbabilityEngine.ProbabilityResult probability =
@@ -225,6 +211,19 @@ public class MainActivity extends Activity {
 
                         LearningEngine.LearningResult learning =
                                 LearningEngine.learn(
+                                        btcPrices,
+                                        btcHigh,
+                                        btcLow,
+                                        btcVolume
+                                );
+
+
+                        // =================================================
+                        // COMBINED ENGINE
+                        // =================================================
+
+                        CombinedEngine.CombinedResult combined =
+                                CombinedEngine.analyze(
                                         btcPrices,
                                         btcHigh,
                                         btcLow,
@@ -277,7 +276,7 @@ public class MainActivity extends Activity {
 
 
                         // =================================================
-                        // SHOW RESULT
+                        // DISPLAY RESULT
                         // =================================================
 
                         new Handler(
@@ -608,6 +607,127 @@ public class MainActivity extends Activity {
 
 
                                     // =============================================
+                                    // FINAL COMBINED AI
+                                    // =============================================
+
+                                    addSection(
+                                            "FINAL AI ANALYSIS"
+                                    );
+
+                                    addMetric(
+                                            "FINAL Direction",
+                                            combined.direction
+                                    );
+
+                                    addMetric(
+                                            "FINAL BUY Probability",
+                                            format(
+                                                    combined.buyProbability
+                                            ) + "%"
+                                    );
+
+                                    addMetric(
+                                            "FINAL SELL Probability",
+                                            format(
+                                                    combined.sellProbability
+                                            ) + "%"
+                                    );
+
+                                    addMetric(
+                                            "FINAL NEUTRAL Probability",
+                                            format(
+                                                    combined.neutralProbability
+                                            ) + "%"
+                                    );
+
+                                    addMetric(
+                                            "Combined Confidence",
+                                            format(
+                                                    combined.confidence
+                                            ) + "%"
+                                    );
+
+                                    addMetric(
+                                            "Technical BUY",
+                                            format(
+                                                    combined.technicalBuy
+                                            ) + "%"
+                                    );
+
+                                    addMetric(
+                                            "Technical SELL",
+                                            format(
+                                                    combined.technicalSell
+                                            ) + "%"
+                                    );
+
+                                    addMetric(
+                                            "Technical NEUTRAL",
+                                            format(
+                                                    combined.technicalNeutral
+                                            ) + "%"
+                                    );
+
+                                    addMetric(
+                                            "Probability BUY",
+                                            format(
+                                                    combined.probabilityBuy
+                                            ) + "%"
+                                    );
+
+                                    addMetric(
+                                            "Probability SELL",
+                                            format(
+                                                    combined.probabilitySell
+                                            ) + "%"
+                                    );
+
+                                    addMetric(
+                                            "Probability NEUTRAL",
+                                            format(
+                                                    combined.probabilityNeutral
+                                            ) + "%"
+                                    );
+
+                                    addMetric(
+                                            "Learning BUY",
+                                            format(
+                                                    combined.learningBuy
+                                            ) + "%"
+                                    );
+
+                                    addMetric(
+                                            "Learning SELL",
+                                            format(
+                                                    combined.learningSell
+                                            ) + "%"
+                                    );
+
+                                    addMetric(
+                                            "Learning NEUTRAL",
+                                            format(
+                                                    combined.learningNeutral
+                                            ) + "%"
+                                    );
+
+                                    addMetric(
+                                            "Learning Samples",
+                                            String.valueOf(
+                                                    combined.learningMatchedSamples
+                                            )
+                                    );
+
+                                    addMetric(
+                                            "Learning Test Accuracy",
+                                            format(
+                                                    combined.learningAccuracy
+                                            ) + "%"
+                                    );
+
+                                    addSpace();
+
+
+                                    // =============================================
                                     // BACKTEST V3
                                     // =============================================
 
@@ -815,13 +935,13 @@ public class MainActivity extends Activity {
                                     );
 
                                     addText(
-                                            "Learning Engine uses historical setups and an unseen test split.",
+                                            "Three engines are combined into one final analytical result.",
                                             12,
                                             Color.GRAY
                                     );
 
                                     addText(
-                                            "Backtest and probabilities are historical research results, not guaranteed future results.",
+                                            "Backtest and probabilities are historical research results and do not guarantee future results.",
                                             12,
                                             Color.GRAY
                                     );
@@ -1018,25 +1138,11 @@ public class MainActivity extends Activity {
                     );
 
 
-            btcOpen.add(
-                    open
-            );
-
-            btcHigh.add(
-                    high
-            );
-
-            btcLow.add(
-                    low
-            );
-
-            btcPrices.add(
-                    close
-            );
-
-            btcVolume.add(
-                    volume
-            );
+            btcOpen.add(open);
+            btcHigh.add(high);
+            btcLow.add(low);
+            btcPrices.add(close);
+            btcVolume.add(volume);
         }
 
 
@@ -1782,4 +1888,4 @@ public class MainActivity extends Activity {
                 value
         );
     }
-                                        }
+                            }
