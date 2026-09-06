@@ -83,6 +83,10 @@ public class MainActivity extends Activity {
         loadMarketData(loading);
     }
 
+    // =========================================================
+    // LOAD MARKET DATA
+    // =========================================================
+
     private void loadMarketData(
             TextView loading
     ) {
@@ -106,6 +110,14 @@ public class MainActivity extends Activity {
 
                 ProbabilityEngine.ProbabilityResult probability =
                         ProbabilityEngine.calculate(
+                                btcPrices,
+                                btcHigh,
+                                btcLow,
+                                btcVolume
+                        );
+
+                BacktestEngine.BacktestResult backtest =
+                        BacktestEngine.run(
                                 btcPrices,
                                 btcHigh,
                                 btcLow,
@@ -138,6 +150,10 @@ public class MainActivity extends Activity {
 
                     container.removeAllViews();
 
+                    // =================================================
+                    // TITLE
+                    // =================================================
+
                     showTitle("MARKET AI");
 
                     addText(
@@ -147,6 +163,10 @@ public class MainActivity extends Activity {
                     );
 
                     addSpace();
+
+                    // =================================================
+                    // MARKET
+                    // =================================================
 
                     addSection("MARKET");
 
@@ -181,6 +201,10 @@ public class MainActivity extends Activity {
                     );
 
                     addSpace();
+
+                    // =================================================
+                    // TECHNICAL ANALYSIS
+                    // =================================================
 
                     addSection(
                             "TECHNICAL ANALYSIS"
@@ -257,6 +281,10 @@ public class MainActivity extends Activity {
 
                     addSpace();
 
+                    // =================================================
+                    // AI PROBABILITY
+                    // =================================================
+
                     addSection(
                             "AI PROBABILITY"
                     );
@@ -315,11 +343,113 @@ public class MainActivity extends Activity {
 
                     addSpace();
 
+                    // =================================================
+                    // BACKTEST
+                    // =================================================
+
+                    addSection(
+                            "BACKTEST"
+                    );
+
+                    addMetric(
+                            "Total Signals",
+                            String.valueOf(
+                                    backtest.totalTrades
+                            )
+                    );
+
+                    addMetric(
+                            "Correct Signals",
+                            String.valueOf(
+                                    backtest.correctTrades
+                            )
+                    );
+
+                    addMetric(
+                            "Wrong Signals",
+                            String.valueOf(
+                                    backtest.wrongTrades
+                            )
+                    );
+
+                    addMetric(
+                            "Neutral Signals",
+                            String.valueOf(
+                                    backtest.neutralTrades
+                            )
+                    );
+
+                    addMetric(
+                            "BUY Signals",
+                            String.valueOf(
+                                    backtest.buySignals
+                            )
+                    );
+
+                    addMetric(
+                            "BUY Correct",
+                            String.valueOf(
+                                    backtest.buyCorrect
+                            )
+                    );
+
+                    addMetric(
+                            "BUY Accuracy",
+                            format(
+                                    backtest.buyAccuracy
+                            ) + "%"
+                    );
+
+                    addMetric(
+                            "SELL Signals",
+                            String.valueOf(
+                                    backtest.sellSignals
+                            )
+                    );
+
+                    addMetric(
+                            "SELL Correct",
+                            String.valueOf(
+                                    backtest.sellCorrect
+                            )
+                    );
+
+                    addMetric(
+                            "SELL Accuracy",
+                            format(
+                                    backtest.sellAccuracy
+                            ) + "%"
+                    );
+
+                    addMetric(
+                            "Overall Accuracy",
+                            format(
+                                    backtest.accuracy
+                            ) + "%"
+                    );
+
+                    addMetric(
+                            "Average Return",
+                            format(
+                                    backtest.averageReturn
+                            ) + "%"
+                    );
+
+                    addMetric(
+                            "Total Return",
+                            format(
+                                    backtest.totalReturn
+                            ) + "%"
+                    );
+
+                    addSpace();
+
                     addText(
-                            "Model output is a historical/statistical estimate, not a guarantee of future price movement.",
+                            "Backtest is a historical simulation. It does not guarantee future results.",
                             12,
                             Color.GRAY
                     );
+
                 });
 
             } catch (Exception e) {
@@ -354,7 +484,7 @@ public class MainActivity extends Activity {
     }
 
     // =========================================================
-    // BTC - 365 DAILY CANDLES
+    // BTC DATA
     // =========================================================
 
     private void fetchBTC()
@@ -481,7 +611,7 @@ public class MainActivity extends Activity {
     }
 
     // =========================================================
-    // GOLD
+    // GOLD DATA
     // =========================================================
 
     private double fetchGold()
@@ -596,8 +726,7 @@ public class MainActivity extends Activity {
                         "close"
                 );
 
-        double latest =
-                0.0;
+        double latest = 0.0;
 
         for (int i =
                      closes.length() - 1;
@@ -699,34 +828,31 @@ public class MainActivity extends Activity {
         int bullish = 0;
         int bearish = 0;
 
-        if (result.ema20 > 0 &&
-                price > result.ema20) {
+        if (result.ema20 > 0) {
 
-            bullish++;
-
-        } else if (result.ema20 > 0) {
-
-            bearish++;
+            if (price > result.ema20) {
+                bullish++;
+            } else {
+                bearish++;
+            }
         }
 
-        if (result.ema50 > 0 &&
-                price > result.ema50) {
+        if (result.ema50 > 0) {
 
-            bullish++;
-
-        } else if (result.ema50 > 0) {
-
-            bearish++;
+            if (price > result.ema50) {
+                bullish++;
+            } else {
+                bearish++;
+            }
         }
 
-        if (result.ema200 > 0 &&
-                price > result.ema200) {
+        if (result.ema200 > 0) {
 
-            bullish++;
-
-        } else if (result.ema200 > 0) {
-
-            bearish++;
+            if (price > result.ema200) {
+                bullish++;
+            } else {
+                bearish++;
+            }
         }
 
         if (result.momentum > 0) {
@@ -739,12 +865,10 @@ public class MainActivity extends Activity {
         }
 
         if (bullish >= 3) {
-
             return "UP";
         }
 
         if (bearish >= 3) {
-
             return "DOWN";
         }
 
@@ -790,33 +914,29 @@ public class MainActivity extends Activity {
             bearish++;
         }
 
-        if (result.ema50 > 0 &&
-                price > result.ema50) {
+        if (result.ema50 > 0) {
 
-            bullish++;
-
-        } else {
-
-            bearish++;
+            if (price > result.ema50) {
+                bullish++;
+            } else {
+                bearish++;
+            }
         }
 
-        if (result.ema200 > 0 &&
-                price > result.ema200) {
+        if (result.ema200 > 0) {
 
-            bullish++;
-
-        } else {
-
-            bearish++;
+            if (price > result.ema200) {
+                bullish++;
+            } else {
+                bearish++;
+            }
         }
 
         if (bullish >= 4) {
-
             return "BUY BIAS";
         }
 
         if (bearish >= 4) {
-
             return "SELL BIAS";
         }
 
@@ -830,7 +950,6 @@ public class MainActivity extends Activity {
     private double calculateAverageVolume() {
 
         if (btcVolume.isEmpty()) {
-
             return 0.0;
         }
 
@@ -856,7 +975,7 @@ public class MainActivity extends Activity {
     }
 
     // =========================================================
-    // UI
+    // UI TITLE
     // =========================================================
 
     private void showTitle(
@@ -881,6 +1000,10 @@ public class MainActivity extends Activity {
         container.addView(title);
     }
 
+    // =========================================================
+    // SECTION
+    // =========================================================
+
     private void addSection(
             String text
     ) {
@@ -901,6 +1024,10 @@ public class MainActivity extends Activity {
 
         container.addView(section);
     }
+
+    // =========================================================
+    // METRIC
+    // =========================================================
 
     private void addMetric(
             String name,
@@ -929,6 +1056,10 @@ public class MainActivity extends Activity {
         container.addView(metric);
     }
 
+    // =========================================================
+    // TEXT
+    // =========================================================
+
     private TextView addText(
             String text,
             int size,
@@ -954,6 +1085,10 @@ public class MainActivity extends Activity {
         return view;
     }
 
+    // =========================================================
+    // SPACE
+    // =========================================================
+
     private void addSpace() {
 
         TextView space =
@@ -971,6 +1106,10 @@ public class MainActivity extends Activity {
         container.addView(space);
     }
 
+    // =========================================================
+    // FORMAT
+    // =========================================================
+
     private String format(
             double value
     ) {
@@ -981,4 +1120,4 @@ public class MainActivity extends Activity {
                 value
         );
     }
-}
+                    }
