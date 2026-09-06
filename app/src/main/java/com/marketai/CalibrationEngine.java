@@ -7,8 +7,6 @@ public class CalibrationEngine {
     private static final int MIN_HISTORY = 220;
     private static final int FORWARD_DAYS = 5;
 
-    // A signal is considered successful only if its
-    // net 5-day return is positive after estimated costs.
     private static final double FEE_PER_SIDE = 0.10;
     private static final double SLIPPAGE_PER_SIDE = 0.05;
 
@@ -41,7 +39,6 @@ public class CalibrationEngine {
                 double accuracy,
                 double averageReturn
         ) {
-
             this.range = range;
             this.signals = signals;
             this.correct = correct;
@@ -88,13 +85,10 @@ public class CalibrationEngine {
                 Bucket bucket70_80,
                 Bucket bucket80_100
         ) {
-
             this.totalSignals = totalSignals;
             this.testedSignals = testedSignals;
-
             this.correctSignals = correctSignals;
             this.wrongSignals = wrongSignals;
-
             this.overallAccuracy = overallAccuracy;
             this.averageReturn = averageReturn;
 
@@ -121,13 +115,13 @@ public class CalibrationEngine {
         double returnTotal;
 
         void add(
-                boolean correctResult,
+                boolean isCorrect,
                 double returnPercent
         ) {
 
             signals++;
 
-            if (correctResult) {
+            if (isCorrect) {
                 correct++;
             } else {
                 wrong++;
@@ -136,7 +130,9 @@ public class CalibrationEngine {
             returnTotal += returnPercent;
         }
 
-        Bucket build(String range) {
+        Bucket build(
+                String range
+        ) {
 
             double accuracy =
                     signals == 0
@@ -146,8 +142,7 @@ public class CalibrationEngine {
                                     (double) correct
                                             /
                                     signals
-                            )
-                                    * 100.0;
+                            ) * 100.0;
 
             double averageReturn =
                     signals == 0
@@ -169,7 +164,7 @@ public class CalibrationEngine {
 
 
     // =========================================================
-    // MAIN CALIBRATION
+    // RUN CALIBRATION
     // =========================================================
 
     public static Result run(
@@ -188,7 +183,6 @@ public class CalibrationEngine {
                         ||
                 volume == null
         ) {
-
             return emptyResult();
         }
 
@@ -211,14 +205,9 @@ public class CalibrationEngine {
                         MIN_HISTORY +
                         FORWARD_DAYS
         ) {
-
             return emptyResult();
         }
 
-
-        // =====================================================
-        // BUCKETS
-        // =====================================================
 
         BucketData b0_40 =
                 new BucketData();
@@ -249,7 +238,7 @@ public class CalibrationEngine {
 
 
         // =====================================================
-        // WALK FORWARD THROUGH HISTORY
+        // WALK THROUGH HISTORY
         // =====================================================
 
         for (
@@ -283,10 +272,6 @@ public class CalibrationEngine {
                     );
 
 
-            // =================================================
-            // COMBINED ENGINE
-            // =================================================
-
             CombinedEngine.CombinedResult signal =
                     CombinedEngine.analyze(
                             historicalClose,
@@ -303,16 +288,12 @@ public class CalibrationEngine {
                     signal.direction;
 
 
-            // =================================================
-            // ONLY TEST REAL DIRECTIONS
-            // =================================================
-
+            // NEUTRAL is not tested
             if (
                     "NEUTRAL".equals(
                             direction
                     )
             ) {
-
                 continue;
             }
 
@@ -331,14 +312,9 @@ public class CalibrationEngine {
                             ||
                     futurePrice <= 0.0
             ) {
-
                 continue;
             }
 
-
-            // =================================================
-            // RAW RETURN
-            // =================================================
 
             double rawReturn;
 
@@ -357,9 +333,7 @@ public class CalibrationEngine {
                                 )
                                         /
                                 entryPrice
-                        )
-                                *
-                        100.0;
+                        ) * 100.0;
 
             } else {
 
@@ -371,15 +345,9 @@ public class CalibrationEngine {
                                 )
                                         /
                                 entryPrice
-                        )
-                                *
-                        100.0;
+                        ) * 100.0;
             }
 
-
-            // =================================================
-            // NET RETURN
-            // =================================================
 
             double netReturn =
                     rawReturn -
@@ -394,11 +362,8 @@ public class CalibrationEngine {
 
 
             if (correct) {
-
                 correctSignals++;
-
             } else {
-
                 wrongSignals++;
             }
 
@@ -407,24 +372,15 @@ public class CalibrationEngine {
                     netReturn;
 
 
-            // =================================================
-            // USE HIGHEST FINAL PROBABILITY
-            // =================================================
-
             double confidence =
                     signal.confidence;
 
 
             if (
-                    Double.isNaN(
-                            confidence
-                    )
+                    Double.isNaN(confidence)
                             ||
-                    Double.isInfinite(
-                            confidence
-                    )
+                    Double.isInfinite(confidence)
             ) {
-
                 confidence = 33.33;
             }
 
@@ -440,7 +396,7 @@ public class CalibrationEngine {
 
 
             // =================================================
-            // PUT RESULT INTO CALIBRATION BUCKET
+            // BUCKET
             // =================================================
 
             if (
@@ -498,10 +454,6 @@ public class CalibrationEngine {
         }
 
 
-        // =====================================================
-        // FINAL STATS
-        // =====================================================
-
         double accuracy =
                 testedSignals == 0
                         ? 0.0
@@ -511,9 +463,7 @@ public class CalibrationEngine {
                                         correctSignals
                                         /
                                 testedSignals
-                        )
-                                *
-                        100.0;
+                        ) * 100.0;
 
 
         double averageReturn =
@@ -523,10 +473,6 @@ public class CalibrationEngine {
                         returnTotal /
                         testedSignals;
 
-
-        // =====================================================
-        // RETURN
-        // =====================================================
 
         return new Result(
 
@@ -542,29 +488,118 @@ public class CalibrationEngine {
 
                 round(averageReturn),
 
-                b0_40.build(
-                        "0-40%"
-                ),
+                b0_40.build("0-40%"),
+                b40_50.build("40-50%"),
+                b50_60.build("50-60%"),
+                b60_70.build("60-70%"),
+                b70_80.build("70-80%"),
+                b80_100.build("80-100%")
+        );
+    }
 
-                b40_50.build(
-                        "40-50%"
-                ),
 
-                b50_60.build(
-                        "50-60%"
-                ),
+    // =========================================================
+    // CONNECT CALIBRATION TO CURRENT SIGNAL
+    // =========================================================
 
-                b60_70.build(
-                        "60-70%"
-                ),
+    public static double calibrateConfidence(
+            CombinedEngine.CombinedResult combined,
+            Result calibration
+    ) {
 
-                b70_80.build(
-                        "70-80%"
-                ),
+        if (
+                combined == null
+                        ||
+                calibration == null
+        ) {
+            return 0.0;
+        }
 
-                b80_100.build(
-                        "80-100%"
-                )
+
+        double confidence =
+                combined.confidence;
+
+
+        if (
+                Double.isNaN(confidence)
+                        ||
+                Double.isInfinite(confidence)
+        ) {
+            return 0.0;
+        }
+
+
+        confidence =
+                Math.max(
+                        0.0,
+                        Math.min(
+                                100.0,
+                                confidence
+                        )
+                );
+
+
+        Bucket bucket;
+
+
+        if (
+                confidence < 40.0
+        ) {
+
+            bucket =
+                    calibration.bucket0_40;
+
+        } else if (
+                confidence < 50.0
+        ) {
+
+            bucket =
+                    calibration.bucket40_50;
+
+        } else if (
+                confidence < 60.0
+        ) {
+
+            bucket =
+                    calibration.bucket50_60;
+
+        } else if (
+                confidence < 70.0
+        ) {
+
+            bucket =
+                    calibration.bucket60_70;
+
+        } else if (
+                confidence < 80.0
+        ) {
+
+            bucket =
+                    calibration.bucket70_80;
+
+        } else {
+
+            bucket =
+                    calibration.bucket80_100;
+        }
+
+
+        // Less than 10 historical samples
+        // means calibration is not reliable enough.
+        if (
+                bucket == null
+                        ||
+                bucket.signals < 10
+        ) {
+
+            return round(
+                    confidence
+            );
+        }
+
+
+        return round(
+                bucket.accuracy
         );
     }
 
@@ -575,7 +610,15 @@ public class CalibrationEngine {
 
     private static Result emptyResult() {
 
-        Bucket empty0 =
+        return new Result(
+
+                0,
+                0,
+                0,
+                0,
+                0.0,
+                0.0,
+
                 new Bucket(
                         "0-40%",
                         0,
@@ -583,9 +626,8 @@ public class CalibrationEngine {
                         0,
                         0.0,
                         0.0
-                );
+                ),
 
-        Bucket empty1 =
                 new Bucket(
                         "40-50%",
                         0,
@@ -593,9 +635,8 @@ public class CalibrationEngine {
                         0,
                         0.0,
                         0.0
-                );
+                ),
 
-        Bucket empty2 =
                 new Bucket(
                         "50-60%",
                         0,
@@ -603,9 +644,8 @@ public class CalibrationEngine {
                         0,
                         0.0,
                         0.0
-                );
+                ),
 
-        Bucket empty3 =
                 new Bucket(
                         "60-70%",
                         0,
@@ -613,9 +653,8 @@ public class CalibrationEngine {
                         0,
                         0.0,
                         0.0
-                );
+                ),
 
-        Bucket empty4 =
                 new Bucket(
                         "70-80%",
                         0,
@@ -623,9 +662,8 @@ public class CalibrationEngine {
                         0,
                         0.0,
                         0.0
-                );
+                ),
 
-        Bucket empty5 =
                 new Bucket(
                         "80-100%",
                         0,
@@ -633,22 +671,7 @@ public class CalibrationEngine {
                         0,
                         0.0,
                         0.0
-                );
-
-
-        return new Result(
-                0,
-                0,
-                0,
-                0,
-                0.0,
-                0.0,
-                empty0,
-                empty1,
-                empty2,
-                empty3,
-                empty4,
-                empty5
+                )
         );
     }
 
@@ -663,8 +686,6 @@ public class CalibrationEngine {
 
         return Math.round(
                 value * 100.0
-        )
-                /
-                100.0;
+        ) / 100.0;
     }
-              }
+                    }
