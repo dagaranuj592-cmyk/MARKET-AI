@@ -61,14 +61,12 @@ public class MainActivity extends Activity {
         scrollView =
                 new ScrollView(this);
 
-
         container =
                 new LinearLayout(this);
 
         container.setOrientation(
                 LinearLayout.VERTICAL
         );
-
 
         container.setPadding(
                 32,
@@ -77,16 +75,13 @@ public class MainActivity extends Activity {
                 32
         );
 
-
         container.setBackgroundColor(
                 Color.rgb(11, 15, 20)
         );
 
-
         scrollView.addView(
                 container
         );
-
 
         setContentView(
                 scrollView
@@ -100,9 +95,7 @@ public class MainActivity extends Activity {
         scrollView.setOnTouchListener(
                 (view, event) -> {
 
-                    switch (
-                            event.getAction()
-                    ) {
+                    switch (event.getAction()) {
 
                         case MotionEvent.ACTION_DOWN:
 
@@ -118,33 +111,26 @@ public class MainActivity extends Activity {
                             Object tag =
                                     view.getTag();
 
-
                             if (tag instanceof Float) {
 
                                 float startY =
                                         (Float) tag;
 
-
                                 float endY =
                                         event.getY();
-
 
                                 float distance =
                                         endY - startY;
 
-
                                 if (
-                                        scrollView.getScrollY()
-                                                == 0
+                                        scrollView.getScrollY() == 0
                                                 &&
                                                 distance > 180
                                                 &&
                                                 !isRefreshing
                                 ) {
 
-                                    isRefreshing =
-                                            true;
-
+                                    isRefreshing = true;
 
                                     TextView refreshLoading =
                                             addText(
@@ -152,7 +138,6 @@ public class MainActivity extends Activity {
                                                     15,
                                                     Color.LTGRAY
                                             );
-
 
                                     loadMarketData(
                                             refreshLoading
@@ -162,7 +147,6 @@ public class MainActivity extends Activity {
 
                             break;
                     }
-
 
                     return false;
                 }
@@ -177,14 +161,12 @@ public class MainActivity extends Activity {
                 "MARKET AI"
         );
 
-
         TextView loading =
                 addText(
                         "Loading market data...",
                         18,
                         Color.LTGRAY
                 );
-
 
         loadMarketData(
                 loading
@@ -207,10 +189,13 @@ public class MainActivity extends Activity {
 
                         fetchBTC();
 
-
                         double goldPrice =
                                 fetchGold();
 
+
+                        // =================================================
+                        // TECHNICAL ANALYSIS
+                        // =================================================
 
                         TechnicalAnalyzer.TechnicalResult technical =
                                 TechnicalAnalyzer.analyze(
@@ -221,6 +206,10 @@ public class MainActivity extends Activity {
                                 );
 
 
+                        // =================================================
+                        // AI PROBABILITY ENGINE
+                        // =================================================
+
                         ProbabilityEngine.ProbabilityResult probability =
                                 ProbabilityEngine.calculate(
                                         btcPrices,
@@ -229,6 +218,23 @@ public class MainActivity extends Activity {
                                         btcVolume
                                 );
 
+
+                        // =================================================
+                        // LEARNING ENGINE
+                        // =================================================
+
+                        LearningEngine.LearningResult learning =
+                                LearningEngine.learn(
+                                        btcPrices,
+                                        btcHigh,
+                                        btcLow,
+                                        btcVolume
+                                );
+
+
+                        // =================================================
+                        // BACKTEST V3
+                        // =================================================
 
                         BacktestEngine.BacktestResult backtest =
                                 BacktestEngine.run(
@@ -239,19 +245,25 @@ public class MainActivity extends Activity {
                                 );
 
 
+                        // =================================================
+                        // MARKET LEVELS
+                        // =================================================
+
                         double support =
                                 calculateSupport();
 
-
                         double resistance =
                                 calculateResistance();
-
 
                         double currentPrice =
                                 btcPrices.get(
                                         btcPrices.size() - 1
                                 );
 
+
+                        // =================================================
+                        // TREND
+                        // =================================================
 
                         String trend =
                                 getTrend(
@@ -264,6 +276,10 @@ public class MainActivity extends Activity {
                                 calculateAverageVolume();
 
 
+                        // =================================================
+                        // SHOW RESULT
+                        // =================================================
+
                         new Handler(
                                 Looper.getMainLooper()
                         ).post(
@@ -272,18 +288,16 @@ public class MainActivity extends Activity {
                                     isRefreshing =
                                             false;
 
-
                                     container.removeAllViews();
 
 
-                                    // =================================================
+                                    // =============================================
                                     // TITLE
-                                    // =================================================
+                                    // =============================================
 
                                     showTitle(
                                             "MARKET AI"
                                     );
-
 
                                     addText(
                                             "BTC / GOLD MARKET ANALYSIS",
@@ -291,67 +305,55 @@ public class MainActivity extends Activity {
                                             Color.GRAY
                                     );
 
-
                                     addText(
                                             "Pull down from top to refresh",
                                             12,
                                             Color.GRAY
                                     );
 
-
                                     addSpace();
 
 
-                                    // =================================================
+                                    // =============================================
                                     // MARKET
-                                    // =================================================
+                                    // =============================================
 
                                     addSection(
                                             "MARKET"
                                     );
 
-
                                     addMetric(
                                             "Bitcoin",
-                                            "$"
-                                                    + format(
+                                            "$" + format(
                                                     currentPrice
                                             )
                                     );
 
-
                                     addMetric(
                                             "Gold",
-                                            "$"
-                                                    + format(
+                                            "$" + format(
                                                     goldPrice
                                             )
                                     );
 
-
                                     addMetric(
                                             "Support",
-                                            "$"
-                                                    + format(
+                                            "$" + format(
                                                     support
                                             )
                                     );
 
-
                                     addMetric(
                                             "Resistance",
-                                            "$"
-                                                    + format(
+                                            "$" + format(
                                                     resistance
                                             )
                                     );
-
 
                                     addMetric(
                                             "Trend",
                                             trend
                                     );
-
 
                                     addMetric(
                                             "Average Volume",
@@ -360,18 +362,16 @@ public class MainActivity extends Activity {
                                             )
                                     );
 
-
                                     addSpace();
 
 
-                                    // =================================================
+                                    // =============================================
                                     // TECHNICAL ANALYSIS
-                                    // =================================================
+                                    // =============================================
 
                                     addSection(
                                             "TECHNICAL ANALYSIS"
                                     );
-
 
                                     addMetric(
                                             "RSI",
@@ -380,33 +380,26 @@ public class MainActivity extends Activity {
                                             )
                                     );
 
-
                                     addMetric(
                                             "EMA 20",
-                                            "$"
-                                                    + format(
+                                            "$" + format(
                                                     technical.ema20
                                             )
                                     );
 
-
                                     addMetric(
                                             "EMA 50",
-                                            "$"
-                                                    + format(
+                                            "$" + format(
                                                     technical.ema50
                                             )
                                     );
 
-
                                     addMetric(
                                             "EMA 200",
-                                            "$"
-                                                    + format(
+                                            "$" + format(
                                                     technical.ema200
                                             )
                                     );
-
 
                                     addMetric(
                                             "MACD",
@@ -415,49 +408,39 @@ public class MainActivity extends Activity {
                                             )
                                     );
 
-
                                     addMetric(
                                             "ATR",
-                                            "$"
-                                                    + format(
+                                            "$" + format(
                                                     technical.atr
                                             )
                                     );
 
-
                                     addMetric(
                                             "Bollinger Upper",
-                                            "$"
-                                                    + format(
+                                            "$" + format(
                                                     technical.bollingerUpper
                                             )
                                     );
 
-
                                     addMetric(
                                             "Bollinger Lower",
-                                            "$"
-                                                    + format(
+                                            "$" + format(
                                                     technical.bollingerLower
                                             )
                                     );
-
 
                                     addMetric(
                                             "Momentum",
                                             format(
                                                     technical.momentum
-                                            )
-                                                    + "%"
+                                            ) + "%"
                                     );
-
 
                                     addMetric(
                                             "Volume Ratio",
                                             format(
                                                     technical.volumeRatio
-                                            )
-                                                    + "x"
+                                            ) + "x"
                                     );
 
 
@@ -467,63 +450,52 @@ public class MainActivity extends Activity {
                                                     currentPrice
                                             );
 
-
                                     addMetric(
                                             "Technical Signal",
                                             signal
                                     );
 
-
                                     addSpace();
 
 
-                                    // =================================================
+                                    // =============================================
                                     // AI PROBABILITY
-                                    // =================================================
+                                    // =============================================
 
                                     addSection(
                                             "AI PROBABILITY"
                                     );
 
-
                                     addMetric(
                                             "BUY Probability",
                                             format(
                                                     probability.buyProbability
-                                            )
-                                                    + "%"
+                                            ) + "%"
                                     );
-
 
                                     addMetric(
                                             "SELL Probability",
                                             format(
                                                     probability.sellProbability
-                                            )
-                                                    + "%"
+                                            ) + "%"
                                     );
-
 
                                     addMetric(
                                             "NEUTRAL Probability",
                                             format(
                                                     probability.neutralProbability
-                                            )
-                                                    + "%"
+                                            ) + "%"
                                     );
-
 
                                     addMetric(
                                             "Direction",
                                             probability.direction
                                     );
 
-
                                     addMetric(
                                             "Confidence",
                                             probability.confidence
                                     );
-
 
                                     addMetric(
                                             "Historical Samples",
@@ -532,15 +504,12 @@ public class MainActivity extends Activity {
                                             )
                                     );
 
-
                                     addMetric(
                                             "Validation Accuracy",
                                             format(
                                                     probability.validationAccuracy
-                                            )
-                                                    + "%"
+                                            ) + "%"
                                     );
-
 
                                     addMetric(
                                             "Validation Samples",
@@ -549,18 +518,102 @@ public class MainActivity extends Activity {
                                             )
                                     );
 
+                                    addSpace();
+
+
+                                    // =============================================
+                                    // LEARNING ENGINE
+                                    // =============================================
+
+                                    addSection(
+                                            "LEARNING ENGINE"
+                                    );
+
+                                    addMetric(
+                                            "Learning Direction",
+                                            learning.direction
+                                    );
+
+                                    addMetric(
+                                            "BUY Probability",
+                                            format(
+                                                    learning.buyProbability
+                                            ) + "%"
+                                    );
+
+                                    addMetric(
+                                            "SELL Probability",
+                                            format(
+                                                    learning.sellProbability
+                                            ) + "%"
+                                    );
+
+                                    addMetric(
+                                            "NEUTRAL Probability",
+                                            format(
+                                                    learning.neutralProbability
+                                            ) + "%"
+                                    );
+
+                                    addMetric(
+                                            "Matched Samples",
+                                            String.valueOf(
+                                                    learning.matchedSamples
+                                            )
+                                    );
+
+                                    addMetric(
+                                            "BUY Samples",
+                                            String.valueOf(
+                                                    learning.buySamples
+                                            )
+                                    );
+
+                                    addMetric(
+                                            "SELL Samples",
+                                            String.valueOf(
+                                                    learning.sellSamples
+                                            )
+                                    );
+
+                                    addMetric(
+                                            "NEUTRAL Samples",
+                                            String.valueOf(
+                                                    learning.neutralSamples
+                                            )
+                                    );
+
+                                    addMetric(
+                                            "Average Future Return",
+                                            format(
+                                                    learning.averageFutureReturn
+                                            ) + "%"
+                                    );
+
+                                    addMetric(
+                                            "Unseen Test Accuracy",
+                                            format(
+                                                    learning.trainingAccuracy
+                                            ) + "%"
+                                    );
+
+                                    addMetric(
+                                            "Training Samples",
+                                            String.valueOf(
+                                                    learning.trainingSamples
+                                            )
+                                    );
 
                                     addSpace();
 
 
-                                    // =================================================
+                                    // =============================================
                                     // BACKTEST V3
-                                    // =================================================
+                                    // =============================================
 
                                     addSection(
                                             "BACKTEST V3"
                                     );
-
 
                                     addMetric(
                                             "Total Trades",
@@ -569,14 +622,12 @@ public class MainActivity extends Activity {
                                             )
                                     );
 
-
                                     addMetric(
                                             "Correct Trades",
                                             String.valueOf(
                                                     backtest.correctTrades
                                             )
                                     );
-
 
                                     addMetric(
                                             "Wrong Trades",
@@ -585,14 +636,12 @@ public class MainActivity extends Activity {
                                             )
                                     );
 
-
                                     addMetric(
                                             "Neutral Signals",
                                             String.valueOf(
                                                     backtest.neutralTrades
                                             )
                                     );
-
 
                                     addMetric(
                                             "BUY Signals",
@@ -601,7 +650,6 @@ public class MainActivity extends Activity {
                                             )
                                     );
 
-
                                     addMetric(
                                             "BUY Correct",
                                             String.valueOf(
@@ -609,15 +657,12 @@ public class MainActivity extends Activity {
                                             )
                                     );
 
-
                                     addMetric(
                                             "BUY Accuracy",
                                             format(
                                                     backtest.buyAccuracy
-                                            )
-                                                    + "%"
+                                            ) + "%"
                                     );
-
 
                                     addMetric(
                                             "SELL Signals",
@@ -626,7 +671,6 @@ public class MainActivity extends Activity {
                                             )
                                     );
 
-
                                     addMetric(
                                             "SELL Correct",
                                             String.valueOf(
@@ -634,54 +678,44 @@ public class MainActivity extends Activity {
                                             )
                                     );
 
-
                                     addMetric(
                                             "SELL Accuracy",
                                             format(
                                                     backtest.sellAccuracy
-                                            )
-                                                    + "%"
+                                            ) + "%"
                                     );
-
 
                                     addMetric(
                                             "Overall Accuracy",
                                             format(
                                                     backtest.accuracy
-                                            )
-                                                    + "%"
+                                            ) + "%"
                                     );
-
 
                                     addMetric(
                                             "Average Return",
                                             format(
                                                     backtest.averageReturn
-                                            )
-                                                    + "%"
+                                            ) + "%"
                                     );
-
 
                                     addMetric(
                                             "Total Return",
                                             format(
                                                     backtest.totalReturn
-                                            )
-                                                    + "%"
+                                            ) + "%"
                                     );
-
 
                                     addSpace();
 
 
-                                    // =================================================
+                                    // =============================================
                                     // RISK ANALYSIS
-                                    // =================================================
+                                    // =============================================
 
                                     addSection(
                                             "V3 RISK ANALYSIS"
                                     );
-
 
                                     addMetric(
                                             "Stop Loss Trades",
@@ -690,14 +724,12 @@ public class MainActivity extends Activity {
                                             )
                                     );
 
-
                                     addMetric(
                                             "Take Profit Trades",
                                             String.valueOf(
                                                     backtest.takeProfitTrades
                                             )
                                     );
-
 
                                     addMetric(
                                             "Time Exit Trades",
@@ -706,7 +738,6 @@ public class MainActivity extends Activity {
                                             )
                                     );
 
-
                                     addMetric(
                                             "Profit Factor",
                                             format(
@@ -714,85 +745,68 @@ public class MainActivity extends Activity {
                                             )
                                     );
 
-
                                     addMetric(
                                             "Gross Profit",
                                             format(
                                                     backtest.grossProfit
-                                            )
-                                                    + "%"
+                                            ) + "%"
                                     );
-
 
                                     addMetric(
                                             "Gross Loss",
                                             format(
                                                     backtest.grossLoss
-                                            )
-                                                    + "%"
+                                            ) + "%"
                                     );
-
 
                                     addMetric(
                                             "Maximum Drawdown",
                                             format(
                                                     backtest.maxDrawdown
-                                            )
-                                                    + "%"
+                                            ) + "%"
                                     );
-
 
                                     addMetric(
                                             "BUY Average Return",
                                             format(
                                                     backtest.buyAverageReturn
-                                            )
-                                                    + "%"
+                                            ) + "%"
                                     );
-
 
                                     addMetric(
                                             "SELL Average Return",
                                             format(
                                                     backtest.sellAverageReturn
-                                            )
-                                                    + "%"
+                                            ) + "%"
                                     );
-
 
                                     addMetric(
                                             "BUY Total Return",
                                             format(
                                                     backtest.buyTotalReturn
-                                            )
-                                                    + "%"
+                                            ) + "%"
                                     );
-
 
                                     addMetric(
                                             "SELL Total Return",
                                             format(
                                                     backtest.sellTotalReturn
-                                            )
-                                                    + "%"
+                                            ) + "%"
                                     );
-
 
                                     addMetric(
                                             "BTC Buy & Hold",
                                             format(
                                                     backtest.buyHoldReturn
-                                            )
-                                                    + "%"
+                                            ) + "%"
                                     );
-
 
                                     addSpace();
 
 
-                                    // =================================================
+                                    // =============================================
                                     // INFORMATION
-                                    // =================================================
+                                    // =============================================
 
                                     addText(
                                             "Historical Data: ~2 Years BTC Daily Candles",
@@ -800,9 +814,14 @@ public class MainActivity extends Activity {
                                             Color.GRAY
                                     );
 
+                                    addText(
+                                            "Learning Engine uses historical setups and an unseen test split.",
+                                            12,
+                                            Color.GRAY
+                                    );
 
                                     addText(
-                                            "Backtest is a historical simulation. It does not guarantee future results.",
+                                            "Backtest and probabilities are historical research results, not guaranteed future results.",
                                             12,
                                             Color.GRAY
                                     );
@@ -819,14 +838,11 @@ public class MainActivity extends Activity {
                                     isRefreshing =
                                             false;
 
-
                                     container.removeAllViews();
-
 
                                     showTitle(
                                             "MARKET AI"
                                     );
-
 
                                     addText(
                                             "Market data loading failed.",
@@ -834,9 +850,7 @@ public class MainActivity extends Activity {
                                             Color.RED
                                     );
 
-
                                     addSpace();
-
 
                                     addText(
                                             e.getMessage() == null
@@ -846,9 +860,7 @@ public class MainActivity extends Activity {
                                             Color.LTGRAY
                                     );
 
-
                                     addSpace();
-
 
                                     addText(
                                             "Pull down from the top to try again.",
@@ -893,11 +905,9 @@ public class MainActivity extends Activity {
                 "GET"
         );
 
-
         connection.setConnectTimeout(
                 15000
         );
-
 
         connection.setReadTimeout(
                 15000
@@ -1030,7 +1040,6 @@ public class MainActivity extends Activity {
         }
 
 
-        // Require approximately 2 years
         if (
                 btcPrices.size() < 700
         ) {
@@ -1073,16 +1082,13 @@ public class MainActivity extends Activity {
                 "GET"
         );
 
-
         connection.setConnectTimeout(
                 15000
         );
 
-
         connection.setReadTimeout(
                 15000
         );
-
 
         connection.setRequestProperty(
                 "User-Agent",
@@ -1245,13 +1251,11 @@ public class MainActivity extends Activity {
         int size =
                 btcLow.size();
 
-
         int start =
                 Math.max(
                         0,
                         size - 30
                 );
-
 
         double support =
                 Double.MAX_VALUE;
@@ -1284,13 +1288,11 @@ public class MainActivity extends Activity {
         int size =
                 btcHigh.size();
 
-
         int start =
                 Math.max(
                         0,
                         size - 30
                 );
-
 
         double resistance =
                 Double.MIN_VALUE;
@@ -1582,21 +1584,17 @@ public class MainActivity extends Activity {
                 text
         );
 
-
         title.setTextSize(
                 28
         );
-
 
         title.setTextColor(
                 Color.WHITE
         );
 
-
         title.setGravity(
                 Gravity.CENTER
         );
-
 
         title.setPadding(
                 0,
@@ -1630,16 +1628,13 @@ public class MainActivity extends Activity {
                 text
         );
 
-
         section.setTextSize(
                 17
         );
 
-
         section.setTextColor(
                 Color.WHITE
         );
-
 
         section.setPadding(
                 0,
@@ -1676,16 +1671,13 @@ public class MainActivity extends Activity {
                         + value
         );
 
-
         metric.setTextSize(
                 16
         );
 
-
         metric.setTextColor(
                 Color.LTGRAY
         );
-
 
         metric.setPadding(
                 0,
@@ -1721,16 +1713,13 @@ public class MainActivity extends Activity {
                 text
         );
 
-
         view.setTextSize(
                 size
         );
 
-
         view.setTextColor(
                 color
         );
-
 
         view.setPadding(
                 0,
@@ -1764,7 +1753,6 @@ public class MainActivity extends Activity {
         space.setText(
                 ""
         );
-
 
         space.setPadding(
                 0,
