@@ -7,13 +7,7 @@ public class CombinedBacktestEngine {
     private static final int MIN_HISTORY = 220;
     private static final int FORWARD_DAYS = 5;
 
-    private static final double FEE_PER_SIDE = 0.10;
-    private static final double SLIPPAGE_PER_SIDE = 0.05;
-
-
-    // =========================================================
-    // RESULT
-    // =========================================================
+    private static final double COST = 0.30;
 
     public static class Result {
 
@@ -55,7 +49,6 @@ public class CombinedBacktestEngine {
         public int moderateSignals;
         public int weakSignals;
 
-
         public Result(
                 int totalSignals,
                 int correctSignals,
@@ -85,7 +78,6 @@ public class CombinedBacktestEngine {
                 int moderateSignals,
                 int weakSignals
         ) {
-
             this.totalSignals = totalSignals;
             this.correctSignals = correctSignals;
             this.wrongSignals = wrongSignals;
@@ -127,10 +119,6 @@ public class CombinedBacktestEngine {
     }
 
 
-    // =========================================================
-    // MAIN BACKTEST
-    // =========================================================
-
     public static Result run(
             List<Double> close,
             List<Double> high,
@@ -147,7 +135,6 @@ public class CombinedBacktestEngine {
             return emptyResult();
         }
 
-
         int size = Math.min(
                 close.size(),
                 Math.min(
@@ -159,13 +146,9 @@ public class CombinedBacktestEngine {
                 )
         );
 
-
-        if (
-                size < MIN_HISTORY + FORWARD_DAYS + 1
-        ) {
+        if (size < MIN_HISTORY + FORWARD_DAYS + 1) {
             return emptyResult();
         }
-
 
         int totalSignals = 0;
         int correctSignals = 0;
@@ -192,16 +175,12 @@ public class CombinedBacktestEngine {
         double buyTotalReturn = 0.0;
         double sellTotalReturn = 0.0;
 
-        int returnCount = 0;
-
         double equity = 100.0;
         double peakEquity = 100.0;
         double maxDrawdown = 0.0;
 
+        int returnCount = 0;
 
-        // =====================================================
-        // WALK FORWARD TEST
-        // =====================================================
 
         for (
                 int i = MIN_HISTORY;
@@ -222,11 +201,11 @@ public class CombinedBacktestEngine {
                     volume.subList(0, i + 1);
 
 
-            CombinedEngine.CombinedResult signal;
+            CombinedEngine.CombinedResult result;
 
             try {
 
-                signal =
+                result =
                         CombinedEngine.analyze(
                                 pastClose,
                                 pastHigh,
@@ -241,75 +220,63 @@ public class CombinedBacktestEngine {
             }
 
 
-            if (signal == null) {
-
+            if (result == null) {
                 neutralSignals++;
                 continue;
-            }
-
-
-            // =================================================
-            // SIGNAL STRENGTH
-            // =================================================
-
-            if (
-                    "STRONG".equals(
-                            signal.signalStrength
-                    )
-            ) {
-
-                strongSignals++;
-
-            } else if (
-                    "MODERATE".equals(
-                            signal.signalStrength
-                    )
-            ) {
-
-                moderateSignals++;
-
-            } else {
-
-                weakSignals++;
-            }
-
-
-            // =================================================
-            // ENGINE AGREEMENT
-            // =================================================
-
-            if (
-                    signal.agreement != null
-                            &&
-                    signal.agreement.startsWith("BUY")
-            ) {
-
-                buyAgreementSignals++;
-
-            } else if (
-                    signal.agreement != null
-                            &&
-                    signal.agreement.startsWith("SELL")
-            ) {
-
-                sellAgreementSignals++;
             }
 
 
             String direction =
-                    signal.direction;
+                    result.direction;
 
 
-            // =================================================
-            // IGNORE NEUTRAL
-            // =================================================
+            if (result.signalStrength != null) {
+
+                if (
+                        result.signalStrength.equalsIgnoreCase(
+                                "STRONG"
+                        )
+                ) {
+                    strongSignals++;
+
+                } else if (
+                        result.signalStrength.equalsIgnoreCase(
+                                "MODERATE"
+                        )
+                ) {
+                    moderateSignals++;
+
+                } else {
+                    weakSignals++;
+                }
+
+            } else {
+                weakSignals++;
+            }
+
+
+            if (result.agreement != null) {
+
+                if (
+                        result.agreement
+                                .toUpperCase()
+                                .startsWith("BUY")
+                ) {
+                    buyAgreementSignals++;
+
+                } else if (
+                        result.agreement
+                                .toUpperCase()
+                                .startsWith("SELL")
+                ) {
+                    sellAgreementSignals++;
+                }
+            }
+
 
             if (
-                    direction == null
-                            ||
-                    "NEUTRAL".equalsIgnoreCase(
-                            direction
-                    )
+                    direction == null ||
+                    direction.equalsIgnoreCase("NEUTRAL")
             ) {
 
                 neutralSignals++;
@@ -317,23 +284,18 @@ public class CombinedBacktestEngine {
             }
 
 
-            // =================================================
-            // PRICES
-            // =================================================
-
-            double entryPrice =
+            double entry =
                     close.get(i);
 
-            double futurePrice =
+            double future =
                     close.get(
                             i + FORWARD_DAYS
                     );
 
 
             if (
-                    entryPrice <= 0.0
-                            ||
-                    futurePrice <= 0.0
+                    entry <= 0.0 ||
+                    future <= 0.0
             ) {
 
                 neutralSignals++;
@@ -341,44 +303,32 @@ public class CombinedBacktestEngine {
             }
 
 
-            // =================================================
-            // RAW RETURN
-            // =================================================
-
             double rawReturn;
 
 
             if (
-                    "BUY".equalsIgnoreCase(
-                            direction
-                    )
+                    direction.equalsIgnoreCase("BUY")
             ) {
 
                 rawReturn =
                         (
-                                futurePrice
-                                        -
-                                entryPrice
+                                future - entry
                         )
                                 /
-                        entryPrice
+                        entry
                                 *
                         100.0;
 
             } else if (
-                    "SELL".equalsIgnoreCase(
-                            direction
-                    )
+                    direction.equalsIgnoreCase("SELL")
             ) {
 
                 rawReturn =
                         (
-                                entryPrice
-                                        -
-                                futurePrice
+                                entry - future
                         )
                                 /
-                        entryPrice
+                        entry
                                 *
                         100.0;
 
@@ -389,31 +339,14 @@ public class CombinedBacktestEngine {
             }
 
 
-            // =================================================
-            // COST
-            // =================================================
-
-            double totalCost =
-                    (
-                            FEE_PER_SIDE * 2.0
-                    )
-                            +
-                    (
-                            SLIPPAGE_PER_SIDE * 2.0
-                    );
-
-
             double netReturn =
-                    rawReturn - totalCost;
+                    rawReturn - COST;
 
-
-            // =================================================
-            // COUNT
-            // =================================================
 
             totalSignals++;
 
-            totalReturn += netReturn;
+            totalReturn +=
+                    netReturn;
 
             returnCount++;
 
@@ -424,7 +357,8 @@ public class CombinedBacktestEngine {
 
                 correctSignals++;
 
-                grossProfit += netReturn;
+                grossProfit +=
+                        netReturn;
 
             } else {
 
@@ -435,14 +369,8 @@ public class CombinedBacktestEngine {
             }
 
 
-            // =================================================
-            // BUY
-            // =================================================
-
             if (
-                    "BUY".equalsIgnoreCase(
-                            direction
-                    )
+                    direction.equalsIgnoreCase("BUY")
             ) {
 
                 buySignals++;
@@ -450,44 +378,26 @@ public class CombinedBacktestEngine {
                 buyTotalReturn +=
                         netReturn;
 
-
                 if (
                         netReturn > 0.0
                 ) {
-
                     buyCorrect++;
                 }
-            }
 
-
-            // =================================================
-            // SELL
-            // =================================================
-
-            if (
-                    "SELL".equalsIgnoreCase(
-                            direction
-                    )
-            ) {
+            } else {
 
                 sellSignals++;
 
                 sellTotalReturn +=
                         netReturn;
 
-
                 if (
                         netReturn > 0.0
                 ) {
-
                     sellCorrect++;
                 }
             }
 
-
-            // =================================================
-            // EQUITY CURVE
-            // =================================================
 
             equity =
                     equity
@@ -495,9 +405,7 @@ public class CombinedBacktestEngine {
                     (
                             1.0
                                     +
-                            (
-                                    netReturn / 100.0
-                            )
+                            netReturn / 100.0
                     );
 
 
@@ -512,9 +420,7 @@ public class CombinedBacktestEngine {
 
             double drawdown =
                     (
-                            peakEquity
-                                    -
-                            equity
+                            peakEquity - equity
                     )
                             /
                     peakEquity
@@ -531,10 +437,6 @@ public class CombinedBacktestEngine {
             }
         }
 
-
-        // =====================================================
-        // ACCURACY
-        // =====================================================
 
         double accuracy =
                 percentage(
@@ -557,191 +459,101 @@ public class CombinedBacktestEngine {
                 );
 
 
-        // =====================================================
-        // AVERAGE RETURN
-        // =====================================================
-
-        double averageReturn = 0.0;
-
-
-        if (
-                returnCount > 0
-        ) {
-
-            averageReturn =
-                    totalReturn
-                            /
-                    returnCount;
-        }
+        double averageReturn =
+                returnCount == 0
+                        ? 0.0
+                        :
+                        totalReturn / returnCount;
 
 
-        // =====================================================
-        // PROFIT FACTOR
-        // =====================================================
-
-        double profitFactor = 0.0;
-
-
-        if (
+        double profitFactor =
                 grossLoss > 0.0
-        ) {
-
-            profitFactor =
-                    grossProfit
-                            /
-                    grossLoss;
-
-        } else if (
-                grossProfit > 0.0
-        ) {
-
-            profitFactor =
-                    999.0;
-        }
+                        ? grossProfit / grossLoss
+                        : 0.0;
 
 
-        // =====================================================
-        // BUY AVERAGE
-        // =====================================================
-
-        double buyAverageReturn = 0.0;
-
-
-        if (
+        double buyAverageReturn =
                 buySignals > 0
-        ) {
-
-            buyAverageReturn =
-                    buyTotalReturn
-                            /
-                    buySignals;
-        }
+                        ? buyTotalReturn / buySignals
+                        : 0.0;
 
 
-        // =====================================================
-        // SELL AVERAGE
-        // =====================================================
-
-        double sellAverageReturn = 0.0;
-
-
-        if (
+        double sellAverageReturn =
                 sellSignals > 0
-        ) {
+                        ? sellTotalReturn / sellSignals
+                        : 0.0;
 
-            sellAverageReturn =
-                    sellTotalReturn
-                            /
-                    sellSignals;
-        }
-
-
-        // =====================================================
-        // BUY & HOLD
-        // =====================================================
 
         double firstPrice =
-                close.get(
-                        MIN_HISTORY
-                );
+                close.get(MIN_HISTORY);
+
 
         double lastPrice =
-                close.get(
-                        size - 1
-                );
+                close.get(size - 1);
 
 
-        double buyHoldReturn = 0.0;
-
-
-        if (
+        double buyHoldReturn =
                 firstPrice > 0.0
-        ) {
+                        ?
+                        (
+                                lastPrice - firstPrice
+                        )
+                                /
+                        firstPrice
+                                *
+                        100.0
+                        :
+                        0.0;
 
-            buyHoldReturn =
-                    (
-                            lastPrice
-                                    -
-                            firstPrice
-                    )
-                            /
-                    firstPrice
-                            *
-                    100.0;
-        }
-
-
-        // =====================================================
-        // RESULT
-        // =====================================================
 
         return new Result(
 
                 totalSignals,
-
                 correctSignals,
-
                 wrongSignals,
-
                 neutralSignals,
 
                 buySignals,
-
                 sellSignals,
 
                 buyCorrect,
-
                 sellCorrect,
 
                 round(accuracy),
-
                 round(buyAccuracy),
-
                 round(sellAccuracy),
 
                 round(averageReturn),
-
                 round(totalReturn),
 
                 round(profitFactor),
 
                 round(grossProfit),
-
                 round(grossLoss),
 
                 round(maxDrawdown),
 
                 round(buyAverageReturn),
-
                 round(sellAverageReturn),
 
                 round(buyTotalReturn),
-
                 round(sellTotalReturn),
 
                 round(buyHoldReturn),
 
                 buyAgreementSignals,
-
                 sellAgreementSignals,
 
                 strongSignals,
-
                 moderateSignals,
-
                 weakSignals
         );
     }
 
 
-    // =========================================================
-    // EMPTY RESULT
-    // =========================================================
-
     private static Result emptyResult() {
 
         return new Result(
-
                 0,
                 0,
                 0,
@@ -785,27 +597,17 @@ public class CombinedBacktestEngine {
     }
 
 
-    // =========================================================
-    // PERCENTAGE
-    // =========================================================
-
     private static double percentage(
             int numerator,
             int denominator
     ) {
 
-        if (
-                denominator <= 0
-        ) {
-
+        if (denominator <= 0) {
             return 0.0;
         }
 
-
         return (
-                (
-                        (double) numerator
-                )
+                (double) numerator
                         /
                 denominator
         )
@@ -813,10 +615,6 @@ public class CombinedBacktestEngine {
                 100.0;
     }
 
-
-    // =========================================================
-    // ROUND
-    // =========================================================
 
     private static double round(
             double value
@@ -828,4 +626,4 @@ public class CombinedBacktestEngine {
                 /
                 100.0;
     }
-                        }
+}
