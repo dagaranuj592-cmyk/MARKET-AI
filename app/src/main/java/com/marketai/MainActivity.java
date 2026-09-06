@@ -42,9 +42,7 @@ public class MainActivity extends Activity {
             new ArrayList<>();
 
     @Override
-    protected void onCreate(
-            Bundle savedInstanceState
-    ) {
+    protected void onCreate(Bundle savedInstanceState) {
 
         super.onCreate(savedInstanceState);
 
@@ -84,10 +82,6 @@ public class MainActivity extends Activity {
 
         loadMarketData(loading);
     }
-
-    // =========================================================
-    // LOAD DATA
-    // =========================================================
 
     private void loadMarketData(
             TextView loading
@@ -154,38 +148,26 @@ public class MainActivity extends Activity {
 
                     addSpace();
 
-                    // =================================================
-                    // MARKET
-                    // =================================================
-
                     addSection("MARKET");
 
                     addMetric(
                             "Bitcoin",
-                            "$" + format(
-                                    currentPrice
-                            )
+                            "$" + format(currentPrice)
                     );
 
                     addMetric(
                             "Gold",
-                            "$" + format(
-                                    goldPrice
-                            )
+                            "$" + format(goldPrice)
                     );
 
                     addMetric(
                             "Support",
-                            "$" + format(
-                                    support
-                            )
+                            "$" + format(support)
                     );
 
                     addMetric(
                             "Resistance",
-                            "$" + format(
-                                    resistance
-                            )
+                            "$" + format(resistance)
                     );
 
                     addMetric(
@@ -195,16 +177,10 @@ public class MainActivity extends Activity {
 
                     addMetric(
                             "Average Volume",
-                            format(
-                                    averageVolume
-                            )
+                            format(averageVolume)
                     );
 
                     addSpace();
-
-                    // =================================================
-                    // TECHNICAL
-                    // =================================================
 
                     addSection(
                             "TECHNICAL ANALYSIS"
@@ -212,44 +188,32 @@ public class MainActivity extends Activity {
 
                     addMetric(
                             "RSI",
-                            format(
-                                    technical.rsi
-                            )
+                            format(technical.rsi)
                     );
 
                     addMetric(
                             "EMA 20",
-                            "$" + format(
-                                    technical.ema20
-                            )
+                            "$" + format(technical.ema20)
                     );
 
                     addMetric(
                             "EMA 50",
-                            "$" + format(
-                                    technical.ema50
-                            )
+                            "$" + format(technical.ema50)
                     );
 
                     addMetric(
                             "EMA 200",
-                            "$" + format(
-                                    technical.ema200
-                            )
+                            "$" + format(technical.ema200)
                     );
 
                     addMetric(
                             "MACD",
-                            format(
-                                    technical.macd
-                            )
+                            format(technical.macd)
                     );
 
                     addMetric(
                             "ATR",
-                            "$" + format(
-                                    technical.atr
-                            )
+                            "$" + format(technical.atr)
                     );
 
                     addMetric(
@@ -292,10 +256,6 @@ public class MainActivity extends Activity {
                     );
 
                     addSpace();
-
-                    // =================================================
-                    // AI PROBABILITY
-                    // =================================================
 
                     addSection(
                             "AI PROBABILITY"
@@ -394,7 +354,7 @@ public class MainActivity extends Activity {
     }
 
     // =========================================================
-    // BTC OHLCV
+    // BTC - 365 DAILY CANDLES
     // =========================================================
 
     private void fetchBTC()
@@ -404,7 +364,7 @@ public class MainActivity extends Activity {
                 "https://api.binance.com/api/v3/klines"
                         + "?symbol=BTCUSDT"
                         + "&interval=1d"
-                        + "&limit=180";
+                        + "&limit=365";
 
         URL url =
                 new URL(urlString);
@@ -512,7 +472,7 @@ public class MainActivity extends Activity {
             btcVolume.add(volume);
         }
 
-        if (btcPrices.size() < 60) {
+        if (btcPrices.size() < 250) {
 
             throw new Exception(
                     "Not enough BTC historical data"
@@ -781,7 +741,6 @@ public class MainActivity extends Activity {
         if (bullish >= 3) {
 
             return "UP";
-
         }
 
         if (bearish >= 3) {
@@ -854,7 +813,6 @@ public class MainActivity extends Activity {
         if (bullish >= 4) {
 
             return "BUY BIAS";
-
         }
 
         if (bearish >= 4) {
@@ -866,7 +824,7 @@ public class MainActivity extends Activity {
     }
 
     // =========================================================
-    // VOLUME
+    // AVERAGE VOLUME
     // =========================================================
 
     private double calculateAverageVolume() {
@@ -898,7 +856,7 @@ public class MainActivity extends Activity {
     }
 
     // =========================================================
-    // UI TITLE
+    // UI
     // =========================================================
 
     private void showTitle(
@@ -909,16 +867,9 @@ public class MainActivity extends Activity {
                 new TextView(this);
 
         title.setText(text);
-
         title.setTextSize(28);
-
-        title.setTextColor(
-                Color.WHITE
-        );
-
-        title.setGravity(
-                Gravity.CENTER
-        );
+        title.setTextColor(Color.WHITE);
+        title.setGravity(Gravity.CENTER);
 
         title.setPadding(
                 0,
@@ -930,10 +881,6 @@ public class MainActivity extends Activity {
         container.addView(title);
     }
 
-    // =========================================================
-    // SECTION
-    // =========================================================
-
     private void addSection(
             String text
     ) {
@@ -942,12 +889,8 @@ public class MainActivity extends Activity {
                 new TextView(this);
 
         section.setText(text);
-
         section.setTextSize(17);
-
-        section.setTextColor(
-                Color.WHITE
-        );
+        section.setTextColor(Color.WHITE);
 
         section.setPadding(
                 0,
@@ -958,10 +901,6 @@ public class MainActivity extends Activity {
 
         container.addView(section);
     }
-
-    // =========================================================
-    // METRIC
-    // =========================================================
 
     private void addMetric(
             String name,
@@ -978,10 +917,7 @@ public class MainActivity extends Activity {
         );
 
         metric.setTextSize(16);
-
-        metric.setTextColor(
-                Color.LTGRAY
-        );
+        metric.setTextColor(Color.LTGRAY);
 
         metric.setPadding(
                 0,
@@ -993,10 +929,6 @@ public class MainActivity extends Activity {
         container.addView(metric);
     }
 
-    // =========================================================
-    // TEXT
-    // =========================================================
-
     private TextView addText(
             String text,
             int size,
@@ -1007,9 +939,7 @@ public class MainActivity extends Activity {
                 new TextView(this);
 
         view.setText(text);
-
         view.setTextSize(size);
-
         view.setTextColor(color);
 
         view.setPadding(
@@ -1023,10 +953,6 @@ public class MainActivity extends Activity {
 
         return view;
     }
-
-    // =========================================================
-    // SPACE
-    // =========================================================
 
     private void addSpace() {
 
@@ -1045,10 +971,6 @@ public class MainActivity extends Activity {
         container.addView(space);
     }
 
-    // =========================================================
-    // FORMAT
-    // =========================================================
-
     private String format(
             double value
     ) {
@@ -1059,4 +981,4 @@ public class MainActivity extends Activity {
                 value
         );
     }
-            }
+}
