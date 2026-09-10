@@ -74,7 +74,6 @@ public class MainActivity extends Activity {
     // =========================================================
 
     private LiveMarketEngine liveMarketEngine;
-
     private LiveCandleEngine liveCandleEngine;
 
     private TextView liveBTCPriceView;
@@ -137,6 +136,14 @@ public class MainActivity extends Activity {
 
     private MoveDetector.MoveResult live5Move;
     private MoveDetector.MoveResult live15Move;
+
+
+    // =========================================================
+    // STRATEGY ENGINE
+    // =========================================================
+
+    private StrategyEngine.StrategyResult strategy5m;
+    private StrategyEngine.StrategyResult strategy15m;
 
 
     // =========================================================
@@ -208,9 +215,7 @@ public class MainActivity extends Activity {
             Bundle savedInstanceState
     ) {
 
-        super.onCreate(
-                savedInstanceState
-        );
+        super.onCreate(savedInstanceState);
 
         buildBaseUI();
 
@@ -245,17 +250,11 @@ public class MainActivity extends Activity {
                 35
         );
 
-        container.setBackgroundColor(
-                BG
-        );
+        container.setBackgroundColor(BG);
 
-        scrollView.addView(
-                container
-        );
+        scrollView.addView(container);
 
-        setContentView(
-                scrollView
-        );
+        setContentView(scrollView);
 
 
         scrollView.setOnTouchListener(
@@ -267,9 +266,7 @@ public class MainActivity extends Activity {
                             MotionEvent.ACTION_DOWN
                     ) {
 
-                        view.setTag(
-                                event.getY()
-                        );
+                        view.setTag(event.getY());
 
                     } else if (
                             event.getAction()
@@ -291,9 +288,7 @@ public class MainActivity extends Activity {
                                     event.getY();
 
                             if (
-                                    scrollView.getScrollY()
-                                            ==
-                                    0
+                                    scrollView.getScrollY() == 0
                                             &&
                                     end - start > 160
                                             &&
@@ -319,7 +314,6 @@ public class MainActivity extends Activity {
     protected void onStart() {
 
         super.onStart();
-
 
         startLiveBTC();
 
@@ -347,25 +341,20 @@ public class MainActivity extends Activity {
                                         double price
                                 ) {
 
-                                    latestLiveBTC =
-                                            price;
+                                    latestLiveBTC = price;
 
                                     runOnUiThread(
                                             () -> {
 
                                                 if (
-                                                        liveBTCPriceView
-                                                                != null
+                                                        liveBTCPriceView != null
                                                 ) {
 
-                                                    liveBTCPriceView
-                                                            .setText(
-                                                                    "$"
-                                                                            +
-                                                                    format(
-                                                                            price
-                                                                    )
-                                                            );
+                                                    liveBTCPriceView.setText(
+                                                            "$"
+                                                                    +
+                                                            format(price)
+                                                    );
                                                 }
                                             }
                                     );
@@ -381,38 +370,31 @@ public class MainActivity extends Activity {
                                             () -> {
 
                                                 if (
-                                                        liveBTCStatusView
-                                                                == null
+                                                        liveBTCStatusView == null
                                                 ) {
 
                                                     return;
                                                 }
 
-                                                if (
-                                                        connected
-                                                ) {
+                                                if (connected) {
 
-                                                    liveBTCStatusView
-                                                            .setText(
-                                                                    "● LIVE  •  BTCUSDT"
-                                                            );
+                                                    liveBTCStatusView.setText(
+                                                            "● LIVE  •  BTCUSDT"
+                                                    );
 
-                                                    liveBTCStatusView
-                                                            .setTextColor(
-                                                                    GREEN
-                                                            );
+                                                    liveBTCStatusView.setTextColor(
+                                                            GREEN
+                                                    );
 
                                                 } else {
 
-                                                    liveBTCStatusView
-                                                            .setText(
-                                                                    "○ RECONNECTING"
-                                                            );
+                                                    liveBTCStatusView.setText(
+                                                            "○ RECONNECTING"
+                                                    );
 
-                                                    liveBTCStatusView
-                                                            .setTextColor(
-                                                                    YELLOW
-                                                            );
+                                                    liveBTCStatusView.setTextColor(
+                                                            YELLOW
+                                                    );
                                                 }
                                             }
                                     );
@@ -428,19 +410,16 @@ public class MainActivity extends Activity {
                                             () -> {
 
                                                 if (
-                                                        liveBTCStatusView
-                                                                != null
+                                                        liveBTCStatusView != null
                                                 ) {
 
-                                                    liveBTCStatusView
-                                                            .setText(
-                                                                    "○ LIVE CONNECTION ERROR"
-                                                            );
+                                                    liveBTCStatusView.setText(
+                                                            "○ LIVE CONNECTION ERROR"
+                                                    );
 
-                                                    liveBTCStatusView
-                                                            .setTextColor(
-                                                                    RED
-                                                            );
+                                                    liveBTCStatusView.setTextColor(
+                                                            RED
+                                                    );
                                                 }
                                             }
                                     );
@@ -488,13 +467,11 @@ public class MainActivity extends Activity {
                                 ) {
 
                                     runOnUiThread(
-                                            () -> {
-
-                                                updateCandleStatus(
-                                                        interval,
-                                                        connected
-                                                );
-                                            }
+                                            () ->
+                                                    updateCandleStatus(
+                                                            interval,
+                                                            connected
+                                                    )
                                     );
                                 }
 
@@ -506,12 +483,10 @@ public class MainActivity extends Activity {
                                 ) {
 
                                     runOnUiThread(
-                                            () -> {
-
-                                                updateCandleError(
-                                                        interval
-                                                );
-                                            }
+                                            () ->
+                                                    updateCandleError(
+                                                            interval
+                                                    )
                                     );
                                 }
                             }
@@ -536,14 +511,12 @@ public class MainActivity extends Activity {
             liveMarketEngine.stop();
         }
 
-
         if (
                 liveCandleEngine != null
         ) {
 
             liveCandleEngine.stop();
         }
-
 
         super.onStop();
     }
@@ -558,17 +531,12 @@ public class MainActivity extends Activity {
             LiveCandleEngine.Candle candle
     ) {
 
-        if (
-                candle == null
-        ) {
-
+        if (candle == null) {
             return;
         }
 
 
-        if (
-                "5m".equals(interval)
-        ) {
+        if ("5m".equals(interval)) {
 
             updateLiveLists(
                     candle,
@@ -580,9 +548,7 @@ public class MainActivity extends Activity {
             );
 
 
-            if (
-                    live5Close.size() >= 40
-            ) {
+            if (live5Close.size() >= 40) {
 
                 live5Technical =
                         TechnicalAnalyzer.analyze(
@@ -591,7 +557,6 @@ public class MainActivity extends Activity {
                                 live5Low,
                                 live5Volume
                         );
-
 
                 live5Move =
                         MoveDetector.analyze(
@@ -608,18 +573,13 @@ public class MainActivity extends Activity {
                     () -> {
 
                         if (
-                                live5mCandleView
-                                        != null
+                                live5mCandleView != null
                         ) {
 
-                            live5mCandleView
-                                    .setText(
-                                            candleText(
-                                                    candle
-                                            )
-                                    );
+                            live5mCandleView.setText(
+                                    candleText(candle)
+                            );
                         }
-
 
                         updateLive5Analysis();
                     }
@@ -627,9 +587,7 @@ public class MainActivity extends Activity {
         }
 
 
-        if (
-                "15m".equals(interval)
-        ) {
+        if ("15m".equals(interval)) {
 
             updateLiveLists(
                     candle,
@@ -641,9 +599,7 @@ public class MainActivity extends Activity {
             );
 
 
-            if (
-                    live15Close.size() >= 40
-            ) {
+            if (live15Close.size() >= 40) {
 
                 live15Technical =
                         TechnicalAnalyzer.analyze(
@@ -652,7 +608,6 @@ public class MainActivity extends Activity {
                                 live15Low,
                                 live15Volume
                         );
-
 
                 live15Move =
                         MoveDetector.analyze(
@@ -669,18 +624,13 @@ public class MainActivity extends Activity {
                     () -> {
 
                         if (
-                                live15mCandleView
-                                        != null
+                                live15mCandleView != null
                         ) {
 
-                            live15mCandleView
-                                    .setText(
-                                            candleText(
-                                                    candle
-                                            )
-                                    );
+                            live15mCandleView.setText(
+                                    candleText(candle)
+                            );
                         }
-
 
                         updateLive15Analysis();
                     }
@@ -705,9 +655,7 @@ public class MainActivity extends Activity {
 
     ) {
 
-        if (
-                closes.isEmpty()
-        ) {
+        if (closes.isEmpty()) {
 
             opens.add(candle.open);
             highs.add(candle.high);
@@ -720,16 +668,6 @@ public class MainActivity extends Activity {
             int last =
                     closes.size() - 1;
 
-
-            double oldClose =
-                    closes.get(last);
-
-
-            /*
-             * Binance updates the same candle repeatedly.
-             * If the incoming close is the current candle
-             * update, replace it. Otherwise append.
-             */
 
             if (
                     Math.abs(
@@ -801,9 +739,7 @@ public class MainActivity extends Activity {
 
         showHeader();
 
-        addSectionTitle(
-                "MARKET DATA"
-        );
+        addSectionTitle("MARKET DATA");
 
         addText(
                 "Loading BTC and Gold analysis...",
@@ -819,16 +755,11 @@ public class MainActivity extends Activity {
 
     private void refreshMarketData() {
 
-        if (
-                isRefreshing
-        ) {
-
+        if (isRefreshing) {
             return;
         }
 
-
-        isRefreshing =
-                true;
+        isRefreshing = true;
 
         showLoading();
 
@@ -950,6 +881,28 @@ public class MainActivity extends Activity {
                                 );
 
 
+                        // =================================================
+                        // STRATEGY ENGINE
+                        // =================================================
+
+                        StrategyEngine.StrategyResult setup5m =
+                                StrategyEngine.analyze(
+                                        btc5Prices,
+                                        btc5High,
+                                        btc5Low,
+                                        btc5Volume
+                                );
+
+
+                        StrategyEngine.StrategyResult setup15m =
+                                StrategyEngine.analyze(
+                                        btc15Prices,
+                                        btc15High,
+                                        btc15Low,
+                                        btc15Volume
+                                );
+
+
                         double currentPrice =
                                 btcPrices.get(
                                         btcPrices.size() - 1
@@ -980,8 +933,15 @@ public class MainActivity extends Activity {
                         ).post(
                                 () -> {
 
-                                    isRefreshing =
-                                            false;
+                                    isRefreshing = false;
+
+
+                                    strategy5m =
+                                            setup5m;
+
+                                    strategy15m =
+                                            setup15m;
+
 
                                     showDashboard(
                                             currentPrice,
@@ -997,26 +957,23 @@ public class MainActivity extends Activity {
                                             backtest,
                                             combinedBacktest,
                                             move15,
-                                            move5
+                                            move5,
+                                            setup5m,
+                                            setup15m
                                     );
                                 }
                         );
 
-                    } catch (
-                            Exception e
-                    ) {
+                    } catch (Exception e) {
 
                         new Handler(
                                 Looper.getMainLooper()
                         ).post(
                                 () -> {
 
-                                    isRefreshing =
-                                            false;
+                                    isRefreshing = false;
 
-                                    showError(
-                                            e
-                                    );
+                                    showError(e);
                                 }
                         );
                     }
@@ -1053,7 +1010,11 @@ public class MainActivity extends Activity {
 
             MoveDetector.MoveResult move15,
 
-            MoveDetector.MoveResult move5
+            MoveDetector.MoveResult move5,
+
+            StrategyEngine.StrategyResult setup5m,
+
+            StrategyEngine.StrategyResult setup15m
 
     ) {
 
@@ -1067,35 +1028,24 @@ public class MainActivity extends Activity {
         // LIVE BTC
         // =====================================================
 
-        addSectionTitle(
-                "LIVE MARKET"
-        );
+        addSectionTitle("LIVE MARKET");
 
 
         LinearLayout liveCard =
                 createCard();
 
 
-        TextView symbol =
-                cardTitle(
-                        "BTCUSDT"
-                );
-
         liveCard.addView(
-                symbol
+                cardTitle("BTCUSDT")
         );
 
 
         liveBTCPriceView =
                 new TextView(this);
 
-        liveBTCPriceView.setTextSize(
-                34
-        );
+        liveBTCPriceView.setTextSize(34);
 
-        liveBTCPriceView.setTextColor(
-                WHITE
-        );
+        liveBTCPriceView.setTextColor(WHITE);
 
         liveBTCPriceView.setTypeface(
                 Typeface.DEFAULT,
@@ -1117,10 +1067,7 @@ public class MainActivity extends Activity {
 
 
         liveBTCPriceView.setText(
-                "$" +
-                format(
-                        displayPrice
-                )
+                "$" + format(displayPrice)
         );
 
 
@@ -1136,13 +1083,9 @@ public class MainActivity extends Activity {
                 "● LIVE  •  BTCUSDT"
         );
 
-        liveBTCStatusView.setTextSize(
-                12
-        );
+        liveBTCStatusView.setTextSize(12);
 
-        liveBTCStatusView.setTextColor(
-                GREEN
-        );
+        liveBTCStatusView.setTextColor(GREEN);
 
         liveCard.addView(
                 liveBTCStatusView
@@ -1158,9 +1101,7 @@ public class MainActivity extends Activity {
         // FINAL SIGNAL
         // =====================================================
 
-        addSectionTitle(
-                "FINAL SIGNAL"
-        );
+        addSectionTitle("FINAL SIGNAL");
 
 
         LinearLayout signalCard =
@@ -1182,40 +1123,27 @@ public class MainActivity extends Activity {
         );
 
 
-        signal.setTextSize(
-                30
-        );
+        signal.setTextSize(30);
 
-
-        signal.setGravity(
-                Gravity.CENTER
-        );
-
+        signal.setGravity(Gravity.CENTER);
 
         signal.setTypeface(
                 Typeface.DEFAULT,
                 Typeface.BOLD
         );
 
-
         signal.setTextColor(
-                signalColor(
-                        direction
-                )
+                signalColor(direction)
         );
 
 
-        signalCard.addView(
-                signal
-        );
+        signalCard.addView(signal);
 
 
         addCardMetric(
                 signalCard,
                 "Confidence",
-                format(
-                        combined.confidence
-                ) + "%"
+                format(combined.confidence) + "%"
         );
 
 
@@ -1233,40 +1161,571 @@ public class MainActivity extends Activity {
         );
 
 
-        signalCard.addView(
-                divider()
-        );
+        signalCard.addView(divider());
 
 
         addCardMetric(
                 signalCard,
                 "BUY",
-                format(
-                        combined.buyProbability
-                ) + "%"
+                format(combined.buyProbability) + "%"
         );
 
 
         addCardMetric(
                 signalCard,
                 "SELL",
-                format(
-                        combined.sellProbability
-                ) + "%"
+                format(combined.sellProbability) + "%"
         );
 
 
         addCardMetric(
                 signalCard,
                 "WAIT",
-                format(
-                        combined.neutralProbability
-                ) + "%"
+                format(combined.neutralProbability) + "%"
+        );
+
+
+        container.addView(signalCard);
+
+
+        // =====================================================
+        // STRATEGY SETUP
+        // =====================================================
+
+        addSectionTitle("STRATEGY SETUP");
+
+
+        // =====================================================
+        // 5M STRATEGY
+        // =====================================================
+
+        LinearLayout strategyCard5 =
+                createCard();
+
+
+        strategyCard5.addView(
+                cardTitle("5M SETUP")
+        );
+
+
+        TextView setupTitle5 =
+                new TextView(this);
+
+
+        setupTitle5.setText(
+                setup5m.setup
+        );
+
+        setupTitle5.setTextSize(25);
+
+        setupTitle5.setTypeface(
+                Typeface.DEFAULT,
+                Typeface.BOLD
+        );
+
+        setupTitle5.setTextColor(
+                strategyColor(setup5m.setup)
+        );
+
+        setupTitle5.setPadding(
+                0,
+                4,
+                0,
+                8
+        );
+
+
+        strategyCard5.addView(
+                setupTitle5
+        );
+
+
+        addCardMetric(
+                strategyCard5,
+                "Strategy",
+                setup5m.strategy
+        );
+
+
+        addCardMetric(
+                strategyCard5,
+                "Quality",
+                format(setup5m.qualityScore) + "%"
+        );
+
+
+        addCardMetric(
+                strategyCard5,
+                "Direction",
+                setup5m.direction
+        );
+
+
+        if (
+                !"NO SETUP".equals(
+                        setup5m.setup
+                )
+        ) {
+
+            strategyCard5.addView(
+                    divider()
+            );
+
+
+            addCardMetric(
+                    strategyCard5,
+                    "Entry",
+                    "$" +
+                    format(setup5m.entry)
+            );
+
+
+            addCardMetric(
+                    strategyCard5,
+                    "Stop Loss",
+                    "$" +
+                    format(setup5m.stopLoss)
+            );
+
+
+            addCardMetric(
+                    strategyCard5,
+                    "Target 1",
+                    "$" +
+                    format(setup5m.target1)
+            );
+
+
+            addCardMetric(
+                    strategyCard5,
+                    "Target 2",
+                    "$" +
+                    format(setup5m.target2)
+            );
+
+
+            addCardMetric(
+                    strategyCard5,
+                    "R:R 1",
+                    format(setup5m.riskReward1)
+            );
+
+
+            addCardMetric(
+                    strategyCard5,
+                    "R:R 2",
+                    format(setup5m.riskReward2)
+            );
+        }
+
+
+        strategyCard5.addView(
+                divider()
+        );
+
+
+        addCardMetric(
+                strategyCard5,
+                "EMA",
+                setup5m.emaAligned
+                        ? "CONFIRMED"
+                        : "NO"
+        );
+
+
+        addCardMetric(
+                strategyCard5,
+                "Trend",
+                setup5m.trendAligned
+                        ? "CONFIRMED"
+                        : "NO"
+        );
+
+
+        addCardMetric(
+                strategyCard5,
+                "Momentum",
+                setup5m.momentumConfirmed
+                        ? "CONFIRMED"
+                        : "NO"
+        );
+
+
+        addCardMetric(
+                strategyCard5,
+                "Volume",
+                setup5m.volumeConfirmed
+                        ? "CONFIRMED"
+                        : "NO"
+        );
+
+
+        addCardMetric(
+                strategyCard5,
+                "Bollinger",
+                setup5m.bollingerBreakout
+                        ? "BREAKOUT"
+                        : "NO"
+        );
+
+
+        addCardMetric(
+                strategyCard5,
+                "RSI",
+                setup5m.rsiConfirmed
+                        ? "CONFIRMED"
+                        : "NO"
+        );
+
+
+        strategyCard5.addView(
+                divider()
+        );
+
+
+        TextView evidence5 =
+                new TextView(this);
+
+        evidence5.setText(
+                setup5m.evidence
+        );
+
+        evidence5.setTextSize(12);
+
+        evidence5.setTextColor(MUTED);
+
+        evidence5.setPadding(
+                0,
+                5,
+                0,
+                5
+        );
+
+
+        strategyCard5.addView(
+                evidence5
         );
 
 
         container.addView(
-                signalCard
+                strategyCard5
+        );
+
+
+        // =====================================================
+        // 15M STRATEGY
+        // =====================================================
+
+        LinearLayout strategyCard15 =
+                createCard();
+
+
+        strategyCard15.addView(
+                cardTitle("15M SETUP")
+        );
+
+
+        TextView setupTitle15 =
+                new TextView(this);
+
+
+        setupTitle15.setText(
+                setup15m.setup
+        );
+
+        setupTitle15.setTextSize(25);
+
+        setupTitle15.setTypeface(
+                Typeface.DEFAULT,
+                Typeface.BOLD
+        );
+
+        setupTitle15.setTextColor(
+                strategyColor(setup15m.setup)
+        );
+
+        setupTitle15.setPadding(
+                0,
+                4,
+                0,
+                8
+        );
+
+
+        strategyCard15.addView(
+                setupTitle15
+        );
+
+
+        addCardMetric(
+                strategyCard15,
+                "Strategy",
+                setup15m.strategy
+        );
+
+
+        addCardMetric(
+                strategyCard15,
+                "Quality",
+                format(setup15m.qualityScore) + "%"
+        );
+
+
+        addCardMetric(
+                strategyCard15,
+                "Direction",
+                setup15m.direction
+        );
+
+
+        if (
+                !"NO SETUP".equals(
+                        setup15m.setup
+                )
+        ) {
+
+            strategyCard15.addView(
+                    divider()
+            );
+
+
+            addCardMetric(
+                    strategyCard15,
+                    "Entry",
+                    "$" +
+                    format(setup15m.entry)
+            );
+
+
+            addCardMetric(
+                    strategyCard15,
+                    "Stop Loss",
+                    "$" +
+                    format(setup15m.stopLoss)
+            );
+
+
+            addCardMetric(
+                    strategyCard15,
+                    "Target 1",
+                    "$" +
+                    format(setup15m.target1)
+            );
+
+
+            addCardMetric(
+                    strategyCard15,
+                    "Target 2",
+                    "$" +
+                    format(setup15m.target2)
+            );
+
+
+            addCardMetric(
+                    strategyCard15,
+                    "R:R 1",
+                    format(setup15m.riskReward1)
+            );
+
+
+            addCardMetric(
+                    strategyCard15,
+                    "R:R 2",
+                    format(setup15m.riskReward2)
+            );
+        }
+
+
+        strategyCard15.addView(
+                divider()
+        );
+
+
+        addCardMetric(
+                strategyCard15,
+                "EMA",
+                setup15m.emaAligned
+                        ? "CONFIRMED"
+                        : "NO"
+        );
+
+
+        addCardMetric(
+                strategyCard15,
+                "Trend",
+                setup15m.trendAligned
+                        ? "CONFIRMED"
+                        : "NO"
+        );
+
+
+        addCardMetric(
+                strategyCard15,
+                "Momentum",
+                setup15m.momentumConfirmed
+                        ? "CONFIRMED"
+                        : "NO"
+        );
+
+
+        addCardMetric(
+                strategyCard15,
+                "Volume",
+                setup15m.volumeConfirmed
+                        ? "CONFIRMED"
+                        : "NO"
+        );
+
+
+        addCardMetric(
+                strategyCard15,
+                "Bollinger",
+                setup15m.bollingerBreakout
+                        ? "BREAKOUT"
+                        : "NO"
+        );
+
+
+        addCardMetric(
+                strategyCard15,
+                "RSI",
+                setup15m.rsiConfirmed
+                        ? "CONFIRMED"
+                        : "NO"
+        );
+
+
+        strategyCard15.addView(
+                divider()
+        );
+
+
+        TextView evidence15 =
+                new TextView(this);
+
+        evidence15.setText(
+                setup15m.evidence
+        );
+
+        evidence15.setTextSize(12);
+
+        evidence15.setTextColor(MUTED);
+
+        evidence15.setPadding(
+                0,
+                5,
+                0,
+                5
+        );
+
+
+        strategyCard15.addView(
+                evidence15
+        );
+
+
+        container.addView(
+                strategyCard15
+        );
+
+
+        // =====================================================
+        // MULTI TIMEFRAME AGREEMENT
+        // =====================================================
+
+        addSectionTitle(
+                "MULTI-TIMEFRAME SETUP"
+        );
+
+
+        LinearLayout mtfCard =
+                createCard();
+
+
+        String mtfState =
+                getStrategyAgreement(
+                        setup5m,
+                        setup15m
+                );
+
+
+        TextView mtfTitle =
+                new TextView(this);
+
+
+        mtfTitle.setText(
+                mtfState
+        );
+
+        mtfTitle.setTextSize(22);
+
+        mtfTitle.setTypeface(
+                Typeface.DEFAULT,
+                Typeface.BOLD
+        );
+
+        mtfTitle.setTextColor(
+                strategyColor(mtfState)
+        );
+
+        mtfTitle.setGravity(
+                Gravity.CENTER
+        );
+
+        mtfTitle.setPadding(
+                0,
+                5,
+                0,
+                10
+        );
+
+
+        mtfCard.addView(
+                mtfTitle
+        );
+
+
+        addCardMetric(
+                mtfCard,
+                "5M Direction",
+                setup5m.direction
+        );
+
+
+        addCardMetric(
+                mtfCard,
+                "15M Direction",
+                setup15m.direction
+        );
+
+
+        addCardMetric(
+                mtfCard,
+                "5M Quality",
+                format(setup5m.qualityScore) + "%"
+        );
+
+
+        addCardMetric(
+                mtfCard,
+                "15M Quality",
+                format(setup15m.qualityScore) + "%"
+        );
+
+
+        mtfCard.addView(
+                divider()
+        );
+
+
+        addTextToCard(
+                mtfCard,
+                "Both timeframes must independently confirm conditions before treating the setup as strong."
+        );
+
+
+        container.addView(
+                mtfCard
         );
 
 
@@ -1293,9 +1752,7 @@ public class MainActivity extends Activity {
         addCardMetric(
                 shortCard,
                 "5M Move Risk",
-                format(
-                        move5.moveRisk
-                ) + "%"
+                format(move5.moveRisk) + "%"
         );
 
 
@@ -1309,9 +1766,7 @@ public class MainActivity extends Activity {
         addCardMetric(
                 shortCard,
                 "15M Move Risk",
-                format(
-                        move15.moveRisk
-                ) + "%"
+                format(move15.moveRisk) + "%"
         );
 
 
@@ -1353,9 +1808,7 @@ public class MainActivity extends Activity {
 
 
         candle5.addView(
-                cardTitle(
-                        "5 MINUTE"
-                )
+                cardTitle("5 MINUTE")
         );
 
 
@@ -1366,13 +1819,9 @@ public class MainActivity extends Activity {
                 "○ CONNECTING"
         );
 
-        live5mStatusView.setTextSize(
-                12
-        );
+        live5mStatusView.setTextSize(12);
 
-        live5mStatusView.setTextColor(
-                YELLOW
-        );
+        live5mStatusView.setTextColor(YELLOW);
 
         candle5.addView(
                 live5mStatusView
@@ -1386,13 +1835,9 @@ public class MainActivity extends Activity {
                 "Waiting for live candle..."
         );
 
-        live5mCandleView.setTextSize(
-                14
-        );
+        live5mCandleView.setTextSize(14);
 
-        live5mCandleView.setTextColor(
-                WHITE
-        );
+        live5mCandleView.setTextColor(WHITE);
 
         live5mCandleView.setPadding(
                 0,
@@ -1400,6 +1845,7 @@ public class MainActivity extends Activity {
                 0,
                 8
         );
+
 
         candle5.addView(
                 live5mCandleView
@@ -1413,13 +1859,10 @@ public class MainActivity extends Activity {
                 "Analysis waiting..."
         );
 
-        live5mAnalysisView.setTextSize(
-                13
-        );
+        live5mAnalysisView.setTextSize(13);
 
-        live5mAnalysisView.setTextColor(
-                MUTED
-        );
+        live5mAnalysisView.setTextColor(MUTED);
+
 
         candle5.addView(
                 live5mAnalysisView
@@ -1436,9 +1879,7 @@ public class MainActivity extends Activity {
 
 
         candle15.addView(
-                cardTitle(
-                        "15 MINUTE"
-                )
+                cardTitle("15 MINUTE")
         );
 
 
@@ -1449,13 +1890,9 @@ public class MainActivity extends Activity {
                 "○ CONNECTING"
         );
 
-        live15mStatusView.setTextSize(
-                12
-        );
+        live15mStatusView.setTextSize(12);
 
-        live15mStatusView.setTextColor(
-                YELLOW
-        );
+        live15mStatusView.setTextColor(YELLOW);
 
         candle15.addView(
                 live15mStatusView
@@ -1469,13 +1906,9 @@ public class MainActivity extends Activity {
                 "Waiting for live candle..."
         );
 
-        live15mCandleView.setTextSize(
-                14
-        );
+        live15mCandleView.setTextSize(14);
 
-        live15mCandleView.setTextColor(
-                WHITE
-        );
+        live15mCandleView.setTextColor(WHITE);
 
         live15mCandleView.setPadding(
                 0,
@@ -1483,6 +1916,7 @@ public class MainActivity extends Activity {
                 0,
                 8
         );
+
 
         candle15.addView(
                 live15mCandleView
@@ -1496,13 +1930,10 @@ public class MainActivity extends Activity {
                 "Analysis waiting..."
         );
 
-        live15mAnalysisView.setTextSize(
-                13
-        );
+        live15mAnalysisView.setTextSize(13);
 
-        live15mAnalysisView.setTextColor(
-                MUTED
-        );
+        live15mAnalysisView.setTextColor(MUTED);
+
 
         candle15.addView(
                 live15mAnalysisView
@@ -1530,20 +1961,14 @@ public class MainActivity extends Activity {
         addCardMetric(
                 marketCard,
                 "BTC",
-                "$" +
-                format(
-                        currentPrice
-                )
+                "$" + format(currentPrice)
         );
 
 
         addCardMetric(
                 marketCard,
                 "Gold",
-                "$" +
-                format(
-                        goldPrice
-                )
+                "$" + format(goldPrice)
         );
 
 
@@ -1557,29 +1982,21 @@ public class MainActivity extends Activity {
         addCardMetric(
                 marketCard,
                 "Support",
-                "$" +
-                format(
-                        support
-                )
+                "$" + format(support)
         );
 
 
         addCardMetric(
                 marketCard,
                 "Resistance",
-                "$" +
-                format(
-                        resistance
-                )
+                "$" + format(resistance)
         );
 
 
         addCardMetric(
                 marketCard,
                 "Average Volume",
-                format(
-                        averageVolume
-                )
+                format(averageVolume)
         );
 
 
@@ -1604,76 +2021,56 @@ public class MainActivity extends Activity {
         addCardMetric(
                 technicalCard,
                 "RSI",
-                format(
-                        technical.rsi
-                )
+                format(technical.rsi)
         );
 
 
         addCardMetric(
                 technicalCard,
                 "EMA 20",
-                "$" +
-                format(
-                        technical.ema20
-                )
+                "$" + format(technical.ema20)
         );
 
 
         addCardMetric(
                 technicalCard,
                 "EMA 50",
-                "$" +
-                format(
-                        technical.ema50
-                )
+                "$" + format(technical.ema50)
         );
 
 
         addCardMetric(
                 technicalCard,
                 "EMA 200",
-                "$" +
-                format(
-                        technical.ema200
-                )
+                "$" + format(technical.ema200)
         );
 
 
         addCardMetric(
                 technicalCard,
                 "MACD",
-                format(
-                        technical.macd
-                )
+                format(technical.macd)
         );
 
 
         addCardMetric(
                 technicalCard,
                 "ATR",
-                "$" +
-                format(
-                        technical.atr
-                )
+                "$" + format(technical.atr)
         );
 
 
         addCardMetric(
                 technicalCard,
                 "Momentum",
-                format(
-                        technical.momentum
-                ) + "%"
+                format(technical.momentum) + "%"
         );
 
 
         addCardMetric(
                 technicalCard,
                 "Volume Ratio",
-                format(
-                        technical.volumeRatio
-                ) + "x"
+                format(technical.volumeRatio) + "x"
         );
 
 
@@ -1698,9 +2095,7 @@ public class MainActivity extends Activity {
         addCardMetric(
                 moveCard,
                 "5M Risk",
-                format(
-                        move5.moveRisk
-                ) + "%"
+                format(move5.moveRisk) + "%"
         );
 
 
@@ -1714,9 +2109,7 @@ public class MainActivity extends Activity {
         addCardMetric(
                 moveCard,
                 "15M Risk",
-                format(
-                        move15.moveRisk
-                ) + "%"
+                format(move15.moveRisk) + "%"
         );
 
 
@@ -1730,36 +2123,28 @@ public class MainActivity extends Activity {
         addCardMetric(
                 moveCard,
                 "5M Upside",
-                format(
-                        move5.upsideProbability
-                ) + "%"
+                format(move5.upsideProbability) + "%"
         );
 
 
         addCardMetric(
                 moveCard,
                 "5M Downside",
-                format(
-                        move5.downsideProbability
-                ) + "%"
+                format(move5.downsideProbability) + "%"
         );
 
 
         addCardMetric(
                 moveCard,
                 "15M Upside",
-                format(
-                        move15.upsideProbability
-                ) + "%"
+                format(move15.upsideProbability) + "%"
         );
 
 
         addCardMetric(
                 moveCard,
                 "15M Downside",
-                format(
-                        move15.downsideProbability
-                ) + "%"
+                format(move15.downsideProbability) + "%"
         );
 
 
@@ -2113,37 +2498,27 @@ public class MainActivity extends Activity {
         live5mAnalysisView.setText(
                 "RSI  "
                         +
-                format(
-                        live5Technical.rsi
-                )
+                format(live5Technical.rsi)
                         +
                 "   •   EMA20  $"
                         +
-                format(
-                        live5Technical.ema20
-                )
+                format(live5Technical.ema20)
                         +
                 "\n"
                         +
                 "MACD  "
                         +
-                format(
-                        live5Technical.macd
-                )
+                format(live5Technical.macd)
                         +
                 "   •   Momentum  "
                         +
-                format(
-                        live5Technical.momentum
-                )
+                format(live5Technical.momentum)
                         +
                 "%\n"
                         +
                 "Move Risk  "
                         +
-                format(
-                        live5Move.moveRisk
-                )
+                format(live5Move.moveRisk)
                         +
                 "%   •   "
                         +
@@ -2190,37 +2565,27 @@ public class MainActivity extends Activity {
         live15mAnalysisView.setText(
                 "RSI  "
                         +
-                format(
-                        live15Technical.rsi
-                )
+                format(live15Technical.rsi)
                         +
                 "   •   EMA20  $"
                         +
-                format(
-                        live15Technical.ema20
-                )
+                format(live15Technical.ema20)
                         +
                 "\n"
                         +
                 "MACD  "
                         +
-                format(
-                        live15Technical.macd
-                )
+                format(live15Technical.macd)
                         +
                 "   •   Momentum  "
                         +
-                format(
-                        live15Technical.momentum
-                )
+                format(live15Technical.momentum)
                         +
                 "%\n"
                         +
                 "Move Risk  "
                         +
-                format(
-                        live15Move.moveRisk
-                )
+                format(live15Move.moveRisk)
                         +
                 "%   •   "
                         +
@@ -2251,25 +2616,18 @@ public class MainActivity extends Activity {
                         : live15mStatusView;
 
 
-        if (
-                target == null
-        ) {
-
+        if (target == null) {
             return;
         }
 
 
-        if (
-                connected
-        ) {
+        if (connected) {
 
             target.setText(
                     "● LIVE  •  " + interval
             );
 
-            target.setTextColor(
-                    GREEN
-            );
+            target.setTextColor(GREEN);
 
         } else {
 
@@ -2279,9 +2637,7 @@ public class MainActivity extends Activity {
                     interval
             );
 
-            target.setTextColor(
-                    YELLOW
-            );
+            target.setTextColor(YELLOW);
         }
     }
 
@@ -2300,9 +2656,7 @@ public class MainActivity extends Activity {
                         : live15mStatusView;
 
 
-        if (
-                target != null
-        ) {
+        if (target != null) {
 
             target.setText(
                     "○ CONNECTION ERROR  •  "
@@ -2310,9 +2664,7 @@ public class MainActivity extends Activity {
                     interval
             );
 
-            target.setTextColor(
-                    RED
-            );
+            target.setTextColor(RED);
         }
     }
 
@@ -2363,37 +2715,27 @@ public class MainActivity extends Activity {
                         +
                 "O  $"
                         +
-                format(
-                        candle.open
-                )
+                format(candle.open)
                         +
                 "   H  $"
                         +
-                format(
-                        candle.high
-                )
+                format(candle.high)
                         +
                 "\n"
                         +
                 "L  $"
                         +
-                format(
-                        candle.low
-                )
+                format(candle.low)
                         +
                 "   C  $"
                         +
-                format(
-                        candle.close
-                )
+                format(candle.close)
                         +
                 "\n"
                         +
                 "Volume  "
                         +
-                format(
-                        candle.volume
-                );
+                format(candle.volume);
     }
 
 
@@ -2430,13 +2772,9 @@ public class MainActivity extends Activity {
                 "MARKET AI"
         );
 
-        title.setTextSize(
-                26
-        );
+        title.setTextSize(26);
 
-        title.setTextColor(
-                WHITE
-        );
+        title.setTextColor(WHITE);
 
         title.setTypeface(
                 Typeface.DEFAULT,
@@ -2444,9 +2782,7 @@ public class MainActivity extends Activity {
         );
 
 
-        titleBox.addView(
-                title
-        );
+        titleBox.addView(title);
 
 
         TextView subtitle =
@@ -2456,18 +2792,12 @@ public class MainActivity extends Activity {
                 "BTC / GOLD ANALYTICAL ENGINE"
         );
 
-        subtitle.setTextSize(
-                10
-        );
+        subtitle.setTextSize(10);
 
-        subtitle.setTextColor(
-                MUTED
-        );
+        subtitle.setTextColor(MUTED);
 
 
-        titleBox.addView(
-                subtitle
-        );
+        titleBox.addView(subtitle);
 
 
         titleBox.setLayoutParams(
@@ -2479,25 +2809,17 @@ public class MainActivity extends Activity {
         );
 
 
-        header.addView(
-                titleBox
-        );
+        header.addView(titleBox);
 
 
         TextView live =
                 new TextView(this);
 
-        live.setText(
-                "● LIVE"
-        );
+        live.setText("● LIVE");
 
-        live.setTextSize(
-                11
-        );
+        live.setTextSize(11);
 
-        live.setTextColor(
-                GREEN
-        );
+        live.setTextColor(GREEN);
 
         live.setTypeface(
                 Typeface.DEFAULT,
@@ -2505,14 +2827,10 @@ public class MainActivity extends Activity {
         );
 
 
-        header.addView(
-                live
-        );
+        header.addView(live);
 
 
-        container.addView(
-                header
-        );
+        container.addView(header);
 
 
         addSpace();
@@ -2530,17 +2848,11 @@ public class MainActivity extends Activity {
         TextView view =
                 new TextView(this);
 
-        view.setText(
-                text
-        );
+        view.setText(text);
 
-        view.setTextSize(
-                13
-        );
+        view.setTextSize(13);
 
-        view.setTextColor(
-                MUTED
-        );
+        view.setTextColor(MUTED);
 
         view.setTypeface(
                 Typeface.DEFAULT,
@@ -2555,9 +2867,7 @@ public class MainActivity extends Activity {
         );
 
 
-        container.addView(
-                view
-        );
+        container.addView(view);
     }
 
 
@@ -2585,13 +2895,9 @@ public class MainActivity extends Activity {
         GradientDrawable bg =
                 new GradientDrawable();
 
-        bg.setColor(
-                CARD
-        );
+        bg.setColor(CARD);
 
-        bg.setCornerRadius(
-                20
-        );
+        bg.setCornerRadius(20);
 
         bg.setStroke(
                 1,
@@ -2599,9 +2905,7 @@ public class MainActivity extends Activity {
         );
 
 
-        card.setBackground(
-                bg
-        );
+        card.setBackground(bg);
 
 
         LinearLayout.LayoutParams params =
@@ -2619,9 +2923,7 @@ public class MainActivity extends Activity {
         );
 
 
-        card.setLayoutParams(
-                params
-        );
+        card.setLayoutParams(params);
 
 
         return card;
@@ -2639,17 +2941,11 @@ public class MainActivity extends Activity {
         TextView title =
                 new TextView(this);
 
-        title.setText(
-                text
-        );
+        title.setText(text);
 
-        title.setTextSize(
-                15
-        );
+        title.setTextSize(15);
 
-        title.setTextColor(
-                WHITE
-        );
+        title.setTextColor(WHITE);
 
         title.setTypeface(
                 Typeface.DEFAULT,
@@ -2704,17 +3000,11 @@ public class MainActivity extends Activity {
         TextView left =
                 new TextView(this);
 
-        left.setText(
-                name
-        );
+        left.setText(name);
 
-        left.setTextSize(
-                13
-        );
+        left.setTextSize(13);
 
-        left.setTextColor(
-                MUTED
-        );
+        left.setTextColor(MUTED);
 
 
         left.setLayoutParams(
@@ -2729,18 +3019,12 @@ public class MainActivity extends Activity {
         TextView right =
                 new TextView(this);
 
-        right.setText(
-                value
-        );
+        right.setText(value);
 
-        right.setTextSize(
-                13
-        );
+        right.setTextSize(13);
 
         right.setTextColor(
-                valueColor(
-                        value
-                )
+                valueColor(value)
         );
 
         right.setTypeface(
@@ -2753,18 +3037,42 @@ public class MainActivity extends Activity {
         );
 
 
-        row.addView(
-                left
-        );
+        row.addView(left);
 
-        row.addView(
-                right
-        );
+        row.addView(right);
 
 
-        card.addView(
-                row
+        card.addView(row);
+    }
+
+
+    // =========================================================
+    // CARD TEXT
+    // =========================================================
+
+    private void addTextToCard(
+            LinearLayout card,
+            String text
+    ) {
+
+        TextView view =
+                new TextView(this);
+
+        view.setText(text);
+
+        view.setTextSize(12);
+
+        view.setTextColor(MUTED);
+
+        view.setPadding(
+                0,
+                5,
+                0,
+                5
         );
+
+
+        card.addView(view);
     }
 
 
@@ -2777,15 +3085,15 @@ public class MainActivity extends Activity {
         View view =
                 new View(this);
 
-        view.setBackgroundColor(
-                BORDER
-        );
+        view.setBackgroundColor(BORDER);
+
 
         LinearLayout.LayoutParams params =
                 new LinearLayout.LayoutParams(
                         ViewGroup.LayoutParams.MATCH_PARENT,
                         1
                 );
+
 
         params.setMargins(
                 0,
@@ -2794,9 +3102,9 @@ public class MainActivity extends Activity {
                 8
         );
 
-        view.setLayoutParams(
-                params
-        );
+
+        view.setLayoutParams(params);
+
 
         return view;
     }
@@ -2813,21 +3121,13 @@ public class MainActivity extends Activity {
         TextView view =
                 new TextView(this);
 
-        view.setText(
-                text
-        );
+        view.setText(text);
 
-        view.setTextSize(
-                14
-        );
+        view.setTextSize(14);
 
-        view.setTextColor(
-                WHITE
-        );
+        view.setTextColor(WHITE);
 
-        view.setGravity(
-                Gravity.CENTER
-        );
+        view.setGravity(Gravity.CENTER);
 
         view.setTypeface(
                 Typeface.DEFAULT,
@@ -2845,13 +3145,9 @@ public class MainActivity extends Activity {
         GradientDrawable bg =
                 new GradientDrawable();
 
-        bg.setColor(
-                CARD_2
-        );
+        bg.setColor(CARD_2);
 
-        bg.setCornerRadius(
-                18
-        );
+        bg.setCornerRadius(18);
 
         bg.setStroke(
                 1,
@@ -2859,9 +3155,7 @@ public class MainActivity extends Activity {
         );
 
 
-        view.setBackground(
-                bg
-        );
+        view.setBackground(bg);
 
 
         return view;
@@ -2881,17 +3175,11 @@ public class MainActivity extends Activity {
         TextView view =
                 new TextView(this);
 
-        view.setText(
-                text
-        );
+        view.setText(text);
 
-        view.setTextSize(
-                size
-        );
+        view.setTextSize(size);
 
-        view.setTextColor(
-                color
-        );
+        view.setTextColor(color);
 
         view.setPadding(
                 0,
@@ -2901,9 +3189,7 @@ public class MainActivity extends Activity {
         );
 
 
-        container.addView(
-                view
-        );
+        container.addView(view);
 
 
         return view;
@@ -2926,9 +3212,8 @@ public class MainActivity extends Activity {
                 )
         );
 
-        container.addView(
-                view
-        );
+
+        container.addView(view);
     }
 
 
@@ -2940,10 +3225,7 @@ public class MainActivity extends Activity {
             String value
     ) {
 
-        if (
-                value == null
-        ) {
-
+        if (value == null) {
             return WHITE;
         }
 
@@ -2960,6 +3242,12 @@ public class MainActivity extends Activity {
                 v.contains("UP")
                         ||
                 v.contains("BULLISH")
+                        ||
+                v.contains("LONG")
+                        ||
+                v.contains("CONFIRMED")
+                        ||
+                v.contains("BREAKOUT")
         ) {
 
             return GREEN;
@@ -2972,6 +3260,8 @@ public class MainActivity extends Activity {
                 v.contains("DOWN")
                         ||
                 v.contains("BEARISH")
+                        ||
+                v.contains("SHORT")
         ) {
 
             return RED;
@@ -2986,6 +3276,10 @@ public class MainActivity extends Activity {
                 v.contains("UNCERTAIN")
                         ||
                 v.contains("RECONNECT")
+                        ||
+                v.equals("NO")
+                        ||
+                v.contains("NO SETUP")
         ) {
 
             return YELLOW;
@@ -3004,22 +3298,17 @@ public class MainActivity extends Activity {
             String direction
     ) {
 
-        if (
-                direction == null
-        ) {
-
+        if (direction == null) {
             return YELLOW;
         }
 
 
         if (
-                direction.equalsIgnoreCase(
-                        "BUY"
-                )
+                direction.equalsIgnoreCase("BUY")
                         ||
-                direction.equalsIgnoreCase(
-                        "UP"
-                )
+                direction.equalsIgnoreCase("UP")
+                        ||
+                direction.equalsIgnoreCase("LONG")
         ) {
 
             return GREEN;
@@ -3027,13 +3316,11 @@ public class MainActivity extends Activity {
 
 
         if (
-                direction.equalsIgnoreCase(
-                        "SELL"
-                )
+                direction.equalsIgnoreCase("SELL")
                         ||
-                direction.equalsIgnoreCase(
-                        "DOWN"
-                )
+                direction.equalsIgnoreCase("DOWN")
+                        ||
+                direction.equalsIgnoreCase("SHORT")
         ) {
 
             return RED;
@@ -3041,6 +3328,156 @@ public class MainActivity extends Activity {
 
 
         return YELLOW;
+    }
+
+
+    // =========================================================
+    // STRATEGY COLOR
+    // =========================================================
+
+    private int strategyColor(
+            String setup
+    ) {
+
+        if (setup == null) {
+            return YELLOW;
+        }
+
+
+        String value =
+                setup.toUpperCase(
+                        Locale.US
+                );
+
+
+        if (
+                value.contains("LONG")
+                        ||
+                value.contains("UP")
+        ) {
+
+            return GREEN;
+        }
+
+
+        if (
+                value.contains("SHORT")
+                        ||
+                value.contains("DOWN")
+        ) {
+
+            return RED;
+        }
+
+
+        return YELLOW;
+    }
+
+
+    // =========================================================
+    // STRATEGY AGREEMENT
+    // =========================================================
+
+    private String getStrategyAgreement(
+
+            StrategyEngine.StrategyResult setup5,
+
+            StrategyEngine.StrategyResult setup15
+
+    ) {
+
+        if (
+                setup5 == null ||
+                setup15 == null
+        ) {
+
+            return "WAIT";
+        }
+
+
+        boolean long5 =
+                "LONG".equalsIgnoreCase(
+                        setup5.direction
+                );
+
+
+        boolean long15 =
+                "LONG".equalsIgnoreCase(
+                        setup15.direction
+                );
+
+
+        boolean short5 =
+                "SHORT".equalsIgnoreCase(
+                        setup5.direction
+                );
+
+
+        boolean short15 =
+                "SHORT".equalsIgnoreCase(
+                        setup15.direction
+                );
+
+
+        boolean valid5 =
+                setup5.qualityScore >= 60;
+
+
+        boolean valid15 =
+                setup15.qualityScore >= 60;
+
+
+        if (
+                long5 &&
+                long15 &&
+                valid5 &&
+                valid15
+        ) {
+
+            return "LONG AGREEMENT";
+        }
+
+
+        if (
+                short5 &&
+                short15 &&
+                valid5 &&
+                valid15
+        ) {
+
+            return "SHORT AGREEMENT";
+        }
+
+
+        if (
+                long5 &&
+                long15
+        ) {
+
+            return "LONG BIAS";
+        }
+
+
+        if (
+                short5 &&
+                short15
+        ) {
+
+            return "SHORT BIAS";
+        }
+
+
+        if (
+                setup5.setup.equals("NO SETUP")
+                        &&
+                setup15.setup.equals("NO SETUP")
+        ) {
+
+            return "NO SETUP";
+        }
+
+
+        return "TIMEFRAME CONFLICT";
     }
 
 
@@ -3053,11 +3490,13 @@ public class MainActivity extends Activity {
         int size =
                 btcLow.size();
 
+
         int start =
                 Math.max(
                         0,
                         size - 30
                 );
+
 
         double support =
                 Double.MAX_VALUE;
@@ -3090,11 +3529,13 @@ public class MainActivity extends Activity {
         int size =
                 btcHigh.size();
 
+
         int start =
                 Math.max(
                         0,
                         size - 30
                 );
+
 
         double resistance =
                 Double.MIN_VALUE;
@@ -3128,6 +3569,7 @@ public class MainActivity extends Activity {
     ) {
 
         int bullish = 0;
+
         int bearish = 0;
 
 
@@ -3354,9 +3796,7 @@ public class MainActivity extends Activity {
     ) throws Exception {
 
         URL url =
-                new URL(
-                        urlString
-                );
+                new URL(urlString);
 
 
         HttpURLConnection connection =
@@ -3422,13 +3862,12 @@ public class MainActivity extends Activity {
                         != null
         ) {
 
-            response.append(
-                    line
-            );
+            response.append(line);
         }
 
 
         reader.close();
+
         input.close();
 
         connection.disconnect();
@@ -3510,9 +3949,7 @@ public class MainActivity extends Activity {
 
 
         URL url =
-                new URL(
-                        urlString
-                );
+                new URL(urlString);
 
 
         HttpURLConnection connection =
@@ -3574,9 +4011,7 @@ public class MainActivity extends Activity {
                         != null
         ) {
 
-            response.append(
-                    line
-            );
+            response.append(line);
         }
 
 
@@ -3600,25 +4035,20 @@ public class MainActivity extends Activity {
 
 
         JSONObject indicators =
-                results.getJSONObject(
-                        0
-                ).getJSONObject(
-                        "indicators"
-                );
+                results.getJSONObject(0)
+                        .getJSONObject(
+                                "indicators"
+                        );
 
 
         JSONObject quote =
-                indicators.getJSONArray(
-                        "quote"
-                ).getJSONObject(
-                        0
-                );
+                indicators
+                        .getJSONArray("quote")
+                        .getJSONObject(0);
 
 
         JSONArray closes =
-                quote.getJSONArray(
-                        "close"
-                );
+                quote.getJSONArray("close");
 
 
         for (
@@ -3739,6 +4169,7 @@ public class MainActivity extends Activity {
 
         showHeader();
 
+
         addSectionTitle(
                 "DATA ERROR"
         );
@@ -3751,29 +4182,23 @@ public class MainActivity extends Activity {
         TextView error =
                 new TextView(this);
 
+
         error.setText(
                 e.getMessage() == null
                         ? "Unable to load market data."
                         : e.getMessage()
         );
 
-        error.setTextSize(
-                14
-        );
 
-        error.setTextColor(
-                RED
-        );
+        error.setTextSize(14);
+
+        error.setTextColor(RED);
 
 
-        card.addView(
-                error
-        );
+        card.addView(error);
 
 
-        container.addView(
-                card
-        );
+        container.addView(card);
 
 
         TextView retry =
@@ -3787,9 +4212,7 @@ public class MainActivity extends Activity {
         );
 
 
-        container.addView(
-                retry
-        );
+        container.addView(retry);
     }
 
 
@@ -3807,4 +4230,4 @@ public class MainActivity extends Activity {
                 value
         );
     }
-        }
+            }
