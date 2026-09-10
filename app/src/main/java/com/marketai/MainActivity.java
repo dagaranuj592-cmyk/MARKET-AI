@@ -6,8 +6,11 @@ import android.os.Handler;
 import android.os.Looper;
 import android.graphics.Color;
 import android.graphics.Typeface;
+import android.graphics.drawable.GradientDrawable;
 import android.view.Gravity;
 import android.view.MotionEvent;
+import android.view.View;
+import android.view.ViewGroup;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
@@ -31,178 +34,285 @@ public class MainActivity extends Activity {
 
     private boolean isRefreshing = false;
 
-    private final Handler mainHandler =
-            new Handler(Looper.getMainLooper());
+    // =========================================================
+    // COLORS
+    // =========================================================
+
+    private static final int BG =
+            Color.rgb(9, 13, 18);
+
+    private static final int CARD =
+            Color.rgb(17, 23, 30);
+
+    private static final int CARD_2 =
+            Color.rgb(21, 28, 36);
+
+    private static final int BORDER =
+            Color.rgb(39, 49, 60);
+
+    private static final int WHITE =
+            Color.rgb(245, 248, 250);
+
+    private static final int MUTED =
+            Color.rgb(145, 157, 170);
+
+    private static final int GREEN =
+            Color.rgb(0, 220, 120);
+
+    private static final int RED =
+            Color.rgb(255, 75, 90);
+
+    private static final int YELLOW =
+            Color.rgb(255, 190, 60);
+
+    private static final int BLUE =
+            Color.rgb(80, 170, 255);
+
 
     // =========================================================
-    // LIVE BTC PRICE
+    // LIVE BTC
     // =========================================================
 
     private LiveMarketEngine liveMarketEngine;
 
+    private LiveCandleEngine liveCandleEngine;
+
     private TextView liveBTCPriceView;
     private TextView liveBTCStatusView;
+
+    private TextView live5mStatusView;
+    private TextView live15mStatusView;
+
+    private TextView live5mCandleView;
+    private TextView live15mCandleView;
+
+    private TextView live5mAnalysisView;
+    private TextView live15mAnalysisView;
 
     private double latestLiveBTC = 0.0;
 
 
     // =========================================================
-    // LIVE CANDLE ENGINE
+    // LIVE 5M DATA
     // =========================================================
 
-    private LiveCandleEngine liveCandleEngine;
+    private final List<Double> live5Open =
+            new ArrayList<>();
 
-    private TextView live5mStatusView;
-    private TextView live15mStatusView;
+    private final List<Double> live5High =
+            new ArrayList<>();
 
-    private TextView live5mAnalysisView;
-    private TextView live15mAnalysisView;
+    private final List<Double> live5Low =
+            new ArrayList<>();
 
-    private boolean live5mConnected = false;
-    private boolean live15mConnected = false;
+    private final List<Double> live5Close =
+            new ArrayList<>();
 
-    private long last5mCandleTime = -1;
-    private long last15mCandleTime = -1;
-
-
-    // =========================================================
-    // DAILY BTC DATA
-    // =========================================================
-
-    private final List<Double> btcOpen = new ArrayList<>();
-    private final List<Double> btcHigh = new ArrayList<>();
-    private final List<Double> btcLow = new ArrayList<>();
-    private final List<Double> btcPrices = new ArrayList<>();
-    private final List<Double> btcVolume = new ArrayList<>();
+    private final List<Double> live5Volume =
+            new ArrayList<>();
 
 
     // =========================================================
-    // 15M BTC DATA
+    // LIVE 15M DATA
     // =========================================================
 
-    private final List<Double> btc15Open = new ArrayList<>();
-    private final List<Double> btc15High = new ArrayList<>();
-    private final List<Double> btc15Low = new ArrayList<>();
-    private final List<Double> btc15Prices = new ArrayList<>();
-    private final List<Double> btc15Volume = new ArrayList<>();
+    private final List<Double> live15Open =
+            new ArrayList<>();
+
+    private final List<Double> live15High =
+            new ArrayList<>();
+
+    private final List<Double> live15Low =
+            new ArrayList<>();
+
+    private final List<Double> live15Close =
+            new ArrayList<>();
+
+    private final List<Double> live15Volume =
+            new ArrayList<>();
+
+
+    private TechnicalAnalyzer.TechnicalResult live5Technical;
+    private TechnicalAnalyzer.TechnicalResult live15Technical;
+
+    private MoveDetector.MoveResult live5Move;
+    private MoveDetector.MoveResult live15Move;
 
 
     // =========================================================
-    // 5M BTC DATA
+    // DAILY BTC
     // =========================================================
 
-    private final List<Double> btc5Open = new ArrayList<>();
-    private final List<Double> btc5High = new ArrayList<>();
-    private final List<Double> btc5Low = new ArrayList<>();
-    private final List<Double> btc5Prices = new ArrayList<>();
-    private final List<Double> btc5Volume = new ArrayList<>();
+    private final List<Double> btcOpen =
+            new ArrayList<>();
+
+    private final List<Double> btcHigh =
+            new ArrayList<>();
+
+    private final List<Double> btcLow =
+            new ArrayList<>();
+
+    private final List<Double> btcPrices =
+            new ArrayList<>();
+
+    private final List<Double> btcVolume =
+            new ArrayList<>();
 
 
     // =========================================================
-    // ON CREATE
+    // HISTORICAL 15M
+    // =========================================================
+
+    private final List<Double> btc15Open =
+            new ArrayList<>();
+
+    private final List<Double> btc15High =
+            new ArrayList<>();
+
+    private final List<Double> btc15Low =
+            new ArrayList<>();
+
+    private final List<Double> btc15Prices =
+            new ArrayList<>();
+
+    private final List<Double> btc15Volume =
+            new ArrayList<>();
+
+
+    // =========================================================
+    // HISTORICAL 5M
+    // =========================================================
+
+    private final List<Double> btc5Open =
+            new ArrayList<>();
+
+    private final List<Double> btc5High =
+            new ArrayList<>();
+
+    private final List<Double> btc5Low =
+            new ArrayList<>();
+
+    private final List<Double> btc5Prices =
+            new ArrayList<>();
+
+    private final List<Double> btc5Volume =
+            new ArrayList<>();
+
+
+    // =========================================================
+    // CREATE
     // =========================================================
 
     @Override
-    protected void onCreate(Bundle savedInstanceState) {
+    protected void onCreate(
+            Bundle savedInstanceState
+    ) {
 
-        super.onCreate(savedInstanceState);
-
-        scrollView = new ScrollView(this);
-
-        container = new LinearLayout(this);
-
-        container.setOrientation(
-                LinearLayout.VERTICAL
+        super.onCreate(
+                savedInstanceState
         );
 
-        container.setPadding(
-                32,
-                32,
-                32,
-                40
-        );
+        buildBaseUI();
 
-        container.setBackgroundColor(
-                Color.rgb(11, 15, 20)
-        );
-
-        scrollView.addView(container);
-
-        setContentView(scrollView);
-
-
-        // =====================================================
-        // PULL TO REFRESH
-        // =====================================================
-
-        scrollView.setOnTouchListener(
-                (view, event) -> {
-
-                    switch (event.getAction()) {
-
-                        case MotionEvent.ACTION_DOWN:
-
-                            view.setTag(
-                                    event.getY()
-                            );
-
-                            break;
-
-
-                        case MotionEvent.ACTION_UP:
-
-                            Object tag =
-                                    view.getTag();
-
-                            if (tag instanceof Float) {
-
-                                float startY =
-                                        (Float) tag;
-
-                                float endY =
-                                        event.getY();
-
-                                float distance =
-                                        endY - startY;
-
-                                if (
-                                        scrollView.getScrollY() == 0
-                                                &&
-                                        distance > 150
-                                                &&
-                                        !isRefreshing
-                                ) {
-
-                                    refreshMarketData();
-                                }
-                            }
-
-                            break;
-                    }
-
-                    return false;
-                }
-        );
-
-
-        showTitle(
-                "MARKET AI"
-        );
-
-        addText(
-                "Loading market data...",
-                18,
-                Color.LTGRAY
-        );
-
-        addSpace();
+        showLoading();
 
         loadMarketData();
     }
 
 
     // =========================================================
-    // ON START
+    // BASE UI
+    // =========================================================
+
+    private void buildBaseUI() {
+
+        scrollView =
+                new ScrollView(this);
+
+        scrollView.setFillViewport(true);
+
+        container =
+                new LinearLayout(this);
+
+        container.setOrientation(
+                LinearLayout.VERTICAL
+        );
+
+        container.setPadding(
+                20,
+                22,
+                20,
+                35
+        );
+
+        container.setBackgroundColor(
+                BG
+        );
+
+        scrollView.addView(
+                container
+        );
+
+        setContentView(
+                scrollView
+        );
+
+
+        scrollView.setOnTouchListener(
+                (view, event) -> {
+
+                    if (
+                            event.getAction()
+                                    ==
+                            MotionEvent.ACTION_DOWN
+                    ) {
+
+                        view.setTag(
+                                event.getY()
+                        );
+
+                    } else if (
+                            event.getAction()
+                                    ==
+                            MotionEvent.ACTION_UP
+                    ) {
+
+                        Object tag =
+                                view.getTag();
+
+                        if (
+                                tag instanceof Float
+                        ) {
+
+                            float start =
+                                    (Float) tag;
+
+                            float end =
+                                    event.getY();
+
+                            if (
+                                    scrollView.getScrollY()
+                                            ==
+                                    0
+                                            &&
+                                    end - start > 160
+                                            &&
+                                    !isRefreshing
+                            ) {
+
+                                refreshMarketData();
+                            }
+                        }
+                    }
+
+                    return false;
+                }
+        );
+    }
+
+
+    // =========================================================
+    // START
     // =========================================================
 
     @Override
@@ -210,19 +320,22 @@ public class MainActivity extends Activity {
 
         super.onStart();
 
-        startLiveMarket();
+
+        startLiveBTC();
 
         startLiveCandles();
     }
 
 
     // =========================================================
-    // LIVE PRICE
+    // LIVE BTC
     // =========================================================
 
-    private void startLiveMarket() {
+    private void startLiveBTC() {
 
-        if (liveMarketEngine == null) {
+        if (
+                liveMarketEngine == null
+        ) {
 
             liveMarketEngine =
                     new LiveMarketEngine(
@@ -237,7 +350,7 @@ public class MainActivity extends Activity {
                                     latestLiveBTC =
                                             price;
 
-                                    mainHandler.post(
+                                    runOnUiThread(
                                             () -> {
 
                                                 if (
@@ -245,29 +358,14 @@ public class MainActivity extends Activity {
                                                                 != null
                                                 ) {
 
-                                                    liveBTCPriceView.setText(
-                                                            "$"
-                                                                    +
-                                                            format(
-                                                                    price
-                                                            )
-                                                    );
-                                                }
-
-                                                if (
-                                                        liveBTCStatusView
-                                                                != null
-                                                ) {
-
-                                                    liveBTCStatusView.setText(
-                                                            "● LIVE  •  "
-                                                                    +
-                                                            symbol
-                                                    );
-
-                                                    liveBTCStatusView.setTextColor(
-                                                            Color.GREEN
-                                                    );
+                                                    liveBTCPriceView
+                                                            .setText(
+                                                                    "$"
+                                                                            +
+                                                                    format(
+                                                                            price
+                                                                    )
+                                                            );
                                                 }
                                             }
                                     );
@@ -279,34 +377,42 @@ public class MainActivity extends Activity {
                                         boolean connected
                                 ) {
 
-                                    mainHandler.post(
+                                    runOnUiThread(
                                             () -> {
 
                                                 if (
                                                         liveBTCStatusView
-                                                                != null
+                                                                == null
                                                 ) {
 
-                                                    if (connected) {
+                                                    return;
+                                                }
 
-                                                        liveBTCStatusView.setText(
-                                                                "● LIVE  •  BTCUSDT"
-                                                        );
+                                                if (
+                                                        connected
+                                                ) {
 
-                                                        liveBTCStatusView.setTextColor(
-                                                                Color.GREEN
-                                                        );
+                                                    liveBTCStatusView
+                                                            .setText(
+                                                                    "● LIVE  •  BTCUSDT"
+                                                            );
 
-                                                    } else {
+                                                    liveBTCStatusView
+                                                            .setTextColor(
+                                                                    GREEN
+                                                            );
 
-                                                        liveBTCStatusView.setText(
-                                                                "○ RECONNECTING..."
-                                                        );
+                                                } else {
 
-                                                        liveBTCStatusView.setTextColor(
-                                                                Color.YELLOW
-                                                        );
-                                                    }
+                                                    liveBTCStatusView
+                                                            .setText(
+                                                                    "○ RECONNECTING"
+                                                            );
+
+                                                    liveBTCStatusView
+                                                            .setTextColor(
+                                                                    YELLOW
+                                                            );
                                                 }
                                             }
                                     );
@@ -318,7 +424,7 @@ public class MainActivity extends Activity {
                                         String message
                                 ) {
 
-                                    mainHandler.post(
+                                    runOnUiThread(
                                             () -> {
 
                                                 if (
@@ -326,13 +432,15 @@ public class MainActivity extends Activity {
                                                                 != null
                                                 ) {
 
-                                                    liveBTCStatusView.setText(
-                                                            "○ LIVE CONNECTION ERROR"
-                                                    );
+                                                    liveBTCStatusView
+                                                            .setText(
+                                                                    "○ LIVE CONNECTION ERROR"
+                                                            );
 
-                                                    liveBTCStatusView.setTextColor(
-                                                            Color.RED
-                                                    );
+                                                    liveBTCStatusView
+                                                            .setTextColor(
+                                                                    RED
+                                                            );
                                                 }
                                             }
                                     );
@@ -351,7 +459,9 @@ public class MainActivity extends Activity {
 
     private void startLiveCandles() {
 
-        if (liveCandleEngine == null) {
+        if (
+                liveCandleEngine == null
+        ) {
 
             liveCandleEngine =
                     new LiveCandleEngine(
@@ -364,7 +474,7 @@ public class MainActivity extends Activity {
                                         List<LiveCandleEngine.Candle> candles
                                 ) {
 
-                                    handleLiveCandle(
+                                    processLiveCandle(
                                             interval,
                                             candle
                                     );
@@ -377,23 +487,14 @@ public class MainActivity extends Activity {
                                         boolean connected
                                 ) {
 
-                                    if (
-                                            "5m".equals(interval)
-                                    ) {
+                                    runOnUiThread(
+                                            () -> {
 
-                                        live5mConnected =
-                                                connected;
-
-                                    } else if (
-                                            "15m".equals(interval)
-                                    ) {
-
-                                        live15mConnected =
-                                                connected;
-                                    }
-
-                                    mainHandler.post(
-                                            () -> updateLiveConnectionUI()
+                                                updateCandleStatus(
+                                                        interval,
+                                                        connected
+                                                );
+                                            }
                                     );
                                 }
 
@@ -404,45 +505,12 @@ public class MainActivity extends Activity {
                                         String message
                                 ) {
 
-                                    mainHandler.post(
+                                    runOnUiThread(
                                             () -> {
 
-                                                if (
-                                                        "5m".equals(
-                                                                interval
-                                                        )
-                                                ) {
-
-                                                    if (
-                                                            live5mStatusView
-                                                                    != null
-                                                    ) {
-
-                                                        live5mStatusView.setText(
-                                                                "○ 5M ERROR"
-                                                        );
-
-                                                        live5mStatusView.setTextColor(
-                                                                Color.RED
-                                                        );
-                                                    }
-
-                                                } else {
-
-                                                    if (
-                                                            live15mStatusView
-                                                                    != null
-                                                    ) {
-
-                                                        live15mStatusView.setText(
-                                                                "○ 15M ERROR"
-                                                        );
-
-                                                        live15mStatusView.setTextColor(
-                                                                Color.RED
-                                                        );
-                                                    }
-                                                }
+                                                updateCandleError(
+                                                        interval
+                                                );
                                             }
                                     );
                                 }
@@ -455,675 +523,7 @@ public class MainActivity extends Activity {
 
 
     // =========================================================
-    // HANDLE LIVE CANDLE
-    // =========================================================
-
-    private void handleLiveCandle(
-            String interval,
-            LiveCandleEngine.Candle candle
-    ) {
-
-        if (
-                candle == null
-        ) {
-            return;
-        }
-
-
-        if (
-                "5m".equals(interval)
-        ) {
-
-            updateLocalCandle(
-                    candle,
-                    btc5Open,
-                    btc5High,
-                    btc5Low,
-                    btc5Prices,
-                    btc5Volume
-            );
-
-
-            boolean newCandle =
-                    last5mCandleTime != candle.openTime;
-
-            last5mCandleTime =
-                    candle.openTime;
-
-
-            if (
-                    newCandle ||
-                    candle.closed
-            ) {
-
-                calculateLive5mAnalysis();
-            }
-
-
-        } else if (
-                "15m".equals(interval)
-        ) {
-
-            updateLocalCandle(
-                    candle,
-                    btc15Open,
-                    btc15High,
-                    btc15Low,
-                    btc15Prices,
-                    btc15Volume
-            );
-
-
-            boolean newCandle =
-                    last15mCandleTime != candle.openTime;
-
-            last15mCandleTime =
-                    candle.openTime;
-
-
-            if (
-                    newCandle ||
-                    candle.closed
-            ) {
-
-                calculateLive15mAnalysis();
-            }
-        }
-    }
-
-
-    // =========================================================
-    // UPDATE LOCAL CANDLE
-    // =========================================================
-
-    private synchronized void updateLocalCandle(
-
-            LiveCandleEngine.Candle candle,
-
-            List<Double> openList,
-            List<Double> highList,
-            List<Double> lowList,
-            List<Double> closeList,
-            List<Double> volumeList
-
-    ) {
-
-        if (
-                openList.isEmpty()
-                        ||
-                closeList.isEmpty()
-        ) {
-
-            openList.add(candle.open);
-            highList.add(candle.high);
-            lowList.add(candle.low);
-            closeList.add(candle.close);
-            volumeList.add(candle.volume);
-
-            return;
-        }
-
-
-        int last =
-                closeList.size() - 1;
-
-
-        /*
-         * WebSocket candle belongs to the current
-         * candle. If its open time matches the last
-         * locally stored candle, replace it.
-         *
-         * Otherwise append it.
-         */
-
-        double previousClose =
-                closeList.get(last);
-
-
-        if (
-                Math.abs(
-                        previousClose -
-                                candle.close
-                ) < 0
-                        &&
-                openList.get(last) == candle.open
-        ) {
-
-            openList.set(
-                    last,
-                    candle.open
-            );
-
-            highList.set(
-                    last,
-                    candle.high
-            );
-
-            lowList.set(
-                    last,
-                    candle.low
-            );
-
-            closeList.set(
-                    last,
-                    candle.close
-            );
-
-            volumeList.set(
-                    last,
-                    candle.volume
-            );
-
-        } else {
-
-            openList.add(candle.open);
-
-            highList.add(candle.high);
-
-            lowList.add(candle.low);
-
-            closeList.add(candle.close);
-
-            volumeList.add(candle.volume);
-        }
-
-
-        while (
-                closeList.size() > 1200
-        ) {
-
-            openList.remove(0);
-            highList.remove(0);
-            lowList.remove(0);
-            closeList.remove(0);
-            volumeList.remove(0);
-        }
-    }
-
-
-    // =========================================================
-    // LIVE 5M ANALYSIS
-    // =========================================================
-
-    private void calculateLive5mAnalysis() {
-
-        if (
-                btc5Prices.size() < 40
-        ) {
-            return;
-        }
-
-
-        new Thread(
-                () -> {
-
-                    try {
-
-                        TechnicalAnalyzer.TechnicalResult technical =
-                                TechnicalAnalyzer.analyze(
-                                        btc5Prices,
-                                        btc5High,
-                                        btc5Low,
-                                        btc5Volume
-                                );
-
-
-                        MoveDetector.MoveResult move =
-                                MoveDetector.analyze(
-                                        btc5Prices,
-                                        btc5High,
-                                        btc5Low,
-                                        btc5Volume,
-                                        5
-                                );
-
-
-                        double price =
-                                btc5Prices.get(
-                                        btc5Prices.size() - 1
-                                );
-
-
-                        String trend =
-                                getTrend(
-                                        price,
-                                        technical
-                                );
-
-
-                        mainHandler.post(
-                                () -> {
-
-                                    if (
-                                            live5mAnalysisView
-                                                    == null
-                                    ) {
-                                        return;
-                                    }
-
-
-                                    String text =
-                                            "PRICE  $"
-                                                    +
-                                            format(
-                                                    price
-                                            )
-                                                    +
-                                            "\n\n"
-                                                    +
-                                            "TREND  "
-                                                    +
-                                            trend
-                                                    +
-                                            "\n"
-                                                    +
-                                            "RSI  "
-                                                    +
-                                            format(
-                                                    technical.rsi
-                                            )
-                                                    +
-                                            "\n"
-                                                    +
-                                            "EMA 20  $"
-                                                    +
-                                            format(
-                                                    technical.ema20
-                                            )
-                                                    +
-                                            "\n"
-                                                    +
-                                            "EMA 50  $"
-                                                    +
-                                            format(
-                                                    technical.ema50
-                                            )
-                                                    +
-                                            "\n"
-                                                    +
-                                            "MACD  "
-                                                    +
-                                            format(
-                                                    technical.macd
-                                            )
-                                                    +
-                                            "\n"
-                                                    +
-                                            "ATR  $"
-                                                    +
-                                            format(
-                                                    technical.atr
-                                            )
-                                                    +
-                                            "\n"
-                                                    +
-                                            "VOLUME  "
-                                                    +
-                                            format(
-                                                    technical.volumeRatio
-                                            )
-                                                    +
-                                            "x"
-                                                    +
-                                            "\n\n"
-                                                    +
-                                            "MOVE RISK  "
-                                                    +
-                                            format(
-                                                    move.moveRisk
-                                            )
-                                                    +
-                                            "%"
-                                                    +
-                                            "\n"
-                                                    +
-                                            "RISK LEVEL  "
-                                                    +
-                                            move.riskLevel
-                                                    +
-                                            "\n"
-                                                    +
-                                            "DIRECTION  "
-                                                    +
-                                            move.direction
-                                                    +
-                                            "\n"
-                                                    +
-                                            "UPSIDE  "
-                                                    +
-                                            format(
-                                                    move.upsideProbability
-                                            )
-                                                    +
-                                            "%"
-                                                    +
-                                            "\n"
-                                                    +
-                                            "DOWNSIDE  "
-                                                    +
-                                            format(
-                                                    move.downsideProbability
-                                            )
-                                                    +
-                                            "%";
-
-
-                                    live5mAnalysisView.setText(
-                                            text
-                                    );
-
-
-                                    if (
-                                            move.direction.equals(
-                                                    "UP"
-                                            )
-                                    ) {
-
-                                        live5mAnalysisView.setTextColor(
-                                                Color.GREEN
-                                        );
-
-                                    } else if (
-                                            move.direction.equals(
-                                                    "DOWN"
-                                            )
-                                    ) {
-
-                                        live5mAnalysisView.setTextColor(
-                                                Color.RED
-                                        );
-
-                                    } else {
-
-                                        live5mAnalysisView.setTextColor(
-                                                Color.LTGRAY
-                                        );
-                                    }
-                                }
-                        );
-
-                    } catch (
-                            Exception ignored
-                    ) {
-                    }
-                }
-        ).start();
-    }
-
-
-    // =========================================================
-    // LIVE 15M ANALYSIS
-    // =========================================================
-
-    private void calculateLive15mAnalysis() {
-
-        if (
-                btc15Prices.size() < 40
-        ) {
-            return;
-        }
-
-
-        new Thread(
-                () -> {
-
-                    try {
-
-                        TechnicalAnalyzer.TechnicalResult technical =
-                                TechnicalAnalyzer.analyze(
-                                        btc15Prices,
-                                        btc15High,
-                                        btc15Low,
-                                        btc15Volume
-                                );
-
-
-                        MoveDetector.MoveResult move =
-                                MoveDetector.analyze(
-                                        btc15Prices,
-                                        btc15High,
-                                        btc15Low,
-                                        btc15Volume,
-                                        15
-                                );
-
-
-                        double price =
-                                btc15Prices.get(
-                                        btc15Prices.size() - 1
-                                );
-
-
-                        String trend =
-                                getTrend(
-                                        price,
-                                        technical
-                                );
-
-
-                        mainHandler.post(
-                                () -> {
-
-                                    if (
-                                            live15mAnalysisView
-                                                    == null
-                                    ) {
-                                        return;
-                                    }
-
-
-                                    String text =
-                                            "PRICE  $"
-                                                    +
-                                            format(
-                                                    price
-                                            )
-                                                    +
-                                            "\n\n"
-                                                    +
-                                            "TREND  "
-                                                    +
-                                            trend
-                                                    +
-                                            "\n"
-                                                    +
-                                            "RSI  "
-                                                    +
-                                            format(
-                                                    technical.rsi
-                                            )
-                                                    +
-                                            "\n"
-                                                    +
-                                            "EMA 20  $"
-                                                    +
-                                            format(
-                                                    technical.ema20
-                                            )
-                                                    +
-                                            "\n"
-                                                    +
-                                            "EMA 50  $"
-                                                    +
-                                            format(
-                                                    technical.ema50
-                                            )
-                                                    +
-                                            "\n"
-                                                    +
-                                            "MACD  "
-                                                    +
-                                            format(
-                                                    technical.macd
-                                            )
-                                                    +
-                                            "\n"
-                                                    +
-                                            "ATR  $"
-                                                    +
-                                            format(
-                                                    technical.atr
-                                            )
-                                                    +
-                                            "\n"
-                                                    +
-                                            "VOLUME  "
-                                                    +
-                                            format(
-                                                    technical.volumeRatio
-                                            )
-                                                    +
-                                            "x"
-                                                    +
-                                            "\n\n"
-                                                    +
-                                            "MOVE RISK  "
-                                                    +
-                                            format(
-                                                    move.moveRisk
-                                            )
-                                                    +
-                                            "%"
-                                                    +
-                                            "\n"
-                                                    +
-                                            "RISK LEVEL  "
-                                                    +
-                                            move.riskLevel
-                                                    +
-                                            "\n"
-                                                    +
-                                            "DIRECTION  "
-                                                    +
-                                            move.direction
-                                                    +
-                                            "\n"
-                                                    +
-                                            "UPSIDE  "
-                                                    +
-                                            format(
-                                                    move.upsideProbability
-                                            )
-                                                    +
-                                            "%"
-                                                    +
-                                            "\n"
-                                                    +
-                                            "DOWNSIDE  "
-                                                    +
-                                            format(
-                                                    move.downsideProbability
-                                            )
-                                                    +
-                                            "%";
-
-
-                                    live15mAnalysisView.setText(
-                                            text
-                                    );
-
-
-                                    if (
-                                            move.direction.equals(
-                                                    "UP"
-                                            )
-                                    ) {
-
-                                        live15mAnalysisView.setTextColor(
-                                                Color.GREEN
-                                        );
-
-                                    } else if (
-                                            move.direction.equals(
-                                                    "DOWN"
-                                            )
-                                    ) {
-
-                                        live15mAnalysisView.setTextColor(
-                                                Color.RED
-                                        );
-
-                                    } else {
-
-                                        live15mAnalysisView.setTextColor(
-                                                Color.LTGRAY
-                                        );
-                                    }
-                                }
-                        );
-
-                    } catch (
-                            Exception ignored
-                    ) {
-                    }
-                }
-        ).start();
-    }
-
-
-    // =========================================================
-    // LIVE CONNECTION UI
-    // =========================================================
-
-    private void updateLiveConnectionUI() {
-
-        if (
-                live5mStatusView != null
-        ) {
-
-            if (live5mConnected) {
-
-                live5mStatusView.setText(
-                        "● LIVE  •  5M CANDLES"
-                );
-
-                live5mStatusView.setTextColor(
-                        Color.GREEN
-                );
-
-            } else {
-
-                live5mStatusView.setText(
-                        "○ RECONNECTING  •  5M"
-                );
-
-                live5mStatusView.setTextColor(
-                        Color.YELLOW
-                );
-            }
-        }
-
-
-        if (
-                live15mStatusView != null
-        ) {
-
-            if (live15mConnected) {
-
-                live15mStatusView.setText(
-                        "● LIVE  •  15M CANDLES"
-                );
-
-                live15mStatusView.setTextColor(
-                        Color.GREEN
-                );
-
-            } else {
-
-                live15mStatusView.setText(
-                        "○ RECONNECTING  •  15M"
-                );
-
-                live15mStatusView.setTextColor(
-                        Color.YELLOW
-                );
-            }
-        }
-    }
-
-
-    // =========================================================
-    // ON STOP
+    // STOP
     // =========================================================
 
     @Override
@@ -1150,36 +550,287 @@ public class MainActivity extends Activity {
 
 
     // =========================================================
+    // PROCESS LIVE CANDLE
+    // =========================================================
+
+    private void processLiveCandle(
+            String interval,
+            LiveCandleEngine.Candle candle
+    ) {
+
+        if (
+                candle == null
+        ) {
+
+            return;
+        }
+
+
+        if (
+                "5m".equals(interval)
+        ) {
+
+            updateLiveLists(
+                    candle,
+                    live5Open,
+                    live5High,
+                    live5Low,
+                    live5Close,
+                    live5Volume
+            );
+
+
+            if (
+                    live5Close.size() >= 40
+            ) {
+
+                live5Technical =
+                        TechnicalAnalyzer.analyze(
+                                live5Close,
+                                live5High,
+                                live5Low,
+                                live5Volume
+                        );
+
+
+                live5Move =
+                        MoveDetector.analyze(
+                                live5Close,
+                                live5High,
+                                live5Low,
+                                live5Volume,
+                                5
+                        );
+            }
+
+
+            runOnUiThread(
+                    () -> {
+
+                        if (
+                                live5mCandleView
+                                        != null
+                        ) {
+
+                            live5mCandleView
+                                    .setText(
+                                            candleText(
+                                                    candle
+                                            )
+                                    );
+                        }
+
+
+                        updateLive5Analysis();
+                    }
+            );
+        }
+
+
+        if (
+                "15m".equals(interval)
+        ) {
+
+            updateLiveLists(
+                    candle,
+                    live15Open,
+                    live15High,
+                    live15Low,
+                    live15Close,
+                    live15Volume
+            );
+
+
+            if (
+                    live15Close.size() >= 40
+            ) {
+
+                live15Technical =
+                        TechnicalAnalyzer.analyze(
+                                live15Close,
+                                live15High,
+                                live15Low,
+                                live15Volume
+                        );
+
+
+                live15Move =
+                        MoveDetector.analyze(
+                                live15Close,
+                                live15High,
+                                live15Low,
+                                live15Volume,
+                                15
+                        );
+            }
+
+
+            runOnUiThread(
+                    () -> {
+
+                        if (
+                                live15mCandleView
+                                        != null
+                        ) {
+
+                            live15mCandleView
+                                    .setText(
+                                            candleText(
+                                                    candle
+                                            )
+                                    );
+                        }
+
+
+                        updateLive15Analysis();
+                    }
+            );
+        }
+    }
+
+
+    // =========================================================
+    // LIVE LIST UPDATE
+    // =========================================================
+
+    private synchronized void updateLiveLists(
+
+            LiveCandleEngine.Candle candle,
+
+            List<Double> opens,
+            List<Double> highs,
+            List<Double> lows,
+            List<Double> closes,
+            List<Double> volumes
+
+    ) {
+
+        if (
+                closes.isEmpty()
+        ) {
+
+            opens.add(candle.open);
+            highs.add(candle.high);
+            lows.add(candle.low);
+            closes.add(candle.close);
+            volumes.add(candle.volume);
+
+        } else {
+
+            int last =
+                    closes.size() - 1;
+
+
+            double oldClose =
+                    closes.get(last);
+
+
+            /*
+             * Binance updates the same candle repeatedly.
+             * If the incoming close is the current candle
+             * update, replace it. Otherwise append.
+             */
+
+            if (
+                    Math.abs(
+                            candle.open - opens.get(last)
+                    )
+                            <=
+                    Math.max(
+                            0.01,
+                            candle.open * 0.0005
+                    )
+            ) {
+
+                opens.set(
+                        last,
+                        candle.open
+                );
+
+                highs.set(
+                        last,
+                        candle.high
+                );
+
+                lows.set(
+                        last,
+                        candle.low
+                );
+
+                closes.set(
+                        last,
+                        candle.close
+                );
+
+                volumes.set(
+                        last,
+                        candle.volume
+                );
+
+            } else {
+
+                opens.add(candle.open);
+                highs.add(candle.high);
+                lows.add(candle.low);
+                closes.add(candle.close);
+                volumes.add(candle.volume);
+            }
+        }
+
+
+        while (
+                closes.size() > 500
+        ) {
+
+            opens.remove(0);
+            highs.remove(0);
+            lows.remove(0);
+            closes.remove(0);
+            volumes.remove(0);
+        }
+    }
+
+
+    // =========================================================
+    // LOADING
+    // =========================================================
+
+    private void showLoading() {
+
+        container.removeAllViews();
+
+        showHeader();
+
+        addSectionTitle(
+                "MARKET DATA"
+        );
+
+        addText(
+                "Loading BTC and Gold analysis...",
+                14,
+                MUTED
+        );
+    }
+
+
+    // =========================================================
     // REFRESH
     // =========================================================
 
     private void refreshMarketData() {
 
-        if (isRefreshing) {
+        if (
+                isRefreshing
+        ) {
+
             return;
         }
 
 
-        isRefreshing = true;
+        isRefreshing =
+                true;
 
-
-        container.removeAllViews();
-
-
-        showTitle(
-                "MARKET AI"
-        );
-
-
-        addText(
-                "Refreshing BTC 1D / 15M / 5M market data...",
-                17,
-                Color.LTGRAY
-        );
-
-
-        addSpace();
-
+        showLoading();
 
         loadMarketData();
     }
@@ -1324,13 +975,15 @@ public class MainActivity extends Activity {
                                 calculateAverageVolume();
 
 
-                        mainHandler.post(
+                        new Handler(
+                                Looper.getMainLooper()
+                        ).post(
                                 () -> {
 
                                     isRefreshing =
                                             false;
 
-                                    showCompleteScreen(
+                                    showDashboard(
                                             currentPrice,
                                             goldPrice,
                                             support,
@@ -1353,7 +1006,9 @@ public class MainActivity extends Activity {
                             Exception e
                     ) {
 
-                        mainHandler.post(
+                        new Handler(
+                                Looper.getMainLooper()
+                        ).post(
                                 () -> {
 
                                     isRefreshing =
@@ -1372,10 +1027,10 @@ public class MainActivity extends Activity {
 
 
     // =========================================================
-    // COMPLETE SCREEN
+    // DASHBOARD
     // =========================================================
 
-    private void showCompleteScreen(
+    private void showDashboard(
 
             double currentPrice,
             double goldPrice,
@@ -1405,88 +1060,71 @@ public class MainActivity extends Activity {
         container.removeAllViews();
 
 
-        showTitle(
-                "MARKET AI"
-        );
-
-
-        addText(
-                "BTC / GOLD ANALYTICAL ENGINE",
-                13,
-                Color.GRAY
-        );
-
-
-        addSpace();
+        showHeader();
 
 
         // =====================================================
-        // BTC LIVE PRICE
+        // LIVE BTC
         // =====================================================
 
-        addSection(
-                "BTC LIVE MARKET"
+        addSectionTitle(
+                "LIVE MARKET"
+        );
+
+
+        LinearLayout liveCard =
+                createCard();
+
+
+        TextView symbol =
+                cardTitle(
+                        "BTCUSDT"
+                );
+
+        liveCard.addView(
+                symbol
         );
 
 
         liveBTCPriceView =
                 new TextView(this);
 
-
         liveBTCPriceView.setTextSize(
-                30
+                34
         );
-
 
         liveBTCPriceView.setTextColor(
-                Color.GREEN
+                WHITE
         );
-
-
-        liveBTCPriceView.setGravity(
-                Gravity.CENTER
-        );
-
 
         liveBTCPriceView.setTypeface(
                 Typeface.DEFAULT,
                 Typeface.BOLD
         );
 
-
-        if (
-                latestLiveBTC > 0
-        ) {
-
-            liveBTCPriceView.setText(
-                    "$"
-                            +
-                    format(
-                            latestLiveBTC
-                    )
-            );
-
-        } else {
-
-            liveBTCPriceView.setText(
-                    "$"
-                            +
-                    format(
-                            currentPrice
-                    )
-            );
-        }
-
-
         liveBTCPriceView.setPadding(
                 0,
-                10,
+                5,
                 0,
-                5
+                2
         );
 
 
-        container.addView(
+        double displayPrice =
+                latestLiveBTC > 0
+                        ? latestLiveBTC
+                        : currentPrice;
+
+
+        liveBTCPriceView.setText(
+                "$" +
+                format(
+                        displayPrice
+                )
+        );
+
+
+        liveCard.addView(
                 liveBTCPriceView
         );
 
@@ -1494,317 +1132,86 @@ public class MainActivity extends Activity {
         liveBTCStatusView =
                 new TextView(this);
 
-
         liveBTCStatusView.setText(
-                "○ CONNECTING..."
+                "● LIVE  •  BTCUSDT"
         );
-
 
         liveBTCStatusView.setTextSize(
-                13
+                12
         );
-
 
         liveBTCStatusView.setTextColor(
-                Color.YELLOW
+                GREEN
         );
 
-
-        liveBTCStatusView.setGravity(
-                Gravity.CENTER
-        );
-
-
-        liveBTCStatusView.setTypeface(
-                Typeface.DEFAULT,
-                Typeface.BOLD
-        );
-
-
-        container.addView(
+        liveCard.addView(
                 liveBTCStatusView
         );
 
 
-        addSpace();
-
-
-        // =====================================================
-        // LIVE CANDLE STATUS
-        // =====================================================
-
-        addSection(
-                "LIVE CANDLE ENGINE"
-        );
-
-
-        live5mStatusView =
-                new TextView(this);
-
-
-        live5mStatusView.setTextSize(
-                14
-        );
-
-
-        live5mStatusView.setTypeface(
-                Typeface.DEFAULT,
-                Typeface.BOLD
-        );
-
-
-        live5mStatusView.setPadding(
-                0,
-                8,
-                0,
-                8
-        );
-
-
         container.addView(
-                live5mStatusView
+                liveCard
         );
-
-
-        live15mStatusView =
-                new TextView(this);
-
-
-        live15mStatusView.setTextSize(
-                14
-        );
-
-
-        live15mStatusView.setTypeface(
-                Typeface.DEFAULT,
-                Typeface.BOLD
-        );
-
-
-        live15mStatusView.setPadding(
-                0,
-                8,
-                0,
-                8
-        );
-
-
-        container.addView(
-                live15mStatusView
-        );
-
-
-        updateLiveConnectionUI();
-
-
-        addSpace();
-
-
-        // =====================================================
-        // LIVE 5M ANALYSIS
-        // =====================================================
-
-        addSection(
-                "LIVE 5M ANALYSIS"
-        );
-
-
-        live5mAnalysisView =
-                new TextView(this);
-
-
-        live5mAnalysisView.setText(
-                "Waiting for live 5M candle data..."
-        );
-
-
-        live5mAnalysisView.setTextSize(
-                15
-        );
-
-
-        live5mAnalysisView.setTextColor(
-                Color.LTGRAY
-        );
-
-
-        live5mAnalysisView.setTypeface(
-                Typeface.MONOSPACE,
-                Typeface.NORMAL
-        );
-
-
-        live5mAnalysisView.setPadding(
-                0,
-                8,
-                0,
-                8
-        );
-
-
-        container.addView(
-                live5mAnalysisView
-        );
-
-
-        addSpace();
-
-
-        // =====================================================
-        // LIVE 15M ANALYSIS
-        // =====================================================
-
-        addSection(
-                "LIVE 15M ANALYSIS"
-        );
-
-
-        live15mAnalysisView =
-                new TextView(this);
-
-
-        live15mAnalysisView.setText(
-                "Waiting for live 15M candle data..."
-        );
-
-
-        live15mAnalysisView.setTextSize(
-                15
-        );
-
-
-        live15mAnalysisView.setTextColor(
-                Color.LTGRAY
-        );
-
-
-        live15mAnalysisView.setTypeface(
-                Typeface.MONOSPACE,
-                Typeface.NORMAL
-        );
-
-
-        live15mAnalysisView.setPadding(
-                0,
-                8,
-                0,
-                8
-        );
-
-
-        container.addView(
-                live15mAnalysisView
-        );
-
-
-        addSpace();
-
-
-        // =====================================================
-        // REFRESH
-        // =====================================================
-
-        TextView refreshButton =
-                new TextView(this);
-
-
-        refreshButton.setText(
-                "↻  REFRESH MARKET DATA"
-        );
-
-
-        refreshButton.setTextSize(
-                16
-        );
-
-
-        refreshButton.setTextColor(
-                Color.WHITE
-        );
-
-
-        refreshButton.setGravity(
-                Gravity.CENTER
-        );
-
-
-        refreshButton.setTypeface(
-                Typeface.DEFAULT,
-                Typeface.BOLD
-        );
-
-
-        refreshButton.setPadding(
-                10,
-                20,
-                10,
-                20
-        );
-
-
-        refreshButton.setBackgroundColor(
-                Color.rgb(35, 55, 65)
-        );
-
-
-        refreshButton.setOnClickListener(
-                view -> refreshMarketData()
-        );
-
-
-        container.addView(
-                refreshButton
-        );
-
-
-        addSpace();
 
 
         // =====================================================
         // FINAL SIGNAL
         // =====================================================
 
-        addSection(
+        addSectionTitle(
                 "FINAL SIGNAL"
         );
 
 
-        String finalSignal =
+        LinearLayout signalCard =
+                createCard();
+
+
+        TextView signal =
+                new TextView(this);
+
+
+        String direction =
                 combined.direction;
 
 
-        if (
-                "NEUTRAL".equals(
-                        finalSignal
+        signal.setText(
+                "NEUTRAL".equals(direction)
+                        ? "WAIT"
+                        : direction
+        );
+
+
+        signal.setTextSize(
+                30
+        );
+
+
+        signal.setGravity(
+                Gravity.CENTER
+        );
+
+
+        signal.setTypeface(
+                Typeface.DEFAULT,
+                Typeface.BOLD
+        );
+
+
+        signal.setTextColor(
+                signalColor(
+                        direction
                 )
-        ) {
-
-            addBigSignal(
-                    "WAIT",
-                    Color.YELLOW
-            );
-
-        } else if (
-                "BUY".equals(
-                        finalSignal
-                )
-        ) {
-
-            addBigSignal(
-                    "BUY",
-                    Color.GREEN
-            );
-
-        } else {
-
-            addBigSignal(
-                    "SELL",
-                    Color.RED
-            );
-        }
+        );
 
 
-        addMetric(
+        signalCard.addView(
+                signal
+        );
+
+
+        addCardMetric(
+                signalCard,
                 "Confidence",
                 format(
                         combined.confidence
@@ -1812,394 +1219,27 @@ public class MainActivity extends Activity {
         );
 
 
-        addMetric(
+        addCardMetric(
+                signalCard,
                 "Signal Strength",
                 combined.signalStrength
         );
 
 
-        addMetric(
+        addCardMetric(
+                signalCard,
                 "Engine Agreement",
                 combined.agreement
         );
 
 
-        if (
-                "NEUTRAL".equals(
-                        combined.direction
-                )
-        ) {
-
-            addText(
-                    "No clear edge. The system is not forcing BUY or SELL.",
-                    13,
-                    Color.GRAY
-            );
-
-        } else {
-
-            addText(
-                    "Final direction is based on combined analytical engines.",
-                    13,
-                    Color.GRAY
-            );
-        }
-
-
-        addSpace();
-
-
-        // =====================================================
-        // LARGE MOVE
-        // =====================================================
-
-        addSection(
-                "LARGE MOVE DETECTOR"
+        signalCard.addView(
+                divider()
         );
 
 
-        addText(
-                "Detects abnormal volatility / volume / compression conditions.",
-                12,
-                Color.GRAY
-        );
-
-
-        addSpace();
-
-
-        // =====================================================
-        // 15M MOVE
-        // =====================================================
-
-        addSection(
-                "15 MINUTE MOVE DETECTOR"
-        );
-
-
-        addMetric(
-                "Move Risk",
-                format(move15.moveRisk) + "%"
-        );
-
-
-        addMetric(
-                "Risk Level",
-                move15.riskLevel
-        );
-
-
-        addMetric(
-                "Expected Direction",
-                move15.direction
-        );
-
-
-        addMetric(
-                "Upside Probability",
-                format(move15.upsideProbability) + "%"
-        );
-
-
-        addMetric(
-                "Downside Probability",
-                format(move15.downsideProbability) + "%"
-        );
-
-
-        addMetric(
-                "Volatility Score",
-                format(move15.volatilityScore)
-        );
-
-
-        addMetric(
-                "Volume Score",
-                format(move15.volumeScore)
-        );
-
-
-        addMetric(
-                "Compression Score",
-                format(move15.compressionScore)
-        );
-
-
-        addMetric(
-                "Momentum Score",
-                format(move15.momentumScore)
-        );
-
-
-        addMetric(
-                "Volatility Expansion",
-                yesNo(move15.volatilityExpansion)
-        );
-
-
-        addMetric(
-                "Volume Expansion",
-                yesNo(move15.volumeExpansion)
-        );
-
-
-        addMetric(
-                "Volatility Compression",
-                yesNo(move15.volatilityCompression)
-        );
-
-
-        addText(
-                "Evidence: " + move15.evidence,
-                12,
-                Color.GRAY
-        );
-
-
-        addSpace();
-
-
-        // =====================================================
-        // 5M MOVE
-        // =====================================================
-
-        addSection(
-                "5 MINUTE MOVE DETECTOR"
-        );
-
-
-        addMetric(
-                "Move Risk",
-                format(move5.moveRisk) + "%"
-        );
-
-
-        addMetric(
-                "Risk Level",
-                move5.riskLevel
-        );
-
-
-        addMetric(
-                "Expected Direction",
-                move5.direction
-        );
-
-
-        addMetric(
-                "Upside Probability",
-                format(move5.upsideProbability) + "%"
-        );
-
-
-        addMetric(
-                "Downside Probability",
-                format(move5.downsideProbability) + "%"
-        );
-
-
-        addMetric(
-                "Volatility Score",
-                format(move5.volatilityScore)
-        );
-
-
-        addMetric(
-                "Volume Score",
-                format(move5.volumeScore)
-        );
-
-
-        addMetric(
-                "Compression Score",
-                format(move5.compressionScore)
-        );
-
-
-        addMetric(
-                "Momentum Score",
-                format(move5.momentumScore)
-        );
-
-
-        addMetric(
-                "Volatility Expansion",
-                yesNo(move5.volatilityExpansion)
-        );
-
-
-        addMetric(
-                "Volume Expansion",
-                yesNo(move5.volumeExpansion)
-        );
-
-
-        addMetric(
-                "Volatility Compression",
-                yesNo(move5.volatilityCompression)
-        );
-
-
-        addText(
-                "Evidence: " + move5.evidence,
-                12,
-                Color.GRAY
-        );
-
-
-        addSpace();
-
-
-        // =====================================================
-        // MULTI TIMEFRAME
-        // =====================================================
-
-        addSection(
-                "MULTI-TIMEFRAME MOVE VIEW"
-        );
-
-
-        String moveAgreement =
-                getMoveAgreement(
-                        move5,
-                        move15
-                );
-
-
-        addBigSignal(
-                moveAgreement,
-                getMoveAgreementColor(
-                        moveAgreement
-                )
-        );
-
-
-        addMetric(
-                "5M Direction",
-                move5.direction
-        );
-
-
-        addMetric(
-                "15M Direction",
-                move15.direction
-        );
-
-
-        addMetric(
-                "5M Risk",
-                format(move5.moveRisk) + "%"
-        );
-
-
-        addMetric(
-                "15M Risk",
-                format(move15.moveRisk) + "%"
-        );
-
-
-        addText(
-                getMoveExplanation(
-                        move5,
-                        move15
-                ),
-                13,
-                Color.GRAY
-        );
-
-
-        addSpace();
-
-
-        // =====================================================
-        // TRADE REFERENCE
-        // =====================================================
-
-        addSection(
-                "TRADE REFERENCE"
-        );
-
-
-        addMetric(
-                "Reference Price",
-                "$" + format(currentPrice)
-        );
-
-
-        addMetric(
-                "Live Exit Price",
-                "NOT AVAILABLE"
-        );
-
-
-        addText(
-                "Future exit price cannot be known from live market data.",
-                12,
-                Color.GRAY
-        );
-
-
-        addSpace();
-
-
-        // =====================================================
-        // MARKET
-        // =====================================================
-
-        addSection(
-                "MARKET"
-        );
-
-
-        addMetric(
-                "Bitcoin",
-                "$" + format(currentPrice)
-        );
-
-
-        addMetric(
-                "Gold",
-                "$" + format(goldPrice)
-        );
-
-
-        addMetric(
-                "Support",
-                "$" + format(support)
-        );
-
-
-        addMetric(
-                "Resistance",
-                "$" + format(resistance)
-        );
-
-
-        addMetric(
-                "Trend",
-                trend
-        );
-
-
-        addMetric(
-                "Average Volume",
-                format(averageVolume)
-        );
-
-
-        addSpace();
-
-
-        // =====================================================
-        // FINAL PROBABILITIES
-        // =====================================================
-
-        addSection(
-                "FINAL PROBABILITIES"
-        );
-
-
-        addMetric(
+        addCardMetric(
+                signalCard,
                 "BUY",
                 format(
                         combined.buyProbability
@@ -2207,7 +1247,8 @@ public class MainActivity extends Activity {
         );
 
 
-        addMetric(
+        addCardMetric(
+                signalCard,
                 "SELL",
                 format(
                         combined.sellProbability
@@ -2215,334 +1256,547 @@ public class MainActivity extends Activity {
         );
 
 
-        addMetric(
-                "WAIT / NEUTRAL",
+        addCardMetric(
+                signalCard,
+                "WAIT",
                 format(
                         combined.neutralProbability
                 ) + "%"
         );
 
 
-        addSpace();
+        container.addView(
+                signalCard
+        );
 
 
         // =====================================================
-        // ENGINE AGREEMENT
+        // SHORT TERM
         // =====================================================
 
-        addSection(
-                "ENGINE AGREEMENT"
+        addSectionTitle(
+                "SHORT-TERM MARKET"
         );
 
 
-        addMetric(
-                "Technical",
-                getTechnicalDirection(
-                        combined.technicalBuy,
-                        combined.technicalSell,
-                        combined.technicalNeutral
-                )
+        LinearLayout shortCard =
+                createCard();
+
+
+        addCardMetric(
+                shortCard,
+                "5M Direction",
+                move5.direction
         );
 
 
-        addMetric(
-                "Probability",
-                probability.direction
+        addCardMetric(
+                shortCard,
+                "5M Move Risk",
+                format(
+                        move5.moveRisk
+                ) + "%"
         );
 
 
-        addMetric(
-                "Learning",
-                learning.direction
+        addCardMetric(
+                shortCard,
+                "15M Direction",
+                move15.direction
         );
 
 
-        addMetric(
-                "Agreement",
-                combined.agreement
+        addCardMetric(
+                shortCard,
+                "15M Move Risk",
+                format(
+                        move15.moveRisk
+                ) + "%"
         );
 
 
-        addSpace();
+        String agreement =
+                getMoveAgreement(
+                        move5,
+                        move15
+                );
+
+
+        shortCard.addView(
+                divider()
+        );
+
+
+        addCardMetric(
+                shortCard,
+                "Market State",
+                agreement
+        );
+
+
+        container.addView(
+                shortCard
+        );
 
 
         // =====================================================
-        // COMBINED BACKTEST
+        // LIVE CANDLE MONITOR
         // =====================================================
 
-        addSection(
-                "COMBINED BACKTEST"
+        addSectionTitle(
+                "LIVE CANDLE MONITOR"
         );
 
 
-        addMetric(
-                "Total Signals",
-                String.valueOf(
-                        combinedBacktest.totalSignals
+        LinearLayout candle5 =
+                createCard();
+
+
+        candle5.addView(
+                cardTitle(
+                        "5 MINUTE"
                 )
         );
 
 
-        addMetric(
-                "Correct Signals",
-                String.valueOf(
-                        combinedBacktest.correctSignals
+        live5mStatusView =
+                new TextView(this);
+
+        live5mStatusView.setText(
+                "○ CONNECTING"
+        );
+
+        live5mStatusView.setTextSize(
+                12
+        );
+
+        live5mStatusView.setTextColor(
+                YELLOW
+        );
+
+        candle5.addView(
+                live5mStatusView
+        );
+
+
+        live5mCandleView =
+                new TextView(this);
+
+        live5mCandleView.setText(
+                "Waiting for live candle..."
+        );
+
+        live5mCandleView.setTextSize(
+                14
+        );
+
+        live5mCandleView.setTextColor(
+                WHITE
+        );
+
+        live5mCandleView.setPadding(
+                0,
+                10,
+                0,
+                8
+        );
+
+        candle5.addView(
+                live5mCandleView
+        );
+
+
+        live5mAnalysisView =
+                new TextView(this);
+
+        live5mAnalysisView.setText(
+                "Analysis waiting..."
+        );
+
+        live5mAnalysisView.setTextSize(
+                13
+        );
+
+        live5mAnalysisView.setTextColor(
+                MUTED
+        );
+
+        candle5.addView(
+                live5mAnalysisView
+        );
+
+
+        container.addView(
+                candle5
+        );
+
+
+        LinearLayout candle15 =
+                createCard();
+
+
+        candle15.addView(
+                cardTitle(
+                        "15 MINUTE"
                 )
         );
 
 
-        addMetric(
-                "Wrong Signals",
-                String.valueOf(
-                        combinedBacktest.wrongSignals
-                )
+        live15mStatusView =
+                new TextView(this);
+
+        live15mStatusView.setText(
+                "○ CONNECTING"
+        );
+
+        live15mStatusView.setTextSize(
+                12
+        );
+
+        live15mStatusView.setTextColor(
+                YELLOW
+        );
+
+        candle15.addView(
+                live15mStatusView
         );
 
 
-        addMetric(
-                "Neutral Signals",
-                String.valueOf(
-                        combinedBacktest.neutralSignals
-                )
+        live15mCandleView =
+                new TextView(this);
+
+        live15mCandleView.setText(
+                "Waiting for live candle..."
+        );
+
+        live15mCandleView.setTextSize(
+                14
+        );
+
+        live15mCandleView.setTextColor(
+                WHITE
+        );
+
+        live15mCandleView.setPadding(
+                0,
+                10,
+                0,
+                8
+        );
+
+        candle15.addView(
+                live15mCandleView
         );
 
 
-        addMetric(
-                "BUY Signals",
-                String.valueOf(
-                        combinedBacktest.buySignals
-                )
+        live15mAnalysisView =
+                new TextView(this);
+
+        live15mAnalysisView.setText(
+                "Analysis waiting..."
+        );
+
+        live15mAnalysisView.setTextSize(
+                13
+        );
+
+        live15mAnalysisView.setTextColor(
+                MUTED
+        );
+
+        candle15.addView(
+                live15mAnalysisView
         );
 
 
-        addMetric(
-                "SELL Signals",
-                String.valueOf(
-                        combinedBacktest.sellSignals
-                )
+        container.addView(
+                candle15
         );
 
 
-        addMetric(
-                "Overall Accuracy",
+        // =====================================================
+        // MARKET STRUCTURE
+        // =====================================================
+
+        addSectionTitle(
+                "MARKET STRUCTURE"
+        );
+
+
+        LinearLayout marketCard =
+                createCard();
+
+
+        addCardMetric(
+                marketCard,
+                "BTC",
+                "$" +
                 format(
-                        combinedBacktest.accuracy
-                ) + "%"
-        );
-
-
-        addMetric(
-                "BUY Accuracy",
-                format(
-                        combinedBacktest.buyAccuracy
-                ) + "%"
-        );
-
-
-        addMetric(
-                "SELL Accuracy",
-                format(
-                        combinedBacktest.sellAccuracy
-                ) + "%"
-        );
-
-
-        addMetric(
-                "Average Return",
-                format(
-                        combinedBacktest.averageReturn
-                ) + "%"
-        );
-
-
-        addMetric(
-                "Total Return",
-                format(
-                        combinedBacktest.totalReturn
-                ) + "%"
-        );
-
-
-        addMetric(
-                "Profit Factor",
-                format(
-                        combinedBacktest.profitFactor
+                        currentPrice
                 )
         );
 
 
-        addMetric(
-                "Maximum Drawdown",
+        addCardMetric(
+                marketCard,
+                "Gold",
+                "$" +
                 format(
-                        combinedBacktest.maxDrawdown
-                ) + "%"
-        );
-
-
-        addMetric(
-                "BUY Agreement Signals",
-                String.valueOf(
-                        combinedBacktest.buyAgreementSignals
+                        goldPrice
                 )
         );
 
 
-        addMetric(
-                "SELL Agreement Signals",
-                String.valueOf(
-                        combinedBacktest.sellAgreementSignals
+        addCardMetric(
+                marketCard,
+                "Trend",
+                trend
+        );
+
+
+        addCardMetric(
+                marketCard,
+                "Support",
+                "$" +
+                format(
+                        support
                 )
         );
 
 
-        addMetric(
-                "STRONG Signals",
-                String.valueOf(
-                        combinedBacktest.strongSignals
+        addCardMetric(
+                marketCard,
+                "Resistance",
+                "$" +
+                format(
+                        resistance
                 )
         );
 
 
-        addMetric(
-                "MODERATE Signals",
-                String.valueOf(
-                        combinedBacktest.moderateSignals
+        addCardMetric(
+                marketCard,
+                "Average Volume",
+                format(
+                        averageVolume
                 )
         );
 
 
-        addMetric(
-                "WEAK Signals",
-                String.valueOf(
-                        combinedBacktest.weakSignals
-                )
+        container.addView(
+                marketCard
         );
-
-
-        addSpace();
 
 
         // =====================================================
         // TECHNICAL
         // =====================================================
 
-        addSection(
-                "TECHNICAL DETAILS"
+        addSectionTitle(
+                "TECHNICAL ANALYSIS"
         );
 
 
-        addMetric(
+        LinearLayout technicalCard =
+                createCard();
+
+
+        addCardMetric(
+                technicalCard,
                 "RSI",
-                format(technical.rsi)
-        );
-
-
-        addMetric(
-                "EMA 20",
-                "$" + format(technical.ema20)
-        );
-
-
-        addMetric(
-                "EMA 50",
-                "$" + format(technical.ema50)
-        );
-
-
-        addMetric(
-                "EMA 200",
-                "$" + format(technical.ema200)
-        );
-
-
-        addMetric(
-                "MACD",
-                format(technical.macd)
-        );
-
-
-        addMetric(
-                "ATR",
-                "$" + format(technical.atr)
-        );
-
-
-        addMetric(
-                "Bollinger Upper",
-                "$" + format(technical.bollingerUpper)
-        );
-
-
-        addMetric(
-                "Bollinger Lower",
-                "$" + format(technical.bollingerLower)
-        );
-
-
-        addMetric(
-                "Momentum",
-                format(technical.momentum) + "%"
-        );
-
-
-        addMetric(
-                "Volume Ratio",
-                format(technical.volumeRatio) + "x"
-        );
-
-
-        addMetric(
-                "Technical Signal",
-                getTechnicalSignal(
-                        technical,
-                        currentPrice
+                format(
+                        technical.rsi
                 )
         );
 
 
-        addSpace();
+        addCardMetric(
+                technicalCard,
+                "EMA 20",
+                "$" +
+                format(
+                        technical.ema20
+                )
+        );
+
+
+        addCardMetric(
+                technicalCard,
+                "EMA 50",
+                "$" +
+                format(
+                        technical.ema50
+                )
+        );
+
+
+        addCardMetric(
+                technicalCard,
+                "EMA 200",
+                "$" +
+                format(
+                        technical.ema200
+                )
+        );
+
+
+        addCardMetric(
+                technicalCard,
+                "MACD",
+                format(
+                        technical.macd
+                )
+        );
+
+
+        addCardMetric(
+                technicalCard,
+                "ATR",
+                "$" +
+                format(
+                        technical.atr
+                )
+        );
+
+
+        addCardMetric(
+                technicalCard,
+                "Momentum",
+                format(
+                        technical.momentum
+                ) + "%"
+        );
+
+
+        addCardMetric(
+                technicalCard,
+                "Volume Ratio",
+                format(
+                        technical.volumeRatio
+                ) + "x"
+        );
+
+
+        container.addView(
+                technicalCard
+        );
 
 
         // =====================================================
-        // AI DETAILS
+        // MOVE DETECTOR
         // =====================================================
 
-        addSection(
-                "AI ENGINE DETAILS"
+        addSectionTitle(
+                "MOVE DETECTOR"
         );
 
 
-        addMetric(
-                "Probability BUY",
-                format(probability.buyProbability) + "%"
+        LinearLayout moveCard =
+                createCard();
+
+
+        addCardMetric(
+                moveCard,
+                "5M Risk",
+                format(
+                        move5.moveRisk
+                ) + "%"
         );
 
 
-        addMetric(
-                "Probability SELL",
-                format(probability.sellProbability) + "%"
+        addCardMetric(
+                moveCard,
+                "5M Direction",
+                move5.direction
         );
 
 
-        addMetric(
-                "Probability WAIT",
-                format(probability.neutralProbability) + "%"
+        addCardMetric(
+                moveCard,
+                "15M Risk",
+                format(
+                        move15.moveRisk
+                ) + "%"
         );
 
 
-        addMetric(
+        addCardMetric(
+                moveCard,
+                "15M Direction",
+                move15.direction
+        );
+
+
+        addCardMetric(
+                moveCard,
+                "5M Upside",
+                format(
+                        move5.upsideProbability
+                ) + "%"
+        );
+
+
+        addCardMetric(
+                moveCard,
+                "5M Downside",
+                format(
+                        move5.downsideProbability
+                ) + "%"
+        );
+
+
+        addCardMetric(
+                moveCard,
+                "15M Upside",
+                format(
+                        move15.upsideProbability
+                ) + "%"
+        );
+
+
+        addCardMetric(
+                moveCard,
+                "15M Downside",
+                format(
+                        move15.downsideProbability
+                ) + "%"
+        );
+
+
+        container.addView(
+                moveCard
+        );
+
+
+        // =====================================================
+        // AI
+        // =====================================================
+
+        addSectionTitle(
+                "AI ENGINE"
+        );
+
+
+        LinearLayout aiCard =
+                createCard();
+
+
+        addCardMetric(
+                aiCard,
                 "Probability Direction",
                 probability.direction
         );
 
 
-        addMetric(
+        addCardMetric(
+                aiCard,
                 "Probability Confidence",
                 probability.confidence
         );
 
 
-        addMetric(
+        addCardMetric(
+                aiCard,
                 "Historical Samples",
                 String.valueOf(
                         probability.samples
@@ -2550,7 +1804,8 @@ public class MainActivity extends Activity {
         );
 
 
-        addMetric(
+        addCardMetric(
+                aiCard,
                 "Validation Accuracy",
                 format(
                         probability.validationAccuracy
@@ -2558,73 +1813,150 @@ public class MainActivity extends Activity {
         );
 
 
-        addMetric(
-                "Validation Samples",
-                String.valueOf(
-                        probability.validationSamples
-                )
-        );
-
-
-        addMetric(
+        addCardMetric(
+                aiCard,
                 "Learning Direction",
                 learning.direction
         );
 
 
-        addMetric(
-                "Learning BUY",
-                format(
-                        learning.buyProbability
-                ) + "%"
-        );
-
-
-        addMetric(
-                "Learning SELL",
-                format(
-                        learning.sellProbability
-                ) + "%"
-        );
-
-
-        addMetric(
-                "Learning WAIT",
-                format(
-                        learning.neutralProbability
-                ) + "%"
-        );
-
-
-        addMetric(
-                "Learning Matched Samples",
+        addCardMetric(
+                aiCard,
+                "Learning Samples",
                 String.valueOf(
                         learning.matchedSamples
                 )
         );
 
 
-        addMetric(
-                "Learning Test Accuracy",
+        addCardMetric(
+                aiCard,
+                "Learning Accuracy",
                 format(
                         learning.trainingAccuracy
                 ) + "%"
         );
 
 
-        addSpace();
+        container.addView(
+                aiCard
+        );
 
 
         // =====================================================
-        // BACKTEST V3
+        // COMBINED BACKTEST
         // =====================================================
 
-        addSection(
+        addSectionTitle(
+                "COMBINED BACKTEST"
+        );
+
+
+        LinearLayout cbCard =
+                createCard();
+
+
+        addCardMetric(
+                cbCard,
+                "Total Signals",
+                String.valueOf(
+                        combinedBacktest.totalSignals
+                )
+        );
+
+
+        addCardMetric(
+                cbCard,
+                "Correct",
+                String.valueOf(
+                        combinedBacktest.correctSignals
+                )
+        );
+
+
+        addCardMetric(
+                cbCard,
+                "Wrong",
+                String.valueOf(
+                        combinedBacktest.wrongSignals
+                )
+        );
+
+
+        addCardMetric(
+                cbCard,
+                "Accuracy",
+                format(
+                        combinedBacktest.accuracy
+                ) + "%"
+        );
+
+
+        addCardMetric(
+                cbCard,
+                "Average Return",
+                format(
+                        combinedBacktest.averageReturn
+                ) + "%"
+        );
+
+
+        addCardMetric(
+                cbCard,
+                "Total Return",
+                format(
+                        combinedBacktest.totalReturn
+                ) + "%"
+        );
+
+
+        addCardMetric(
+                cbCard,
+                "Profit Factor",
+                format(
+                        combinedBacktest.profitFactor
+                )
+        );
+
+
+        addCardMetric(
+                cbCard,
+                "Max Drawdown",
+                format(
+                        combinedBacktest.maxDrawdown
+                ) + "%"
+        );
+
+
+        addCardMetric(
+                cbCard,
+                "Strong Signals",
+                String.valueOf(
+                        combinedBacktest.strongSignals
+                )
+        );
+
+
+        container.addView(
+                cbCard
+        );
+
+
+        // =====================================================
+        // ORIGINAL BACKTEST
+        // =====================================================
+
+        addSectionTitle(
                 "BACKTEST V3"
         );
 
 
-        addMetric(
+        LinearLayout btCard =
+                createCard();
+
+
+        addCardMetric(
+                btCard,
                 "Total Trades",
                 String.valueOf(
                         backtest.totalTrades
@@ -2632,87 +1964,35 @@ public class MainActivity extends Activity {
         );
 
 
-        addMetric(
-                "Correct Trades",
+        addCardMetric(
+                btCard,
+                "Correct",
                 String.valueOf(
                         backtest.correctTrades
                 )
         );
 
 
-        addMetric(
-                "Wrong Trades",
+        addCardMetric(
+                btCard,
+                "Wrong",
                 String.valueOf(
                         backtest.wrongTrades
                 )
         );
 
 
-        addMetric(
-                "Neutral Signals",
-                String.valueOf(
-                        backtest.neutralTrades
-                )
-        );
-
-
-        addMetric(
-                "BUY Signals",
-                String.valueOf(
-                        backtest.buySignals
-                )
-        );
-
-
-        addMetric(
-                "BUY Correct",
-                String.valueOf(
-                        backtest.buyCorrect
-                )
-        );
-
-
-        addMetric(
-                "BUY Accuracy",
-                format(
-                        backtest.buyAccuracy
-                ) + "%"
-        );
-
-
-        addMetric(
-                "SELL Signals",
-                String.valueOf(
-                        backtest.sellSignals
-                )
-        );
-
-
-        addMetric(
-                "SELL Correct",
-                String.valueOf(
-                        backtest.sellCorrect
-                )
-        );
-
-
-        addMetric(
-                "SELL Accuracy",
-                format(
-                        backtest.sellAccuracy
-                ) + "%"
-        );
-
-
-        addMetric(
-                "Overall Accuracy",
+        addCardMetric(
+                btCard,
+                "Accuracy",
                 format(
                         backtest.accuracy
                 ) + "%"
         );
 
 
-        addMetric(
+        addCardMetric(
+                btCard,
                 "Average Return",
                 format(
                         backtest.averageReturn
@@ -2720,7 +2000,8 @@ public class MainActivity extends Activity {
         );
 
 
-        addMetric(
+        addCardMetric(
+                btCard,
                 "Total Return",
                 format(
                         backtest.totalReturn
@@ -2728,43 +2009,8 @@ public class MainActivity extends Activity {
         );
 
 
-        addSpace();
-
-
-        // =====================================================
-        // RISK
-        // =====================================================
-
-        addSection(
-                "V3 RISK ANALYSIS"
-        );
-
-
-        addMetric(
-                "Stop Loss Trades",
-                String.valueOf(
-                        backtest.stopLossTrades
-                )
-        );
-
-
-        addMetric(
-                "Take Profit Trades",
-                String.valueOf(
-                        backtest.takeProfitTrades
-                )
-        );
-
-
-        addMetric(
-                "Time Exit Trades",
-                String.valueOf(
-                        backtest.timeExitTrades
-                )
-        );
-
-
-        addMetric(
+        addCardMetric(
+                btCard,
                 "Profit Factor",
                 format(
                         backtest.profitFactor
@@ -2772,63 +2018,17 @@ public class MainActivity extends Activity {
         );
 
 
-        addMetric(
-                "Gross Profit",
-                format(
-                        backtest.grossProfit
-                ) + "%"
-        );
-
-
-        addMetric(
-                "Gross Loss",
-                format(
-                        backtest.grossLoss
-                ) + "%"
-        );
-
-
-        addMetric(
-                "Maximum Drawdown",
+        addCardMetric(
+                btCard,
+                "Max Drawdown",
                 format(
                         backtest.maxDrawdown
                 ) + "%"
         );
 
 
-        addMetric(
-                "BUY Average Return",
-                format(
-                        backtest.buyAverageReturn
-                ) + "%"
-        );
-
-
-        addMetric(
-                "SELL Average Return",
-                format(
-                        backtest.sellAverageReturn
-                ) + "%"
-        );
-
-
-        addMetric(
-                "BUY Total Return",
-                format(
-                        backtest.buyTotalReturn
-                ) + "%"
-        );
-
-
-        addMetric(
-                "SELL Total Return",
-                format(
-                        backtest.sellTotalReturn
-                ) + "%"
-        );
-
-
-        addMetric(
+        addCardMetric(
+                btCard,
                 "BTC Buy & Hold",
                 format(
                         backtest.buyHoldReturn
@@ -2836,59 +2036,1618 @@ public class MainActivity extends Activity {
         );
 
 
+        container.addView(
+                btCard
+        );
+
+
+        // =====================================================
+        // REFRESH
+        // =====================================================
+
         addSpace();
 
 
-        // =====================================================
-        // DATA
-        // =====================================================
+        TextView refresh =
+                button(
+                        "↻  REFRESH MARKET DATA"
+                );
+
+
+        refresh.setOnClickListener(
+                v -> refreshMarketData()
+        );
+
+
+        container.addView(
+                refresh
+        );
+
+
+        addSpace();
+
 
         addText(
-                "BTC Daily Data: ~2 Years",
-                12,
-                Color.GRAY
+                "Market AI is an analytical and research system. Historical results and model probabilities do not guarantee future results.",
+                11,
+                MUTED
         );
 
 
         addText(
-                "BTC 15M Data: 1000 candles + live candle stream",
-                12,
-                Color.GRAY
+                "Live market data: BTCUSDT.",
+                11,
+                MUTED
+        );
+    }
+
+
+    // =========================================================
+    // LIVE 5M ANALYSIS
+    // =========================================================
+
+    private void updateLive5Analysis() {
+
+        if (
+                live5mAnalysisView == null
+        ) {
+
+            return;
+        }
+
+
+        if (
+                live5Technical == null
+                        ||
+                live5Move == null
+        ) {
+
+            live5mAnalysisView.setText(
+                    "Collecting live candle history..."
+            );
+
+            return;
+        }
+
+
+        live5mAnalysisView.setText(
+                "RSI  "
+                        +
+                format(
+                        live5Technical.rsi
+                )
+                        +
+                "   •   EMA20  $"
+                        +
+                format(
+                        live5Technical.ema20
+                )
+                        +
+                "\n"
+                        +
+                "MACD  "
+                        +
+                format(
+                        live5Technical.macd
+                )
+                        +
+                "   •   Momentum  "
+                        +
+                format(
+                        live5Technical.momentum
+                )
+                        +
+                "%\n"
+                        +
+                "Move Risk  "
+                        +
+                format(
+                        live5Move.moveRisk
+                )
+                        +
+                "%   •   "
+                        +
+                live5Move.direction
         );
 
 
-        addText(
-                "BTC 5M Data: 1000 candles + live candle stream",
-                12,
-                Color.GRAY
+        live5mAnalysisView.setTextColor(
+                signalColor(
+                        live5Move.direction
+                )
+        );
+    }
+
+
+    // =========================================================
+    // LIVE 15M ANALYSIS
+    // =========================================================
+
+    private void updateLive15Analysis() {
+
+        if (
+                live15mAnalysisView == null
+        ) {
+
+            return;
+        }
+
+
+        if (
+                live15Technical == null
+                        ||
+                live15Move == null
+        ) {
+
+            live15mAnalysisView.setText(
+                    "Collecting live candle history..."
+            );
+
+            return;
+        }
+
+
+        live15mAnalysisView.setText(
+                "RSI  "
+                        +
+                format(
+                        live15Technical.rsi
+                )
+                        +
+                "   •   EMA20  $"
+                        +
+                format(
+                        live15Technical.ema20
+                )
+                        +
+                "\n"
+                        +
+                "MACD  "
+                        +
+                format(
+                        live15Technical.macd
+                )
+                        +
+                "   •   Momentum  "
+                        +
+                format(
+                        live15Technical.momentum
+                )
+                        +
+                "%\n"
+                        +
+                "Move Risk  "
+                        +
+                format(
+                        live15Move.moveRisk
+                )
+                        +
+                "%   •   "
+                        +
+                live15Move.direction
         );
 
 
-        addText(
-                "BTC live price and candles are received through WebSocket streams.",
-                12,
-                Color.GRAY
+        live15mAnalysisView.setTextColor(
+                signalColor(
+                        live15Move.direction
+                )
+        );
+    }
+
+
+    // =========================================================
+    // CANDLE STATUS
+    // =========================================================
+
+    private void updateCandleStatus(
+            String interval,
+            boolean connected
+    ) {
+
+        TextView target =
+                "5m".equals(interval)
+                        ? live5mStatusView
+                        : live15mStatusView;
+
+
+        if (
+                target == null
+        ) {
+
+            return;
+        }
+
+
+        if (
+                connected
+        ) {
+
+            target.setText(
+                    "● LIVE  •  " + interval
+            );
+
+            target.setTextColor(
+                    GREEN
+            );
+
+        } else {
+
+            target.setText(
+                    "○ RECONNECTING  •  "
+                            +
+                    interval
+            );
+
+            target.setTextColor(
+                    YELLOW
+            );
+        }
+    }
+
+
+    // =========================================================
+    // CANDLE ERROR
+    // =========================================================
+
+    private void updateCandleError(
+            String interval
+    ) {
+
+        TextView target =
+                "5m".equals(interval)
+                        ? live5mStatusView
+                        : live15mStatusView;
+
+
+        if (
+                target != null
+        ) {
+
+            target.setText(
+                    "○ CONNECTION ERROR  •  "
+                            +
+                    interval
+            );
+
+            target.setTextColor(
+                    RED
+            );
+        }
+    }
+
+
+    // =========================================================
+    // CANDLE TEXT
+    // =========================================================
+
+    private String candleText(
+            LiveCandleEngine.Candle candle
+    ) {
+
+        String type;
+
+
+        if (
+                candle.close > candle.open
+        ) {
+
+            type = "BULLISH";
+
+        } else if (
+                candle.close < candle.open
+        ) {
+
+            type = "BEARISH";
+
+        } else {
+
+            type = "DOJI";
+        }
+
+
+        String state =
+                candle.closed
+                        ? "CLOSED"
+                        : "FORMING";
+
+
+        return
+                type
+                        +
+                "  •  "
+                        +
+                state
+                        +
+                "\n"
+                        +
+                "O  $"
+                        +
+                format(
+                        candle.open
+                )
+                        +
+                "   H  $"
+                        +
+                format(
+                        candle.high
+                )
+                        +
+                "\n"
+                        +
+                "L  $"
+                        +
+                format(
+                        candle.low
+                )
+                        +
+                "   C  $"
+                        +
+                format(
+                        candle.close
+                )
+                        +
+                "\n"
+                        +
+                "Volume  "
+                        +
+                format(
+                        candle.volume
+                );
+    }
+
+
+    // =========================================================
+    // HEADER
+    // =========================================================
+
+    private void showHeader() {
+
+        LinearLayout header =
+                new LinearLayout(this);
+
+        header.setOrientation(
+                LinearLayout.HORIZONTAL
+        );
+
+        header.setGravity(
+                Gravity.CENTER_VERTICAL
         );
 
 
-        addText(
-                "Live 5M / 15M indicators update as the current candle changes.",
-                12,
-                Color.GRAY
+        LinearLayout titleBox =
+                new LinearLayout(this);
+
+        titleBox.setOrientation(
+                LinearLayout.VERTICAL
         );
 
 
-        addText(
-                "Move probabilities are analytical estimates, not guarantees.",
-                12,
-                Color.GRAY
+        TextView title =
+                new TextView(this);
+
+        title.setText(
+                "MARKET AI"
+        );
+
+        title.setTextSize(
+                26
+        );
+
+        title.setTextColor(
+                WHITE
+        );
+
+        title.setTypeface(
+                Typeface.DEFAULT,
+                Typeface.BOLD
         );
 
 
-        addText(
-                "Historical backtests do not guarantee future results.",
-                12,
-                Color.GRAY
+        titleBox.addView(
+                title
+        );
+
+
+        TextView subtitle =
+                new TextView(this);
+
+        subtitle.setText(
+                "BTC / GOLD ANALYTICAL ENGINE"
+        );
+
+        subtitle.setTextSize(
+                10
+        );
+
+        subtitle.setTextColor(
+                MUTED
+        );
+
+
+        titleBox.addView(
+                subtitle
+        );
+
+
+        titleBox.setLayoutParams(
+                new LinearLayout.LayoutParams(
+                        0,
+                        ViewGroup.LayoutParams.WRAP_CONTENT,
+                        1
+                )
+        );
+
+
+        header.addView(
+                titleBox
+        );
+
+
+        TextView live =
+                new TextView(this);
+
+        live.setText(
+                "● LIVE"
+        );
+
+        live.setTextSize(
+                11
+        );
+
+        live.setTextColor(
+                GREEN
+        );
+
+        live.setTypeface(
+                Typeface.DEFAULT,
+                Typeface.BOLD
+        );
+
+
+        header.addView(
+                live
+        );
+
+
+        container.addView(
+                header
+        );
+
+
+        addSpace();
+    }
+
+
+    // =========================================================
+    // SECTION TITLE
+    // =========================================================
+
+    private void addSectionTitle(
+            String text
+    ) {
+
+        TextView view =
+                new TextView(this);
+
+        view.setText(
+                text
+        );
+
+        view.setTextSize(
+                13
+        );
+
+        view.setTextColor(
+                MUTED
+        );
+
+        view.setTypeface(
+                Typeface.DEFAULT,
+                Typeface.BOLD
+        );
+
+        view.setPadding(
+                2,
+                18,
+                2,
+                8
+        );
+
+
+        container.addView(
+                view
+        );
+    }
+
+
+    // =========================================================
+    // CARD
+    // =========================================================
+
+    private LinearLayout createCard() {
+
+        LinearLayout card =
+                new LinearLayout(this);
+
+        card.setOrientation(
+                LinearLayout.VERTICAL
+        );
+
+        card.setPadding(
+                17,
+                15,
+                17,
+                15
+        );
+
+
+        GradientDrawable bg =
+                new GradientDrawable();
+
+        bg.setColor(
+                CARD
+        );
+
+        bg.setCornerRadius(
+                20
+        );
+
+        bg.setStroke(
+                1,
+                BORDER
+        );
+
+
+        card.setBackground(
+                bg
+        );
+
+
+        LinearLayout.LayoutParams params =
+                new LinearLayout.LayoutParams(
+                        ViewGroup.LayoutParams.MATCH_PARENT,
+                        ViewGroup.LayoutParams.WRAP_CONTENT
+                );
+
+
+        params.setMargins(
+                0,
+                3,
+                0,
+                8
+        );
+
+
+        card.setLayoutParams(
+                params
+        );
+
+
+        return card;
+    }
+
+
+    // =========================================================
+    // CARD TITLE
+    // =========================================================
+
+    private TextView cardTitle(
+            String text
+    ) {
+
+        TextView title =
+                new TextView(this);
+
+        title.setText(
+                text
+        );
+
+        title.setTextSize(
+                15
+        );
+
+        title.setTextColor(
+                WHITE
+        );
+
+        title.setTypeface(
+                Typeface.DEFAULT,
+                Typeface.BOLD
+        );
+
+        title.setPadding(
+                0,
+                0,
+                0,
+                7
+        );
+
+
+        return title;
+    }
+
+
+    // =========================================================
+    // CARD METRIC
+    // =========================================================
+
+    private void addCardMetric(
+
+            LinearLayout card,
+
+            String name,
+
+            String value
+
+    ) {
+
+        LinearLayout row =
+                new LinearLayout(this);
+
+        row.setOrientation(
+                LinearLayout.HORIZONTAL
+        );
+
+        row.setGravity(
+                Gravity.CENTER_VERTICAL
+        );
+
+        row.setPadding(
+                0,
+                5,
+                0,
+                5
+        );
+
+
+        TextView left =
+                new TextView(this);
+
+        left.setText(
+                name
+        );
+
+        left.setTextSize(
+                13
+        );
+
+        left.setTextColor(
+                MUTED
+        );
+
+
+        left.setLayoutParams(
+                new LinearLayout.LayoutParams(
+                        0,
+                        ViewGroup.LayoutParams.WRAP_CONTENT,
+                        1
+                )
+        );
+
+
+        TextView right =
+                new TextView(this);
+
+        right.setText(
+                value
+        );
+
+        right.setTextSize(
+                13
+        );
+
+        right.setTextColor(
+                valueColor(
+                        value
+                )
+        );
+
+        right.setTypeface(
+                Typeface.DEFAULT,
+                Typeface.BOLD
+        );
+
+        right.setGravity(
+                Gravity.RIGHT
+        );
+
+
+        row.addView(
+                left
+        );
+
+        row.addView(
+                right
+        );
+
+
+        card.addView(
+                row
+        );
+    }
+
+
+    // =========================================================
+    // DIVIDER
+    // =========================================================
+
+    private View divider() {
+
+        View view =
+                new View(this);
+
+        view.setBackgroundColor(
+                BORDER
+        );
+
+        LinearLayout.LayoutParams params =
+                new LinearLayout.LayoutParams(
+                        ViewGroup.LayoutParams.MATCH_PARENT,
+                        1
+                );
+
+        params.setMargins(
+                0,
+                8,
+                0,
+                8
+        );
+
+        view.setLayoutParams(
+                params
+        );
+
+        return view;
+    }
+
+
+    // =========================================================
+    // BUTTON
+    // =========================================================
+
+    private TextView button(
+            String text
+    ) {
+
+        TextView view =
+                new TextView(this);
+
+        view.setText(
+                text
+        );
+
+        view.setTextSize(
+                14
+        );
+
+        view.setTextColor(
+                WHITE
+        );
+
+        view.setGravity(
+                Gravity.CENTER
+        );
+
+        view.setTypeface(
+                Typeface.DEFAULT,
+                Typeface.BOLD
+        );
+
+        view.setPadding(
+                10,
+                17,
+                10,
+                17
+        );
+
+
+        GradientDrawable bg =
+                new GradientDrawable();
+
+        bg.setColor(
+                CARD_2
+        );
+
+        bg.setCornerRadius(
+                18
+        );
+
+        bg.setStroke(
+                1,
+                BORDER
+        );
+
+
+        view.setBackground(
+                bg
+        );
+
+
+        return view;
+    }
+
+
+    // =========================================================
+    // TEXT
+    // =========================================================
+
+    private TextView addText(
+            String text,
+            int size,
+            int color
+    ) {
+
+        TextView view =
+                new TextView(this);
+
+        view.setText(
+                text
+        );
+
+        view.setTextSize(
+                size
+        );
+
+        view.setTextColor(
+                color
+        );
+
+        view.setPadding(
+                0,
+                5,
+                0,
+                5
+        );
+
+
+        container.addView(
+                view
+        );
+
+
+        return view;
+    }
+
+
+    // =========================================================
+    // SPACE
+    // =========================================================
+
+    private void addSpace() {
+
+        View view =
+                new View(this);
+
+        view.setLayoutParams(
+                new LinearLayout.LayoutParams(
+                        1,
+                        8
+                )
+        );
+
+        container.addView(
+                view
+        );
+    }
+
+
+    // =========================================================
+    // VALUE COLOR
+    // =========================================================
+
+    private int valueColor(
+            String value
+    ) {
+
+        if (
+                value == null
+        ) {
+
+            return WHITE;
+        }
+
+
+        String v =
+                value.toUpperCase(
+                        Locale.US
+                );
+
+
+        if (
+                v.equals("BUY")
+                        ||
+                v.contains("UP")
+                        ||
+                v.contains("BULLISH")
+        ) {
+
+            return GREEN;
+        }
+
+
+        if (
+                v.equals("SELL")
+                        ||
+                v.contains("DOWN")
+                        ||
+                v.contains("BEARISH")
+        ) {
+
+            return RED;
+        }
+
+
+        if (
+                v.equals("WAIT")
+                        ||
+                v.contains("NEUTRAL")
+                        ||
+                v.contains("UNCERTAIN")
+                        ||
+                v.contains("RECONNECT")
+        ) {
+
+            return YELLOW;
+        }
+
+
+        return WHITE;
+    }
+
+
+    // =========================================================
+    // SIGNAL COLOR
+    // =========================================================
+
+    private int signalColor(
+            String direction
+    ) {
+
+        if (
+                direction == null
+        ) {
+
+            return YELLOW;
+        }
+
+
+        if (
+                direction.equalsIgnoreCase(
+                        "BUY"
+                )
+                        ||
+                direction.equalsIgnoreCase(
+                        "UP"
+                )
+        ) {
+
+            return GREEN;
+        }
+
+
+        if (
+                direction.equalsIgnoreCase(
+                        "SELL"
+                )
+                        ||
+                direction.equalsIgnoreCase(
+                        "DOWN"
+                )
+        ) {
+
+            return RED;
+        }
+
+
+        return YELLOW;
+    }
+
+
+    // =========================================================
+    // SUPPORT
+    // =========================================================
+
+    private double calculateSupport() {
+
+        int size =
+                btcLow.size();
+
+        int start =
+                Math.max(
+                        0,
+                        size - 30
+                );
+
+        double support =
+                Double.MAX_VALUE;
+
+
+        for (
+                int i = start;
+                i < size;
+                i++
+        ) {
+
+            support =
+                    Math.min(
+                            support,
+                            btcLow.get(i)
+                    );
+        }
+
+
+        return support;
+    }
+
+
+    // =========================================================
+    // RESISTANCE
+    // =========================================================
+
+    private double calculateResistance() {
+
+        int size =
+                btcHigh.size();
+
+        int start =
+                Math.max(
+                        0,
+                        size - 30
+                );
+
+        double resistance =
+                Double.MIN_VALUE;
+
+
+        for (
+                int i = start;
+                i < size;
+                i++
+        ) {
+
+            resistance =
+                    Math.max(
+                            resistance,
+                            btcHigh.get(i)
+                    );
+        }
+
+
+        return resistance;
+    }
+
+
+    // =========================================================
+    // TREND
+    // =========================================================
+
+    private String getTrend(
+            double price,
+            TechnicalAnalyzer.TechnicalResult result
+    ) {
+
+        int bullish = 0;
+        int bearish = 0;
+
+
+        if (
+                price > result.ema20
+        ) {
+
+            bullish++;
+
+        } else {
+
+            bearish++;
+        }
+
+
+        if (
+                price > result.ema50
+        ) {
+
+            bullish++;
+
+        } else {
+
+            bearish++;
+        }
+
+
+        if (
+                price > result.ema200
+        ) {
+
+            bullish++;
+
+        } else {
+
+            bearish++;
+        }
+
+
+        if (
+                result.momentum > 0
+        ) {
+
+            bullish++;
+
+        } else {
+
+            bearish++;
+        }
+
+
+        if (
+                bullish >= 3
+        ) {
+
+            return "UP";
+        }
+
+
+        if (
+                bearish >= 3
+        ) {
+
+            return "DOWN";
+        }
+
+
+        return "NEUTRAL";
+    }
+
+
+    // =========================================================
+    // AVERAGE VOLUME
+    // =========================================================
+
+    private double calculateAverageVolume() {
+
+        if (
+                btcVolume.isEmpty()
+        ) {
+
+            return 0;
+        }
+
+
+        int count =
+                Math.min(
+                        20,
+                        btcVolume.size()
+                );
+
+
+        int start =
+                btcVolume.size() - count;
+
+
+        double sum = 0;
+
+
+        for (
+                int i = start;
+                i < btcVolume.size();
+                i++
+        ) {
+
+            sum +=
+                    btcVolume.get(i);
+        }
+
+
+        return sum / count;
+    }
+
+
+    // =========================================================
+    // BTC FETCH
+    // =========================================================
+
+    private void fetchBTC()
+            throws Exception {
+
+        String url =
+                "https://api.binance.com/api/v3/klines"
+                        +
+                "?symbol=BTCUSDT"
+                        +
+                "&interval=1d"
+                        +
+                "&limit=730";
+
+
+        fetchCandleData(
+                url,
+                btcOpen,
+                btcHigh,
+                btcLow,
+                btcPrices,
+                btcVolume
+        );
+
+
+        if (
+                btcPrices.size() < 700
+        ) {
+
+            throw new Exception(
+                    "Not enough BTC daily data"
+            );
+        }
+    }
+
+
+    // =========================================================
+    // INTRADAY FETCH
+    // =========================================================
+
+    private void fetchIntradayBTC(
+
+            String interval,
+
+            int limit,
+
+            List<Double> opens,
+            List<Double> highs,
+            List<Double> lows,
+            List<Double> closes,
+            List<Double> volumes
+
+    ) throws Exception {
+
+        String url =
+                "https://api.binance.com/api/v3/klines"
+                        +
+                "?symbol=BTCUSDT"
+                        +
+                "&interval="
+                        +
+                interval
+                        +
+                "&limit="
+                        +
+                limit;
+
+
+        fetchCandleData(
+                url,
+                opens,
+                highs,
+                lows,
+                closes,
+                volumes
+        );
+
+
+        if (
+                closes.size() < 1000
+        ) {
+
+            throw new Exception(
+                    "Not enough BTC "
+                            +
+                    interval
+                            +
+                    " data"
+            );
+        }
+    }
+
+
+    // =========================================================
+    // GENERIC CANDLE FETCH
+    // =========================================================
+
+    private void fetchCandleData(
+
+            String urlString,
+
+            List<Double> opens,
+            List<Double> highs,
+            List<Double> lows,
+            List<Double> closes,
+            List<Double> volumes
+
+    ) throws Exception {
+
+        URL url =
+                new URL(
+                        urlString
+                );
+
+
+        HttpURLConnection connection =
+                (HttpURLConnection)
+                        url.openConnection();
+
+
+        connection.setRequestMethod(
+                "GET"
+        );
+
+        connection.setConnectTimeout(
+                15000
+        );
+
+        connection.setReadTimeout(
+                15000
+        );
+
+        connection.setRequestProperty(
+                "User-Agent",
+                "MarketAI/1.0"
+        );
+
+
+        int code =
+                connection.getResponseCode();
+
+
+        if (
+                code != 200
+        ) {
+
+            throw new Exception(
+                    "Market server error: "
+                            +
+                    code
+            );
+        }
+
+
+        InputStream input =
+                connection.getInputStream();
+
+
+        BufferedReader reader =
+                new BufferedReader(
+                        new InputStreamReader(
+                                input
+                        )
+                );
+
+
+        StringBuilder response =
+                new StringBuilder();
+
+
+        String line;
+
+
+        while (
+                (line = reader.readLine())
+                        != null
+        ) {
+
+            response.append(
+                    line
+            );
+        }
+
+
+        reader.close();
+        input.close();
+
+        connection.disconnect();
+
+
+        JSONArray data =
+                new JSONArray(
+                        response.toString()
+                );
+
+
+        opens.clear();
+        highs.clear();
+        lows.clear();
+        closes.clear();
+        volumes.clear();
+
+
+        for (
+                int i = 0;
+                i < data.length();
+                i++
+        ) {
+
+            JSONArray c =
+                    data.getJSONArray(i);
+
+
+            opens.add(
+                    Double.parseDouble(
+                            c.getString(1)
+                    )
+            );
+
+
+            highs.add(
+                    Double.parseDouble(
+                            c.getString(2)
+                    )
+            );
+
+
+            lows.add(
+                    Double.parseDouble(
+                            c.getString(3)
+                    )
+            );
+
+
+            closes.add(
+                    Double.parseDouble(
+                            c.getString(4)
+                    )
+            );
+
+
+            volumes.add(
+                    Double.parseDouble(
+                            c.getString(5)
+                    )
+            );
+        }
+    }
+
+
+    // =========================================================
+    // GOLD
+    // =========================================================
+
+    private double fetchGold()
+            throws Exception {
+
+        String urlString =
+                "https://query1.finance.yahoo.com/v8/finance/chart/GC=F"
+                        +
+                "?range=6mo"
+                        +
+                "&interval=1d";
+
+
+        URL url =
+                new URL(
+                        urlString
+                );
+
+
+        HttpURLConnection connection =
+                (HttpURLConnection)
+                        url.openConnection();
+
+
+        connection.setRequestMethod(
+                "GET"
+        );
+
+        connection.setConnectTimeout(
+                15000
+        );
+
+        connection.setReadTimeout(
+                15000
+        );
+
+        connection.setRequestProperty(
+                "User-Agent",
+                "Mozilla/5.0"
+        );
+
+
+        int code =
+                connection.getResponseCode();
+
+
+        if (
+                code != 200
+        ) {
+
+            throw new Exception(
+                    "Gold server error: "
+                            +
+                    code
+            );
+        }
+
+
+        BufferedReader reader =
+                new BufferedReader(
+                        new InputStreamReader(
+                                connection.getInputStream()
+                        )
+                );
+
+
+        StringBuilder response =
+                new StringBuilder();
+
+
+        String line;
+
+
+        while (
+                (line = reader.readLine())
+                        != null
+        ) {
+
+            response.append(
+                    line
+            );
+        }
+
+
+        reader.close();
+
+        connection.disconnect();
+
+
+        JSONObject root =
+                new JSONObject(
+                        response.toString()
+                );
+
+
+        JSONArray results =
+                root.getJSONObject(
+                        "chart"
+                ).getJSONArray(
+                        "result"
+                );
+
+
+        JSONObject indicators =
+                results.getJSONObject(
+                        0
+                ).getJSONObject(
+                        "indicators"
+                );
+
+
+        JSONObject quote =
+                indicators.getJSONArray(
+                        "quote"
+                ).getJSONObject(
+                        0
+                );
+
+
+        JSONArray closes =
+                quote.getJSONArray(
+                        "close"
+                );
+
+
+        for (
+                int i =
+                        closes.length() - 1;
+                i >= 0;
+                i--
+        ) {
+
+            if (
+                    !closes.isNull(i)
+            ) {
+
+                double price =
+                        closes.getDouble(i);
+
+
+                if (
+                        price > 0
+                ) {
+
+                    return price;
+                }
+            }
+        }
+
+
+        throw new Exception(
+                "Gold price unavailable"
         );
     }
 
@@ -2898,8 +3657,11 @@ public class MainActivity extends Activity {
     // =========================================================
 
     private String getMoveAgreement(
+
             MoveDetector.MoveResult move5,
+
             MoveDetector.MoveResult move15
+
     ) {
 
         if (
@@ -2912,9 +3674,9 @@ public class MainActivity extends Activity {
 
 
         boolean highRisk =
-                move5.moveRisk >= 55.0
+                move5.moveRisk >= 55
                         ||
-                move15.moveRisk >= 55.0;
+                move15.moveRisk >= 55;
 
 
         if (
@@ -2966,112 +3728,6 @@ public class MainActivity extends Activity {
 
 
     // =========================================================
-    // MOVE COLOR
-    // =========================================================
-
-    private int getMoveAgreementColor(
-            String value
-    ) {
-
-        if (
-                value.contains("UP")
-        ) {
-
-            return Color.GREEN;
-        }
-
-
-        if (
-                value.contains("DOWN")
-        ) {
-
-            return Color.RED;
-        }
-
-
-        return Color.YELLOW;
-    }
-
-
-    // =========================================================
-    // MOVE EXPLANATION
-    // =========================================================
-
-    private String getMoveExplanation(
-            MoveDetector.MoveResult move5,
-            MoveDetector.MoveResult move15
-    ) {
-
-        if (
-                move5 == null ||
-                move15 == null
-        ) {
-
-            return "Move detector data unavailable.";
-        }
-
-
-        if (
-                move5.direction.equals("UP")
-                        &&
-                move15.direction.equals("UP")
-                        &&
-                (
-                                move5.moveRisk >= 55.0
-                                        ||
-                                move15.moveRisk >= 55.0
-                        )
-        ) {
-
-            return "Both short-term timeframes point UP while move-risk is elevated. This is an early-warning condition, not a guarantee.";
-        }
-
-
-        if (
-                move5.direction.equals("DOWN")
-                        &&
-                move15.direction.equals("DOWN")
-                        &&
-                (
-                                move5.moveRisk >= 55.0
-                                        ||
-                                move15.moveRisk >= 55.0
-                        )
-        ) {
-
-            return "Both short-term timeframes point DOWN while move-risk is elevated. This is an early-warning condition, not a guarantee.";
-        }
-
-
-        if (
-                move5.direction.equals("UNCERTAIN")
-                        ||
-                move15.direction.equals("UNCERTAIN")
-        ) {
-
-            return "Short-term direction is not sufficiently aligned yet.";
-        }
-
-
-        return "5M and 15M signals are not strongly aligned.";
-    }
-
-
-    // =========================================================
-    // YES NO
-    // =========================================================
-
-    private String yesNo(
-            boolean value
-    ) {
-
-        return value
-                ? "YES"
-                : "NO";
-    }
-
-
-    // =========================================================
     // ERROR
     // =========================================================
 
@@ -3081,1192 +3737,58 @@ public class MainActivity extends Activity {
 
         container.removeAllViews();
 
+        showHeader();
 
-        showTitle(
-                "MARKET AI"
+        addSectionTitle(
+                "DATA ERROR"
         );
 
 
-        addText(
-                "Market data loading failed.",
-                18,
-                Color.RED
+        LinearLayout card =
+                createCard();
+
+
+        TextView error =
+                new TextView(this);
+
+        error.setText(
+                e.getMessage() == null
+                        ? "Unable to load market data."
+                        : e.getMessage()
+        );
+
+        error.setTextSize(
+                14
+        );
+
+        error.setTextColor(
+                RED
         );
 
 
-        addSpace();
-
-
-        String message =
-                e.getMessage();
-
-
-        if (
-                message == null
-                        ||
-                message.trim().isEmpty()
-        ) {
-
-            message =
-                    "Unknown error";
-        }
-
-
-        addText(
-                message,
-                14,
-                Color.LTGRAY
+        card.addView(
+                error
         );
 
 
-        addSpace();
+        container.addView(
+                card
+        );
 
 
         TextView retry =
-                new TextView(this);
-
-
-        retry.setText(
-                "↻  TRY AGAIN"
-        );
-
-
-        retry.setTextSize(
-                16
-        );
-
-
-        retry.setTextColor(
-                Color.WHITE
-        );
-
-
-        retry.setGravity(
-                Gravity.CENTER
-        );
-
-
-        retry.setTypeface(
-                Typeface.DEFAULT,
-                Typeface.BOLD
-        );
-
-
-        retry.setPadding(
-                10,
-                20,
-                10,
-                20
-        );
-
-
-        retry.setBackgroundColor(
-                Color.rgb(35, 55, 65)
-        );
+                button(
+                        "↻  TRY AGAIN"
+                );
 
 
         retry.setOnClickListener(
-                view -> refreshMarketData()
+                v -> refreshMarketData()
         );
 
 
         container.addView(
                 retry
-        );
-    }
-
-
-    // =========================================================
-    // FETCH DAILY BTC
-    // =========================================================
-
-    private void fetchBTC()
-            throws Exception {
-
-        String urlString =
-                "https://api.binance.com/api/v3/klines"
-                        +
-                "?symbol=BTCUSDT"
-                        +
-                "&interval=1d"
-                        +
-                "&limit=730";
-
-
-        fetchCandleData(
-                urlString,
-                btcOpen,
-                btcHigh,
-                btcLow,
-                btcPrices,
-                btcVolume
-        );
-
-
-        if (
-                btcPrices.size() < 700
-        ) {
-
-            throw new Exception(
-                    "Not enough BTC daily data. Received: "
-                            +
-                    btcPrices.size()
-                            +
-                    " candles"
-            );
-        }
-    }
-
-
-    // =========================================================
-    // FETCH INTRADAY BTC
-    // =========================================================
-
-    private void fetchIntradayBTC(
-            String interval,
-            int limit,
-
-            List<Double> openList,
-            List<Double> highList,
-            List<Double> lowList,
-            List<Double> closeList,
-            List<Double> volumeList
-
-    ) throws Exception {
-
-        String urlString =
-                "https://api.binance.com/api/v3/klines"
-                        +
-                "?symbol=BTCUSDT"
-                        +
-                "&interval="
-                        +
-                interval
-                        +
-                "&limit="
-                        +
-                limit;
-
-
-        fetchCandleData(
-                urlString,
-                openList,
-                highList,
-                lowList,
-                closeList,
-                volumeList
-        );
-
-
-        if (
-                closeList.size() < 1000
-        ) {
-
-            throw new Exception(
-                    "Not enough BTC "
-                            +
-                    interval
-                            +
-                    " data. Received: "
-                            +
-                    closeList.size()
-                            +
-                    " candles"
-            );
-        }
-    }
-
-
-    // =========================================================
-    // GENERIC CANDLE FETCH
-    // =========================================================
-
-    private void fetchCandleData(
-
-            String urlString,
-
-            List<Double> openList,
-            List<Double> highList,
-            List<Double> lowList,
-            List<Double> closeList,
-            List<Double> volumeList
-
-    ) throws Exception {
-
-        URL url =
-                new URL(
-                        urlString
-                );
-
-
-        HttpURLConnection connection =
-                (HttpURLConnection)
-                        url.openConnection();
-
-
-        connection.setRequestMethod(
-                "GET"
-        );
-
-
-        connection.setConnectTimeout(
-                15000
-        );
-
-
-        connection.setReadTimeout(
-                15000
-        );
-
-
-        connection.setRequestProperty(
-                "User-Agent",
-                "MarketAI/1.0"
-        );
-
-
-        int responseCode =
-                connection.getResponseCode();
-
-
-        if (
-                responseCode != 200
-        ) {
-
-            throw new Exception(
-                    "BTC server error: "
-                            +
-                    responseCode
-            );
-        }
-
-
-        InputStream input =
-                connection.getInputStream();
-
-
-        BufferedReader reader =
-                new BufferedReader(
-                        new InputStreamReader(
-                                input
-                        )
-                );
-
-
-        StringBuilder response =
-                new StringBuilder();
-
-
-        String line;
-
-
-        while (
-                (line = reader.readLine())
-                        != null
-        ) {
-
-            response.append(
-                    line
-            );
-        }
-
-
-        reader.close();
-
-        input.close();
-
-        connection.disconnect();
-
-
-        JSONArray candles =
-                new JSONArray(
-                        response.toString()
-                );
-
-
-        openList.clear();
-        highList.clear();
-        lowList.clear();
-        closeList.clear();
-        volumeList.clear();
-
-
-        for (
-                int i = 0;
-                i < candles.length();
-                i++
-        ) {
-
-            JSONArray candle =
-                    candles.getJSONArray(i);
-
-
-            double open =
-                    Double.parseDouble(
-                            candle.getString(1)
-                    );
-
-
-            double high =
-                    Double.parseDouble(
-                            candle.getString(2)
-                    );
-
-
-            double low =
-                    Double.parseDouble(
-                            candle.getString(3)
-                    );
-
-
-            double close =
-                    Double.parseDouble(
-                            candle.getString(4)
-                    );
-
-
-            double volume =
-                    Double.parseDouble(
-                            candle.getString(5)
-                    );
-
-
-            openList.add(open);
-
-            highList.add(high);
-
-            lowList.add(low);
-
-            closeList.add(close);
-
-            volumeList.add(volume);
-        }
-    }
-
-
-    // =========================================================
-    // GOLD
-    // =========================================================
-
-    private double fetchGold()
-            throws Exception {
-
-        String urlString =
-                "https://query1.finance.yahoo.com/v8/finance/chart/GC=F"
-                        +
-                "?range=6mo"
-                        +
-                "&interval=1d";
-
-
-        URL url =
-                new URL(
-                        urlString
-                );
-
-
-        HttpURLConnection connection =
-                (HttpURLConnection)
-                        url.openConnection();
-
-
-        connection.setRequestMethod(
-                "GET"
-        );
-
-
-        connection.setConnectTimeout(
-                15000
-        );
-
-
-        connection.setReadTimeout(
-                15000
-        );
-
-
-        connection.setRequestProperty(
-                "User-Agent",
-                "Mozilla/5.0"
-        );
-
-
-        int responseCode =
-                connection.getResponseCode();
-
-
-        if (
-                responseCode != 200
-        ) {
-
-            throw new Exception(
-                    "Gold server error: "
-                            +
-                    responseCode
-            );
-        }
-
-
-        InputStream input =
-                connection.getInputStream();
-
-
-        BufferedReader reader =
-                new BufferedReader(
-                        new InputStreamReader(
-                                input
-                        )
-                );
-
-
-        StringBuilder response =
-                new StringBuilder();
-
-
-        String line;
-
-
-        while (
-                (line = reader.readLine())
-                        != null
-        ) {
-
-            response.append(line);
-        }
-
-
-        reader.close();
-
-        input.close();
-
-        connection.disconnect();
-
-
-        JSONObject root =
-                new JSONObject(
-                        response.toString()
-                );
-
-
-        JSONObject chart =
-                root.getJSONObject(
-                        "chart"
-                );
-
-
-        JSONArray results =
-                chart.getJSONArray(
-                        "result"
-                );
-
-
-        if (
-                results.length() == 0
-        ) {
-
-            throw new Exception(
-                    "Gold data unavailable"
-            );
-        }
-
-
-        JSONObject result =
-                results.getJSONObject(0);
-
-
-        JSONObject indicators =
-                result.getJSONObject(
-                        "indicators"
-                );
-
-
-        JSONArray quote =
-                indicators.getJSONArray(
-                        "quote"
-                );
-
-
-        JSONObject quoteData =
-                quote.getJSONObject(0);
-
-
-        JSONArray closes =
-                quoteData.getJSONArray(
-                        "close"
-                );
-
-
-        double latest =
-                0.0;
-
-
-        for (
-                int i =
-                        closes.length() - 1;
-                i >= 0;
-                i--
-        ) {
-
-            if (
-                    !closes.isNull(i)
-            ) {
-
-                latest =
-                        closes.getDouble(i);
-
-                break;
-            }
-        }
-
-
-        if (
-                latest <= 0
-        ) {
-
-            throw new Exception(
-                    "Gold price unavailable"
-            );
-        }
-
-
-        return latest;
-    }
-
-
-    // =========================================================
-    // SUPPORT
-    // =========================================================
-
-    private double calculateSupport() {
-
-        int size =
-                btcLow.size();
-
-
-        int start =
-                Math.max(
-                        0,
-                        size - 30
-                );
-
-
-        double support =
-                Double.MAX_VALUE;
-
-
-        for (
-                int i = start;
-                i < size;
-                i++
-        ) {
-
-            support =
-                    Math.min(
-                            support,
-                            btcLow.get(i)
-                    );
-        }
-
-
-        return support;
-    }
-
-
-    // =========================================================
-    // RESISTANCE
-    // =========================================================
-
-    private double calculateResistance() {
-
-        int size =
-                btcHigh.size();
-
-
-        int start =
-                Math.max(
-                        0,
-                        size - 30
-                );
-
-
-        double resistance =
-                Double.MIN_VALUE;
-
-
-        for (
-                int i = start;
-                i < size;
-                i++
-        ) {
-
-            resistance =
-                    Math.max(
-                            resistance,
-                            btcHigh.get(i)
-                    );
-        }
-
-
-        return resistance;
-    }
-
-
-    // =========================================================
-    // TREND
-    // =========================================================
-
-    private String getTrend(
-            double price,
-            TechnicalAnalyzer.TechnicalResult result
-    ) {
-
-        int bullish = 0;
-
-        int bearish = 0;
-
-
-        if (
-                result.ema20 > 0
-        ) {
-
-            if (
-                    price > result.ema20
-            ) {
-
-                bullish++;
-
-            } else {
-
-                bearish++;
-            }
-        }
-
-
-        if (
-                result.ema50 > 0
-        ) {
-
-            if (
-                    price > result.ema50
-            ) {
-
-                bullish++;
-
-            } else {
-
-                bearish++;
-            }
-        }
-
-
-        if (
-                result.ema200 > 0
-        ) {
-
-            if (
-                    price > result.ema200
-            ) {
-
-                bullish++;
-
-            } else {
-
-                bearish++;
-            }
-        }
-
-
-        if (
-                result.momentum > 0
-        ) {
-
-            bullish++;
-
-        } else if (
-                result.momentum < 0
-        ) {
-
-            bearish++;
-        }
-
-
-        if (
-                bullish >= 3
-        ) {
-
-            return "UP";
-        }
-
-
-        if (
-                bearish >= 3
-        ) {
-
-            return "DOWN";
-        }
-
-
-        return "NEUTRAL";
-    }
-
-
-    // =========================================================
-    // TECHNICAL SIGNAL
-    // =========================================================
-
-    private String getTechnicalSignal(
-            TechnicalAnalyzer.TechnicalResult result,
-            double price
-    ) {
-
-        int bullish = 0;
-
-        int bearish = 0;
-
-
-        if (
-                result.rsi > 50
-        ) {
-
-            bullish++;
-
-        } else if (
-                result.rsi < 50
-        ) {
-
-            bearish++;
-        }
-
-
-        if (
-                result.macd > 0
-        ) {
-
-            bullish++;
-
-        } else {
-
-            bearish++;
-        }
-
-
-        if (
-                result.momentum > 0
-        ) {
-
-            bullish++;
-
-        } else if (
-                result.momentum < 0
-        ) {
-
-            bearish++;
-        }
-
-
-        if (
-                result.ema50 > 0
-        ) {
-
-            if (
-                    price > result.ema50
-            ) {
-
-                bullish++;
-
-            } else {
-
-                bearish++;
-            }
-        }
-
-
-        if (
-                result.ema200 > 0
-        ) {
-
-            if (
-                    price > result.ema200
-            ) {
-
-                bullish++;
-
-            } else {
-
-                bearish++;
-            }
-        }
-
-
-        if (
-                bullish >= 4
-        ) {
-
-            return "BUY BIAS";
-        }
-
-
-        if (
-                bearish >= 4
-        ) {
-
-            return "SELL BIAS";
-        }
-
-
-        return "NEUTRAL";
-    }
-
-
-    // =========================================================
-    // TECHNICAL DIRECTION
-    // =========================================================
-
-    private String getTechnicalDirection(
-            double buy,
-            double sell,
-            double neutral
-    ) {
-
-        if (
-                buy > sell
-                        &&
-                buy > neutral
-        ) {
-
-            return "BUY";
-        }
-
-
-        if (
-                sell > buy
-                        &&
-                sell > neutral
-        ) {
-
-            return "SELL";
-        }
-
-
-        return "NEUTRAL";
-    }
-
-
-    // =========================================================
-    // AVERAGE VOLUME
-    // =========================================================
-
-    private double calculateAverageVolume() {
-
-        if (
-                btcVolume.isEmpty()
-        ) {
-
-            return 0.0;
-        }
-
-
-        int count =
-                Math.min(
-                        20,
-                        btcVolume.size()
-                );
-
-
-        int start =
-                btcVolume.size()
-                        -
-                count;
-
-
-        double sum =
-                0.0;
-
-
-        for (
-                int i = start;
-                i < btcVolume.size();
-                i++
-        ) {
-
-            sum +=
-                    btcVolume.get(i);
-        }
-
-
-        return sum / count;
-    }
-
-
-    // =========================================================
-    // TITLE
-    // =========================================================
-
-    private void showTitle(
-            String text
-    ) {
-
-        TextView title =
-                new TextView(this);
-
-
-        title.setText(
-                text
-        );
-
-
-        title.setTextSize(
-                28
-        );
-
-
-        title.setTextColor(
-                Color.WHITE
-        );
-
-
-        title.setGravity(
-                Gravity.CENTER
-        );
-
-
-        title.setTypeface(
-                Typeface.DEFAULT,
-                Typeface.BOLD
-        );
-
-
-        title.setPadding(
-                0,
-                10,
-                0,
-                10
-        );
-
-
-        container.addView(
-                title
-        );
-    }
-
-
-    // =========================================================
-    // BIG SIGNAL
-    // =========================================================
-
-    private void addBigSignal(
-            String signal,
-            int color
-    ) {
-
-        TextView view =
-                new TextView(this);
-
-
-        view.setText(
-                signal
-        );
-
-
-        view.setTextSize(
-                32
-        );
-
-
-        view.setTextColor(
-                color
-        );
-
-
-        view.setGravity(
-                Gravity.CENTER
-        );
-
-
-        view.setTypeface(
-                Typeface.DEFAULT,
-                Typeface.BOLD
-        );
-
-
-        view.setPadding(
-                0,
-                15,
-                0,
-                20
-        );
-
-
-        container.addView(
-                view
-        );
-    }
-
-
-    // =========================================================
-    // SECTION
-    // =========================================================
-
-    private void addSection(
-            String text
-    ) {
-
-        TextView section =
-                new TextView(this);
-
-
-        section.setText(
-                text
-        );
-
-
-        section.setTextSize(
-                17
-        );
-
-
-        section.setTextColor(
-                Color.WHITE
-        );
-
-
-        section.setTypeface(
-                Typeface.DEFAULT,
-                Typeface.BOLD
-        );
-
-
-        section.setPadding(
-                0,
-                20,
-                0,
-                10
-        );
-
-
-        container.addView(
-                section
-        );
-    }
-
-
-    // =========================================================
-    // METRIC
-    // =========================================================
-
-    private void addMetric(
-            String name,
-            String value
-    ) {
-
-        TextView metric =
-                new TextView(this);
-
-
-        metric.setText(
-                name
-                        +
-                "    "
-                        +
-                value
-        );
-
-
-        metric.setTextSize(
-                16
-        );
-
-
-        metric.setTextColor(
-                Color.LTGRAY
-        );
-
-
-        metric.setPadding(
-                0,
-                8,
-                0,
-                8
-        );
-
-
-        container.addView(
-                metric
-        );
-    }
-
-
-    // =========================================================
-    // TEXT
-    // =========================================================
-
-    private TextView addText(
-            String text,
-            int size,
-            int color
-    ) {
-
-        TextView view =
-                new TextView(this);
-
-
-        view.setText(
-                text
-        );
-
-
-        view.setTextSize(
-                size
-        );
-
-
-        view.setTextColor(
-                color
-        );
-
-
-        view.setPadding(
-                0,
-                8,
-                0,
-                8
-        );
-
-
-        container.addView(
-                view
-        );
-
-
-        return view;
-    }
-
-
-    // =========================================================
-    // SPACE
-    // =========================================================
-
-    private void addSpace() {
-
-        TextView space =
-                new TextView(this);
-
-
-        space.setText(
-                ""
-        );
-
-
-        space.setPadding(
-                0,
-                10,
-                0,
-                10
-        );
-
-
-        container.addView(
-                space
         );
     }
 
@@ -4285,4 +3807,4 @@ public class MainActivity extends Activity {
                 value
         );
     }
-                }
+        }
