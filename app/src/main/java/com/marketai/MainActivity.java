@@ -33,6 +33,18 @@ public class MainActivity extends Activity {
     private boolean isRefreshing = false;
 
     // =========================================================
+    // LIVE BTC
+    // =========================================================
+
+    private LiveMarketEngine liveMarketEngine;
+
+    private TextView liveBTCPriceView;
+    private TextView liveBTCStatusView;
+
+    private double latestLiveBTC = 0.0;
+
+
+    // =========================================================
     // DAILY BTC DATA
     // =========================================================
 
@@ -41,6 +53,7 @@ public class MainActivity extends Activity {
     private final List<Double> btcLow = new ArrayList<>();
     private final List<Double> btcPrices = new ArrayList<>();
     private final List<Double> btcVolume = new ArrayList<>();
+
 
     // =========================================================
     // 15 MINUTE BTC DATA
@@ -51,6 +64,7 @@ public class MainActivity extends Activity {
     private final List<Double> btc15Low = new ArrayList<>();
     private final List<Double> btc15Prices = new ArrayList<>();
     private final List<Double> btc15Volume = new ArrayList<>();
+
 
     // =========================================================
     // 5 MINUTE BTC DATA
@@ -63,10 +77,15 @@ public class MainActivity extends Activity {
     private final List<Double> btc5Volume = new ArrayList<>();
 
 
+    // =========================================================
+    // ON CREATE
+    // =========================================================
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
 
         super.onCreate(savedInstanceState);
+
 
         // =====================================================
         // SCROLL VIEW
@@ -167,6 +186,160 @@ public class MainActivity extends Activity {
         addSpace();
 
         loadMarketData();
+    }
+
+
+    // =========================================================
+    // LIVE MARKET START
+    // =========================================================
+
+    @Override
+    protected void onStart() {
+
+        super.onStart();
+
+
+        if (liveMarketEngine == null) {
+
+            liveMarketEngine =
+                    new LiveMarketEngine(
+                            new LiveMarketEngine.LiveMarketListener() {
+
+                                @Override
+                                public void onPriceUpdate(
+                                        String symbol,
+                                        double price
+                                ) {
+
+                                    latestLiveBTC =
+                                            price;
+
+
+                                    runOnUiThread(
+                                            () -> {
+
+                                                if (
+                                                        liveBTCPriceView
+                                                                != null
+                                                ) {
+
+                                                    liveBTCPriceView.setText(
+                                                            "$"
+                                                                    +
+                                                            format(
+                                                                    price
+                                                            )
+                                                    );
+                                                }
+
+
+                                                if (
+                                                        liveBTCStatusView
+                                                                != null
+                                                ) {
+
+                                                    liveBTCStatusView.setText(
+                                                            "● LIVE  •  "
+                                                                    +
+                                                            symbol
+                                                    );
+
+                                                    liveBTCStatusView.setTextColor(
+                                                            Color.GREEN
+                                                    );
+                                                }
+                                            }
+                                    );
+                                }
+
+
+                                @Override
+                                public void onConnectionChanged(
+                                        boolean connected
+                                ) {
+
+                                    runOnUiThread(
+                                            () -> {
+
+                                                if (
+                                                        liveBTCStatusView
+                                                                != null
+                                                ) {
+
+                                                    if (connected) {
+
+                                                        liveBTCStatusView.setText(
+                                                                "● LIVE  •  BTCUSDT"
+                                                        );
+
+                                                        liveBTCStatusView.setTextColor(
+                                                                Color.GREEN
+                                                        );
+
+                                                    } else {
+
+                                                        liveBTCStatusView.setText(
+                                                                "○ CONNECTING..."
+                                                        );
+
+                                                        liveBTCStatusView.setTextColor(
+                                                                Color.YELLOW
+                                                        );
+                                                    }
+                                                }
+                                            }
+                                    );
+                                }
+
+
+                                @Override
+                                public void onError(
+                                        String message
+                                ) {
+
+                                    runOnUiThread(
+                                            () -> {
+
+                                                if (
+                                                        liveBTCStatusView
+                                                                != null
+                                                ) {
+
+                                                    liveBTCStatusView.setText(
+                                                            "○ LIVE CONNECTION ERROR"
+                                                    );
+
+                                                    liveBTCStatusView.setTextColor(
+                                                            Color.RED
+                                                    );
+                                                }
+                                            }
+                                    );
+                                }
+                            }
+                    );
+        }
+
+
+        liveMarketEngine.startBTC();
+    }
+
+
+    // =========================================================
+    // LIVE MARKET STOP
+    // =========================================================
+
+    @Override
+    protected void onStop() {
+
+        if (
+                liveMarketEngine != null
+        ) {
+
+            liveMarketEngine.stop();
+        }
+
+        super.onStop();
     }
 
 
@@ -496,6 +669,102 @@ public class MainActivity extends Activity {
 
 
         // =====================================================
+        // LIVE BTC PRICE
+        // =====================================================
+
+        addSection(
+                "BTC LIVE MARKET"
+        );
+
+
+        liveBTCPriceView =
+                new TextView(this);
+
+        liveBTCPriceView.setTextSize(
+                30
+        );
+
+        liveBTCPriceView.setTextColor(
+                Color.GREEN
+        );
+
+        liveBTCPriceView.setGravity(
+                Gravity.CENTER
+        );
+
+        liveBTCPriceView.setTypeface(
+                Typeface.DEFAULT,
+                Typeface.BOLD
+        );
+
+        if (
+                latestLiveBTC > 0
+        ) {
+
+            liveBTCPriceView.setText(
+                    "$"
+                            +
+                    format(
+                            latestLiveBTC
+                    )
+            );
+
+        } else {
+
+            liveBTCPriceView.setText(
+                    "$"
+                            +
+                    format(
+                            currentPrice
+                    )
+            );
+        }
+
+        liveBTCPriceView.setPadding(
+                0,
+                10,
+                0,
+                5
+        );
+
+        container.addView(
+                liveBTCPriceView
+        );
+
+
+        liveBTCStatusView =
+                new TextView(this);
+
+        liveBTCStatusView.setText(
+                "○ CONNECTING..."
+        );
+
+        liveBTCStatusView.setTextSize(
+                13
+        );
+
+        liveBTCStatusView.setTextColor(
+                Color.YELLOW
+        );
+
+        liveBTCStatusView.setGravity(
+                Gravity.CENTER
+        );
+
+        liveBTCStatusView.setTypeface(
+                Typeface.DEFAULT,
+                Typeface.BOLD
+        );
+
+        container.addView(
+                liveBTCStatusView
+        );
+
+
+        addSpace();
+
+
+        // =====================================================
         // REFRESH BUTTON
         // =====================================================
 
@@ -754,8 +1023,9 @@ public class MainActivity extends Activity {
 
 
         addText(
-                "Evidence: " +
-                        move15.evidence,
+                "Evidence: "
+                        +
+                move15.evidence,
                 12,
                 Color.GRAY
         );
@@ -866,8 +1136,9 @@ public class MainActivity extends Activity {
 
 
         addText(
-                "Evidence: " +
-                        move5.evidence,
+                "Evidence: "
+                        +
+                move5.evidence,
                 12,
                 Color.GRAY
         );
@@ -952,7 +1223,9 @@ public class MainActivity extends Activity {
 
         addMetric(
                 "Entry Price",
-                "$" + format(
+                "$"
+                        +
+                format(
                         currentPrice
                 )
         );
@@ -985,7 +1258,9 @@ public class MainActivity extends Activity {
 
         addMetric(
                 "Bitcoin",
-                "$" + format(
+                "$"
+                        +
+                format(
                         currentPrice
                 )
         );
@@ -993,7 +1268,9 @@ public class MainActivity extends Activity {
 
         addMetric(
                 "Gold",
-                "$" + format(
+                "$"
+                        +
+                format(
                         goldPrice
                 )
         );
@@ -1001,7 +1278,9 @@ public class MainActivity extends Activity {
 
         addMetric(
                 "Support",
-                "$" + format(
+                "$"
+                        +
+                format(
                         support
                 )
         );
@@ -1009,7 +1288,9 @@ public class MainActivity extends Activity {
 
         addMetric(
                 "Resistance",
-                "$" + format(
+                "$"
+                        +
+                format(
                         resistance
                 )
         );
@@ -1283,7 +1564,9 @@ public class MainActivity extends Activity {
 
         addMetric(
                 "EMA 20",
-                "$" + format(
+                "$"
+                        +
+                format(
                         technical.ema20
                 )
         );
@@ -1291,7 +1574,9 @@ public class MainActivity extends Activity {
 
         addMetric(
                 "EMA 50",
-                "$" + format(
+                "$"
+                        +
+                format(
                         technical.ema50
                 )
         );
@@ -1299,7 +1584,9 @@ public class MainActivity extends Activity {
 
         addMetric(
                 "EMA 200",
-                "$" + format(
+                "$"
+                        +
+                format(
                         technical.ema200
                 )
         );
@@ -1315,7 +1602,9 @@ public class MainActivity extends Activity {
 
         addMetric(
                 "ATR",
-                "$" + format(
+                "$"
+                        +
+                format(
                         technical.atr
                 )
         );
@@ -1323,7 +1612,9 @@ public class MainActivity extends Activity {
 
         addMetric(
                 "Bollinger Upper",
-                "$" + format(
+                "$"
+                        +
+                format(
                         technical.bollingerUpper
                 )
         );
@@ -1331,7 +1622,9 @@ public class MainActivity extends Activity {
 
         addMetric(
                 "Bollinger Lower",
-                "$" + format(
+                "$"
+                        +
+                format(
                         technical.bollingerLower
                 )
         );
@@ -1733,6 +2026,13 @@ public class MainActivity extends Activity {
 
 
         addText(
+                "BTC live price is received through a live market WebSocket.",
+                12,
+                Color.GRAY
+        );
+
+
+        addText(
                 "Move Detector identifies abnormal-move conditions; direction probabilities are estimates, not guarantees.",
                 12,
                 Color.GRAY
@@ -1760,6 +2060,7 @@ public class MainActivity extends Activity {
                 move5 == null ||
                 move15 == null
         ) {
+
             return "UNCERTAIN";
         }
 
@@ -1829,6 +2130,7 @@ public class MainActivity extends Activity {
         if (
                 value.contains("UP")
         ) {
+
             return Color.GREEN;
         }
 
@@ -1836,6 +2138,7 @@ public class MainActivity extends Activity {
         if (
                 value.contains("DOWN")
         ) {
+
             return Color.RED;
         }
 
@@ -1868,10 +2171,10 @@ public class MainActivity extends Activity {
                 move15.direction.equals("UP")
                         &&
                 (
-                        move5.moveRisk >= 55.0
-                                ||
-                        move15.moveRisk >= 55.0
-                )
+                                move5.moveRisk >= 55.0
+                                        ||
+                                move15.moveRisk >= 55.0
+                        )
         ) {
 
             return "Both short-term timeframes point UP while move-risk is elevated. This is an early-warning condition for a potentially larger upward move, not a guarantee.";
@@ -1884,10 +2187,10 @@ public class MainActivity extends Activity {
                 move15.direction.equals("DOWN")
                         &&
                 (
-                        move5.moveRisk >= 55.0
-                                ||
-                        move15.moveRisk >= 55.0
-                )
+                                move5.moveRisk >= 55.0
+                                        ||
+                                move15.moveRisk >= 55.0
+                        )
         ) {
 
             return "Both short-term timeframes point DOWN while move-risk is elevated. This is an early-warning condition for a potentially larger downward move, not a guarantee.";
@@ -1898,7 +2201,7 @@ public class MainActivity extends Activity {
                 move5.direction.equals(
                         "UNCERTAIN"
                 )
-                ||
+                        ||
                 move15.direction.equals(
                         "UNCERTAIN"
                 )
@@ -3153,4 +3456,4 @@ public class MainActivity extends Activity {
                 value
         );
     }
-                            }
+                }
