@@ -8,7 +8,6 @@ import android.graphics.Color;
 import android.graphics.Typeface;
 import android.view.Gravity;
 import android.view.MotionEvent;
-import android.view.View;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
@@ -32,8 +31,11 @@ public class MainActivity extends Activity {
 
     private boolean isRefreshing = false;
 
+    private final Handler mainHandler =
+            new Handler(Looper.getMainLooper());
+
     // =========================================================
-    // LIVE BTC
+    // LIVE BTC PRICE
     // =========================================================
 
     private LiveMarketEngine liveMarketEngine;
@@ -42,6 +44,25 @@ public class MainActivity extends Activity {
     private TextView liveBTCStatusView;
 
     private double latestLiveBTC = 0.0;
+
+
+    // =========================================================
+    // LIVE CANDLE ENGINE
+    // =========================================================
+
+    private LiveCandleEngine liveCandleEngine;
+
+    private TextView live5mStatusView;
+    private TextView live15mStatusView;
+
+    private TextView live5mAnalysisView;
+    private TextView live15mAnalysisView;
+
+    private boolean live5mConnected = false;
+    private boolean live15mConnected = false;
+
+    private long last5mCandleTime = -1;
+    private long last15mCandleTime = -1;
 
 
     // =========================================================
@@ -56,7 +77,7 @@ public class MainActivity extends Activity {
 
 
     // =========================================================
-    // 15 MINUTE BTC DATA
+    // 15M BTC DATA
     // =========================================================
 
     private final List<Double> btc15Open = new ArrayList<>();
@@ -67,7 +88,7 @@ public class MainActivity extends Activity {
 
 
     // =========================================================
-    // 5 MINUTE BTC DATA
+    // 5M BTC DATA
     // =========================================================
 
     private final List<Double> btc5Open = new ArrayList<>();
@@ -85,11 +106,6 @@ public class MainActivity extends Activity {
     protected void onCreate(Bundle savedInstanceState) {
 
         super.onCreate(savedInstanceState);
-
-
-        // =====================================================
-        // SCROLL VIEW
-        // =====================================================
 
         scrollView = new ScrollView(this);
 
@@ -169,10 +185,6 @@ public class MainActivity extends Activity {
         );
 
 
-        // =====================================================
-        // INITIAL SCREEN
-        // =====================================================
-
         showTitle(
                 "MARKET AI"
         );
@@ -190,7 +202,7 @@ public class MainActivity extends Activity {
 
 
     // =========================================================
-    // LIVE MARKET START
+    // ON START
     // =========================================================
 
     @Override
@@ -198,6 +210,17 @@ public class MainActivity extends Activity {
 
         super.onStart();
 
+        startLiveMarket();
+
+        startLiveCandles();
+    }
+
+
+    // =========================================================
+    // LIVE PRICE
+    // =========================================================
+
+    private void startLiveMarket() {
 
         if (liveMarketEngine == null) {
 
@@ -214,8 +237,7 @@ public class MainActivity extends Activity {
                                     latestLiveBTC =
                                             price;
 
-
-                                    runOnUiThread(
+                                    mainHandler.post(
                                             () -> {
 
                                                 if (
@@ -231,7 +253,6 @@ public class MainActivity extends Activity {
                                                             )
                                                     );
                                                 }
-
 
                                                 if (
                                                         liveBTCStatusView
@@ -258,7 +279,7 @@ public class MainActivity extends Activity {
                                         boolean connected
                                 ) {
 
-                                    runOnUiThread(
+                                    mainHandler.post(
                                             () -> {
 
                                                 if (
@@ -279,7 +300,7 @@ public class MainActivity extends Activity {
                                                     } else {
 
                                                         liveBTCStatusView.setText(
-                                                                "○ CONNECTING..."
+                                                                "○ RECONNECTING..."
                                                         );
 
                                                         liveBTCStatusView.setTextColor(
@@ -297,7 +318,7 @@ public class MainActivity extends Activity {
                                         String message
                                 ) {
 
-                                    runOnUiThread(
+                                    mainHandler.post(
                                             () -> {
 
                                                 if (
@@ -320,13 +341,789 @@ public class MainActivity extends Activity {
                     );
         }
 
-
         liveMarketEngine.startBTC();
     }
 
 
     // =========================================================
-    // LIVE MARKET STOP
+    // LIVE CANDLES
+    // =========================================================
+
+    private void startLiveCandles() {
+
+        if (liveCandleEngine == null) {
+
+            liveCandleEngine =
+                    new LiveCandleEngine(
+                            new LiveCandleEngine.Listener() {
+
+                                @Override
+                                public void onCandleUpdate(
+                                        String interval,
+                                        LiveCandleEngine.Candle candle,
+                                        List<LiveCandleEngine.Candle> candles
+                                ) {
+
+                                    handleLiveCandle(
+                                            interval,
+                                            candle
+                                    );
+                                }
+
+
+                                @Override
+                                public void onConnectionChanged(
+                                        String interval,
+                                        boolean connected
+                                ) {
+
+                                    if (
+                                            "5m".equals(interval)
+                                    ) {
+
+                                        live5mConnected =
+                                                connected;
+
+                                    } else if (
+                                            "15m".equals(interval)
+                                    ) {
+
+                                        live15mConnected =
+                                                connected;
+                                    }
+
+                                    mainHandler.post(
+                                            () -> updateLiveConnectionUI()
+                                    );
+                                }
+
+
+                                @Override
+                                public void onError(
+                                        String interval,
+                                        String message
+                                ) {
+
+                                    mainHandler.post(
+                                            () -> {
+
+                                                if (
+                                                        "5m".equals(
+                                                                interval
+                                                        )
+                                                ) {
+
+                                                    if (
+                                                            live5mStatusView
+                                                                    != null
+                                                    ) {
+
+                                                        live5mStatusView.setText(
+                                                                "○ 5M ERROR"
+                                                        );
+
+                                                        live5mStatusView.setTextColor(
+                                                                Color.RED
+                                                        );
+                                                    }
+
+                                                } else {
+
+                                                    if (
+                                                            live15mStatusView
+                                                                    != null
+                                                    ) {
+
+                                                        live15mStatusView.setText(
+                                                                "○ 15M ERROR"
+                                                        );
+
+                                                        live15mStatusView.setTextColor(
+                                                                Color.RED
+                                                        );
+                                                    }
+                                                }
+                                            }
+                                    );
+                                }
+                            }
+                    );
+        }
+
+        liveCandleEngine.start();
+    }
+
+
+    // =========================================================
+    // HANDLE LIVE CANDLE
+    // =========================================================
+
+    private void handleLiveCandle(
+            String interval,
+            LiveCandleEngine.Candle candle
+    ) {
+
+        if (
+                candle == null
+        ) {
+            return;
+        }
+
+
+        if (
+                "5m".equals(interval)
+        ) {
+
+            updateLocalCandle(
+                    candle,
+                    btc5Open,
+                    btc5High,
+                    btc5Low,
+                    btc5Prices,
+                    btc5Volume
+            );
+
+
+            boolean newCandle =
+                    last5mCandleTime != candle.openTime;
+
+            last5mCandleTime =
+                    candle.openTime;
+
+
+            if (
+                    newCandle ||
+                    candle.closed
+            ) {
+
+                calculateLive5mAnalysis();
+            }
+
+
+        } else if (
+                "15m".equals(interval)
+        ) {
+
+            updateLocalCandle(
+                    candle,
+                    btc15Open,
+                    btc15High,
+                    btc15Low,
+                    btc15Prices,
+                    btc15Volume
+            );
+
+
+            boolean newCandle =
+                    last15mCandleTime != candle.openTime;
+
+            last15mCandleTime =
+                    candle.openTime;
+
+
+            if (
+                    newCandle ||
+                    candle.closed
+            ) {
+
+                calculateLive15mAnalysis();
+            }
+        }
+    }
+
+
+    // =========================================================
+    // UPDATE LOCAL CANDLE
+    // =========================================================
+
+    private synchronized void updateLocalCandle(
+
+            LiveCandleEngine.Candle candle,
+
+            List<Double> openList,
+            List<Double> highList,
+            List<Double> lowList,
+            List<Double> closeList,
+            List<Double> volumeList
+
+    ) {
+
+        if (
+                openList.isEmpty()
+                        ||
+                closeList.isEmpty()
+        ) {
+
+            openList.add(candle.open);
+            highList.add(candle.high);
+            lowList.add(candle.low);
+            closeList.add(candle.close);
+            volumeList.add(candle.volume);
+
+            return;
+        }
+
+
+        int last =
+                closeList.size() - 1;
+
+
+        /*
+         * WebSocket candle belongs to the current
+         * candle. If its open time matches the last
+         * locally stored candle, replace it.
+         *
+         * Otherwise append it.
+         */
+
+        double previousClose =
+                closeList.get(last);
+
+
+        if (
+                Math.abs(
+                        previousClose -
+                                candle.close
+                ) < 0
+                        &&
+                openList.get(last) == candle.open
+        ) {
+
+            openList.set(
+                    last,
+                    candle.open
+            );
+
+            highList.set(
+                    last,
+                    candle.high
+            );
+
+            lowList.set(
+                    last,
+                    candle.low
+            );
+
+            closeList.set(
+                    last,
+                    candle.close
+            );
+
+            volumeList.set(
+                    last,
+                    candle.volume
+            );
+
+        } else {
+
+            openList.add(candle.open);
+
+            highList.add(candle.high);
+
+            lowList.add(candle.low);
+
+            closeList.add(candle.close);
+
+            volumeList.add(candle.volume);
+        }
+
+
+        while (
+                closeList.size() > 1200
+        ) {
+
+            openList.remove(0);
+            highList.remove(0);
+            lowList.remove(0);
+            closeList.remove(0);
+            volumeList.remove(0);
+        }
+    }
+
+
+    // =========================================================
+    // LIVE 5M ANALYSIS
+    // =========================================================
+
+    private void calculateLive5mAnalysis() {
+
+        if (
+                btc5Prices.size() < 40
+        ) {
+            return;
+        }
+
+
+        new Thread(
+                () -> {
+
+                    try {
+
+                        TechnicalAnalyzer.TechnicalResult technical =
+                                TechnicalAnalyzer.analyze(
+                                        btc5Prices,
+                                        btc5High,
+                                        btc5Low,
+                                        btc5Volume
+                                );
+
+
+                        MoveDetector.MoveResult move =
+                                MoveDetector.analyze(
+                                        btc5Prices,
+                                        btc5High,
+                                        btc5Low,
+                                        btc5Volume,
+                                        5
+                                );
+
+
+                        double price =
+                                btc5Prices.get(
+                                        btc5Prices.size() - 1
+                                );
+
+
+                        String trend =
+                                getTrend(
+                                        price,
+                                        technical
+                                );
+
+
+                        mainHandler.post(
+                                () -> {
+
+                                    if (
+                                            live5mAnalysisView
+                                                    == null
+                                    ) {
+                                        return;
+                                    }
+
+
+                                    String text =
+                                            "PRICE  $"
+                                                    +
+                                            format(
+                                                    price
+                                            )
+                                                    +
+                                            "\n\n"
+                                                    +
+                                            "TREND  "
+                                                    +
+                                            trend
+                                                    +
+                                            "\n"
+                                                    +
+                                            "RSI  "
+                                                    +
+                                            format(
+                                                    technical.rsi
+                                            )
+                                                    +
+                                            "\n"
+                                                    +
+                                            "EMA 20  $"
+                                                    +
+                                            format(
+                                                    technical.ema20
+                                            )
+                                                    +
+                                            "\n"
+                                                    +
+                                            "EMA 50  $"
+                                                    +
+                                            format(
+                                                    technical.ema50
+                                            )
+                                                    +
+                                            "\n"
+                                                    +
+                                            "MACD  "
+                                                    +
+                                            format(
+                                                    technical.macd
+                                            )
+                                                    +
+                                            "\n"
+                                                    +
+                                            "ATR  $"
+                                                    +
+                                            format(
+                                                    technical.atr
+                                            )
+                                                    +
+                                            "\n"
+                                                    +
+                                            "VOLUME  "
+                                                    +
+                                            format(
+                                                    technical.volumeRatio
+                                            )
+                                                    +
+                                            "x"
+                                                    +
+                                            "\n\n"
+                                                    +
+                                            "MOVE RISK  "
+                                                    +
+                                            format(
+                                                    move.moveRisk
+                                            )
+                                                    +
+                                            "%"
+                                                    +
+                                            "\n"
+                                                    +
+                                            "RISK LEVEL  "
+                                                    +
+                                            move.riskLevel
+                                                    +
+                                            "\n"
+                                                    +
+                                            "DIRECTION  "
+                                                    +
+                                            move.direction
+                                                    +
+                                            "\n"
+                                                    +
+                                            "UPSIDE  "
+                                                    +
+                                            format(
+                                                    move.upsideProbability
+                                            )
+                                                    +
+                                            "%"
+                                                    +
+                                            "\n"
+                                                    +
+                                            "DOWNSIDE  "
+                                                    +
+                                            format(
+                                                    move.downsideProbability
+                                            )
+                                                    +
+                                            "%";
+
+
+                                    live5mAnalysisView.setText(
+                                            text
+                                    );
+
+
+                                    if (
+                                            move.direction.equals(
+                                                    "UP"
+                                            )
+                                    ) {
+
+                                        live5mAnalysisView.setTextColor(
+                                                Color.GREEN
+                                        );
+
+                                    } else if (
+                                            move.direction.equals(
+                                                    "DOWN"
+                                            )
+                                    ) {
+
+                                        live5mAnalysisView.setTextColor(
+                                                Color.RED
+                                        );
+
+                                    } else {
+
+                                        live5mAnalysisView.setTextColor(
+                                                Color.LTGRAY
+                                        );
+                                    }
+                                }
+                        );
+
+                    } catch (
+                            Exception ignored
+                    ) {
+                    }
+                }
+        ).start();
+    }
+
+
+    // =========================================================
+    // LIVE 15M ANALYSIS
+    // =========================================================
+
+    private void calculateLive15mAnalysis() {
+
+        if (
+                btc15Prices.size() < 40
+        ) {
+            return;
+        }
+
+
+        new Thread(
+                () -> {
+
+                    try {
+
+                        TechnicalAnalyzer.TechnicalResult technical =
+                                TechnicalAnalyzer.analyze(
+                                        btc15Prices,
+                                        btc15High,
+                                        btc15Low,
+                                        btc15Volume
+                                );
+
+
+                        MoveDetector.MoveResult move =
+                                MoveDetector.analyze(
+                                        btc15Prices,
+                                        btc15High,
+                                        btc15Low,
+                                        btc15Volume,
+                                        15
+                                );
+
+
+                        double price =
+                                btc15Prices.get(
+                                        btc15Prices.size() - 1
+                                );
+
+
+                        String trend =
+                                getTrend(
+                                        price,
+                                        technical
+                                );
+
+
+                        mainHandler.post(
+                                () -> {
+
+                                    if (
+                                            live15mAnalysisView
+                                                    == null
+                                    ) {
+                                        return;
+                                    }
+
+
+                                    String text =
+                                            "PRICE  $"
+                                                    +
+                                            format(
+                                                    price
+                                            )
+                                                    +
+                                            "\n\n"
+                                                    +
+                                            "TREND  "
+                                                    +
+                                            trend
+                                                    +
+                                            "\n"
+                                                    +
+                                            "RSI  "
+                                                    +
+                                            format(
+                                                    technical.rsi
+                                            )
+                                                    +
+                                            "\n"
+                                                    +
+                                            "EMA 20  $"
+                                                    +
+                                            format(
+                                                    technical.ema20
+                                            )
+                                                    +
+                                            "\n"
+                                                    +
+                                            "EMA 50  $"
+                                                    +
+                                            format(
+                                                    technical.ema50
+                                            )
+                                                    +
+                                            "\n"
+                                                    +
+                                            "MACD  "
+                                                    +
+                                            format(
+                                                    technical.macd
+                                            )
+                                                    +
+                                            "\n"
+                                                    +
+                                            "ATR  $"
+                                                    +
+                                            format(
+                                                    technical.atr
+                                            )
+                                                    +
+                                            "\n"
+                                                    +
+                                            "VOLUME  "
+                                                    +
+                                            format(
+                                                    technical.volumeRatio
+                                            )
+                                                    +
+                                            "x"
+                                                    +
+                                            "\n\n"
+                                                    +
+                                            "MOVE RISK  "
+                                                    +
+                                            format(
+                                                    move.moveRisk
+                                            )
+                                                    +
+                                            "%"
+                                                    +
+                                            "\n"
+                                                    +
+                                            "RISK LEVEL  "
+                                                    +
+                                            move.riskLevel
+                                                    +
+                                            "\n"
+                                                    +
+                                            "DIRECTION  "
+                                                    +
+                                            move.direction
+                                                    +
+                                            "\n"
+                                                    +
+                                            "UPSIDE  "
+                                                    +
+                                            format(
+                                                    move.upsideProbability
+                                            )
+                                                    +
+                                            "%"
+                                                    +
+                                            "\n"
+                                                    +
+                                            "DOWNSIDE  "
+                                                    +
+                                            format(
+                                                    move.downsideProbability
+                                            )
+                                                    +
+                                            "%";
+
+
+                                    live15mAnalysisView.setText(
+                                            text
+                                    );
+
+
+                                    if (
+                                            move.direction.equals(
+                                                    "UP"
+                                            )
+                                    ) {
+
+                                        live15mAnalysisView.setTextColor(
+                                                Color.GREEN
+                                        );
+
+                                    } else if (
+                                            move.direction.equals(
+                                                    "DOWN"
+                                            )
+                                    ) {
+
+                                        live15mAnalysisView.setTextColor(
+                                                Color.RED
+                                        );
+
+                                    } else {
+
+                                        live15mAnalysisView.setTextColor(
+                                                Color.LTGRAY
+                                        );
+                                    }
+                                }
+                        );
+
+                    } catch (
+                            Exception ignored
+                    ) {
+                    }
+                }
+        ).start();
+    }
+
+
+    // =========================================================
+    // LIVE CONNECTION UI
+    // =========================================================
+
+    private void updateLiveConnectionUI() {
+
+        if (
+                live5mStatusView != null
+        ) {
+
+            if (live5mConnected) {
+
+                live5mStatusView.setText(
+                        "● LIVE  •  5M CANDLES"
+                );
+
+                live5mStatusView.setTextColor(
+                        Color.GREEN
+                );
+
+            } else {
+
+                live5mStatusView.setText(
+                        "○ RECONNECTING  •  5M"
+                );
+
+                live5mStatusView.setTextColor(
+                        Color.YELLOW
+                );
+            }
+        }
+
+
+        if (
+                live15mStatusView != null
+        ) {
+
+            if (live15mConnected) {
+
+                live15mStatusView.setText(
+                        "● LIVE  •  15M CANDLES"
+                );
+
+                live15mStatusView.setTextColor(
+                        Color.GREEN
+                );
+
+            } else {
+
+                live15mStatusView.setText(
+                        "○ RECONNECTING  •  15M"
+                );
+
+                live15mStatusView.setTextColor(
+                        Color.YELLOW
+                );
+            }
+        }
+    }
+
+
+    // =========================================================
+    // ON STOP
     // =========================================================
 
     @Override
@@ -338,6 +1135,15 @@ public class MainActivity extends Activity {
 
             liveMarketEngine.stop();
         }
+
+
+        if (
+                liveCandleEngine != null
+        ) {
+
+            liveCandleEngine.stop();
+        }
+
 
         super.onStop();
     }
@@ -353,13 +1159,17 @@ public class MainActivity extends Activity {
             return;
         }
 
+
         isRefreshing = true;
 
+
         container.removeAllViews();
+
 
         showTitle(
                 "MARKET AI"
         );
+
 
         addText(
                 "Refreshing BTC 1D / 15M / 5M market data...",
@@ -367,14 +1177,16 @@ public class MainActivity extends Activity {
                 Color.LTGRAY
         );
 
+
         addSpace();
+
 
         loadMarketData();
     }
 
 
     // =========================================================
-    // LOAD ALL MARKET DATA
+    // LOAD MARKET DATA
     // =========================================================
 
     private void loadMarketData() {
@@ -384,16 +1196,8 @@ public class MainActivity extends Activity {
 
                     try {
 
-                        // =================================================
-                        // BTC DAILY
-                        // =================================================
-
                         fetchBTC();
 
-
-                        // =================================================
-                        // BTC 15 MINUTE
-                        // =================================================
 
                         fetchIntradayBTC(
                                 "15m",
@@ -406,10 +1210,6 @@ public class MainActivity extends Activity {
                         );
 
 
-                        // =================================================
-                        // BTC 5 MINUTE
-                        // =================================================
-
                         fetchIntradayBTC(
                                 "5m",
                                 1000,
@@ -421,17 +1221,9 @@ public class MainActivity extends Activity {
                         );
 
 
-                        // =================================================
-                        // GOLD
-                        // =================================================
-
                         double goldPrice =
                                 fetchGold();
 
-
-                        // =================================================
-                        // DAILY TECHNICAL
-                        // =================================================
 
                         TechnicalAnalyzer.TechnicalResult technical =
                                 TechnicalAnalyzer.analyze(
@@ -442,10 +1234,6 @@ public class MainActivity extends Activity {
                                 );
 
 
-                        // =================================================
-                        // DAILY PROBABILITY
-                        // =================================================
-
                         ProbabilityEngine.ProbabilityResult probability =
                                 ProbabilityEngine.calculate(
                                         btcPrices,
@@ -454,10 +1242,6 @@ public class MainActivity extends Activity {
                                         btcVolume
                                 );
 
-
-                        // =================================================
-                        // DAILY LEARNING
-                        // =================================================
 
                         LearningEngine.LearningResult learning =
                                 LearningEngine.learn(
@@ -468,10 +1252,6 @@ public class MainActivity extends Activity {
                                 );
 
 
-                        // =================================================
-                        // COMBINED ENGINE
-                        // =================================================
-
                         CombinedEngine.CombinedResult combined =
                                 CombinedEngine.analyze(
                                         btcPrices,
@@ -480,10 +1260,6 @@ public class MainActivity extends Activity {
                                         btcVolume
                                 );
 
-
-                        // =================================================
-                        // ORIGINAL BACKTEST V3
-                        // =================================================
 
                         BacktestEngine.BacktestResult backtest =
                                 BacktestEngine.run(
@@ -494,10 +1270,6 @@ public class MainActivity extends Activity {
                                 );
 
 
-                        // =================================================
-                        // COMBINED BACKTEST
-                        // =================================================
-
                         CombinedBacktestEngine.Result combinedBacktest =
                                 CombinedBacktestEngine.run(
                                         btcPrices,
@@ -506,10 +1278,6 @@ public class MainActivity extends Activity {
                                         btcVolume
                                 );
 
-
-                        // =================================================
-                        // 15M MOVE DETECTOR
-                        // =================================================
 
                         MoveDetector.MoveResult move15 =
                                 MoveDetector.analyze(
@@ -521,10 +1289,6 @@ public class MainActivity extends Activity {
                                 );
 
 
-                        // =================================================
-                        // 5M MOVE DETECTOR
-                        // =================================================
-
                         MoveDetector.MoveResult move5 =
                                 MoveDetector.analyze(
                                         btc5Prices,
@@ -534,10 +1298,6 @@ public class MainActivity extends Activity {
                                         5
                                 );
 
-
-                        // =================================================
-                        // MARKET VALUES
-                        // =================================================
 
                         double currentPrice =
                                 btcPrices.get(
@@ -564,13 +1324,7 @@ public class MainActivity extends Activity {
                                 calculateAverageVolume();
 
 
-                        // =================================================
-                        // MAIN THREAD
-                        // =================================================
-
-                        new Handler(
-                                Looper.getMainLooper()
-                        ).post(
+                        mainHandler.post(
                                 () -> {
 
                                     isRefreshing =
@@ -595,11 +1349,11 @@ public class MainActivity extends Activity {
                                 }
                         );
 
-                    } catch (Exception e) {
+                    } catch (
+                            Exception e
+                    ) {
 
-                        new Handler(
-                                Looper.getMainLooper()
-                        ).post(
+                        mainHandler.post(
                                 () -> {
 
                                     isRefreshing =
@@ -651,13 +1405,10 @@ public class MainActivity extends Activity {
         container.removeAllViews();
 
 
-        // =====================================================
-        // HEADER
-        // =====================================================
-
         showTitle(
                 "MARKET AI"
         );
+
 
         addText(
                 "BTC / GOLD ANALYTICAL ENGINE",
@@ -665,11 +1416,12 @@ public class MainActivity extends Activity {
                 Color.GRAY
         );
 
+
         addSpace();
 
 
         // =====================================================
-        // LIVE BTC PRICE
+        // BTC LIVE PRICE
         // =====================================================
 
         addSection(
@@ -680,22 +1432,27 @@ public class MainActivity extends Activity {
         liveBTCPriceView =
                 new TextView(this);
 
+
         liveBTCPriceView.setTextSize(
                 30
         );
+
 
         liveBTCPriceView.setTextColor(
                 Color.GREEN
         );
 
+
         liveBTCPriceView.setGravity(
                 Gravity.CENTER
         );
+
 
         liveBTCPriceView.setTypeface(
                 Typeface.DEFAULT,
                 Typeface.BOLD
         );
+
 
         if (
                 latestLiveBTC > 0
@@ -720,12 +1477,14 @@ public class MainActivity extends Activity {
             );
         }
 
+
         liveBTCPriceView.setPadding(
                 0,
                 10,
                 0,
                 5
         );
+
 
         container.addView(
                 liveBTCPriceView
@@ -735,26 +1494,32 @@ public class MainActivity extends Activity {
         liveBTCStatusView =
                 new TextView(this);
 
+
         liveBTCStatusView.setText(
                 "○ CONNECTING..."
         );
+
 
         liveBTCStatusView.setTextSize(
                 13
         );
 
+
         liveBTCStatusView.setTextColor(
                 Color.YELLOW
         );
+
 
         liveBTCStatusView.setGravity(
                 Gravity.CENTER
         );
 
+
         liveBTCStatusView.setTypeface(
                 Typeface.DEFAULT,
                 Typeface.BOLD
         );
+
 
         container.addView(
                 liveBTCStatusView
@@ -765,32 +1530,209 @@ public class MainActivity extends Activity {
 
 
         // =====================================================
-        // REFRESH BUTTON
+        // LIVE CANDLE STATUS
+        // =====================================================
+
+        addSection(
+                "LIVE CANDLE ENGINE"
+        );
+
+
+        live5mStatusView =
+                new TextView(this);
+
+
+        live5mStatusView.setTextSize(
+                14
+        );
+
+
+        live5mStatusView.setTypeface(
+                Typeface.DEFAULT,
+                Typeface.BOLD
+        );
+
+
+        live5mStatusView.setPadding(
+                0,
+                8,
+                0,
+                8
+        );
+
+
+        container.addView(
+                live5mStatusView
+        );
+
+
+        live15mStatusView =
+                new TextView(this);
+
+
+        live15mStatusView.setTextSize(
+                14
+        );
+
+
+        live15mStatusView.setTypeface(
+                Typeface.DEFAULT,
+                Typeface.BOLD
+        );
+
+
+        live15mStatusView.setPadding(
+                0,
+                8,
+                0,
+                8
+        );
+
+
+        container.addView(
+                live15mStatusView
+        );
+
+
+        updateLiveConnectionUI();
+
+
+        addSpace();
+
+
+        // =====================================================
+        // LIVE 5M ANALYSIS
+        // =====================================================
+
+        addSection(
+                "LIVE 5M ANALYSIS"
+        );
+
+
+        live5mAnalysisView =
+                new TextView(this);
+
+
+        live5mAnalysisView.setText(
+                "Waiting for live 5M candle data..."
+        );
+
+
+        live5mAnalysisView.setTextSize(
+                15
+        );
+
+
+        live5mAnalysisView.setTextColor(
+                Color.LTGRAY
+        );
+
+
+        live5mAnalysisView.setTypeface(
+                Typeface.MONOSPACE,
+                Typeface.NORMAL
+        );
+
+
+        live5mAnalysisView.setPadding(
+                0,
+                8,
+                0,
+                8
+        );
+
+
+        container.addView(
+                live5mAnalysisView
+        );
+
+
+        addSpace();
+
+
+        // =====================================================
+        // LIVE 15M ANALYSIS
+        // =====================================================
+
+        addSection(
+                "LIVE 15M ANALYSIS"
+        );
+
+
+        live15mAnalysisView =
+                new TextView(this);
+
+
+        live15mAnalysisView.setText(
+                "Waiting for live 15M candle data..."
+        );
+
+
+        live15mAnalysisView.setTextSize(
+                15
+        );
+
+
+        live15mAnalysisView.setTextColor(
+                Color.LTGRAY
+        );
+
+
+        live15mAnalysisView.setTypeface(
+                Typeface.MONOSPACE,
+                Typeface.NORMAL
+        );
+
+
+        live15mAnalysisView.setPadding(
+                0,
+                8,
+                0,
+                8
+        );
+
+
+        container.addView(
+                live15mAnalysisView
+        );
+
+
+        addSpace();
+
+
+        // =====================================================
+        // REFRESH
         // =====================================================
 
         TextView refreshButton =
                 new TextView(this);
 
+
         refreshButton.setText(
                 "↻  REFRESH MARKET DATA"
         );
+
 
         refreshButton.setTextSize(
                 16
         );
 
+
         refreshButton.setTextColor(
                 Color.WHITE
         );
+
 
         refreshButton.setGravity(
                 Gravity.CENTER
         );
 
+
         refreshButton.setTypeface(
                 Typeface.DEFAULT,
                 Typeface.BOLD
         );
+
 
         refreshButton.setPadding(
                 10,
@@ -799,17 +1741,21 @@ public class MainActivity extends Activity {
                 20
         );
 
+
         refreshButton.setBackgroundColor(
                 Color.rgb(35, 55, 65)
         );
+
 
         refreshButton.setOnClickListener(
                 view -> refreshMarketData()
         );
 
+
         container.addView(
                 refreshButton
         );
+
 
         addSpace();
 
@@ -821,6 +1767,7 @@ public class MainActivity extends Activity {
         addSection(
                 "FINAL SIGNAL"
         );
+
 
         String finalSignal =
                 combined.direction;
@@ -903,7 +1850,7 @@ public class MainActivity extends Activity {
 
 
         // =====================================================
-        // LARGE MOVE DETECTOR
+        // LARGE MOVE
         // =====================================================
 
         addSection(
@@ -932,9 +1879,7 @@ public class MainActivity extends Activity {
 
         addMetric(
                 "Move Risk",
-                format(
-                        move15.moveRisk
-                ) + "%"
+                format(move15.moveRisk) + "%"
         );
 
 
@@ -952,80 +1897,60 @@ public class MainActivity extends Activity {
 
         addMetric(
                 "Upside Probability",
-                format(
-                        move15.upsideProbability
-                ) + "%"
+                format(move15.upsideProbability) + "%"
         );
 
 
         addMetric(
                 "Downside Probability",
-                format(
-                        move15.downsideProbability
-                ) + "%"
+                format(move15.downsideProbability) + "%"
         );
 
 
         addMetric(
                 "Volatility Score",
-                format(
-                        move15.volatilityScore
-                )
+                format(move15.volatilityScore)
         );
 
 
         addMetric(
                 "Volume Score",
-                format(
-                        move15.volumeScore
-                )
+                format(move15.volumeScore)
         );
 
 
         addMetric(
                 "Compression Score",
-                format(
-                        move15.compressionScore
-                )
+                format(move15.compressionScore)
         );
 
 
         addMetric(
                 "Momentum Score",
-                format(
-                        move15.momentumScore
-                )
+                format(move15.momentumScore)
         );
 
 
         addMetric(
                 "Volatility Expansion",
-                yesNo(
-                        move15.volatilityExpansion
-                )
+                yesNo(move15.volatilityExpansion)
         );
 
 
         addMetric(
                 "Volume Expansion",
-                yesNo(
-                        move15.volumeExpansion
-                )
+                yesNo(move15.volumeExpansion)
         );
 
 
         addMetric(
                 "Volatility Compression",
-                yesNo(
-                        move15.volatilityCompression
-                )
+                yesNo(move15.volatilityCompression)
         );
 
 
         addText(
-                "Evidence: "
-                        +
-                move15.evidence,
+                "Evidence: " + move15.evidence,
                 12,
                 Color.GRAY
         );
@@ -1045,9 +1970,7 @@ public class MainActivity extends Activity {
 
         addMetric(
                 "Move Risk",
-                format(
-                        move5.moveRisk
-                ) + "%"
+                format(move5.moveRisk) + "%"
         );
 
 
@@ -1065,80 +1988,60 @@ public class MainActivity extends Activity {
 
         addMetric(
                 "Upside Probability",
-                format(
-                        move5.upsideProbability
-                ) + "%"
+                format(move5.upsideProbability) + "%"
         );
 
 
         addMetric(
                 "Downside Probability",
-                format(
-                        move5.downsideProbability
-                ) + "%"
+                format(move5.downsideProbability) + "%"
         );
 
 
         addMetric(
                 "Volatility Score",
-                format(
-                        move5.volatilityScore
-                )
+                format(move5.volatilityScore)
         );
 
 
         addMetric(
                 "Volume Score",
-                format(
-                        move5.volumeScore
-                )
+                format(move5.volumeScore)
         );
 
 
         addMetric(
                 "Compression Score",
-                format(
-                        move5.compressionScore
-                )
+                format(move5.compressionScore)
         );
 
 
         addMetric(
                 "Momentum Score",
-                format(
-                        move5.momentumScore
-                )
+                format(move5.momentumScore)
         );
 
 
         addMetric(
                 "Volatility Expansion",
-                yesNo(
-                        move5.volatilityExpansion
-                )
+                yesNo(move5.volatilityExpansion)
         );
 
 
         addMetric(
                 "Volume Expansion",
-                yesNo(
-                        move5.volumeExpansion
-                )
+                yesNo(move5.volumeExpansion)
         );
 
 
         addMetric(
                 "Volatility Compression",
-                yesNo(
-                        move5.volatilityCompression
-                )
+                yesNo(move5.volatilityCompression)
         );
 
 
         addText(
-                "Evidence: "
-                        +
-                move5.evidence,
+                "Evidence: " + move5.evidence,
                 12,
                 Color.GRAY
         );
@@ -1148,7 +2051,7 @@ public class MainActivity extends Activity {
 
 
         // =====================================================
-        // MULTI-TIMEFRAME MOVE AGREEMENT
+        // MULTI TIMEFRAME
         // =====================================================
 
         addSection(
@@ -1185,17 +2088,13 @@ public class MainActivity extends Activity {
 
         addMetric(
                 "5M Risk",
-                format(
-                        move5.moveRisk
-                ) + "%"
+                format(move5.moveRisk) + "%"
         );
 
 
         addMetric(
                 "15M Risk",
-                format(
-                        move15.moveRisk
-                ) + "%"
+                format(move15.moveRisk) + "%"
         );
 
 
@@ -1222,12 +2121,8 @@ public class MainActivity extends Activity {
 
 
         addMetric(
-                "Entry Price",
-                "$"
-                        +
-                format(
-                        currentPrice
-                )
+                "Reference Price",
+                "$" + format(currentPrice)
         );
 
 
@@ -1258,41 +2153,25 @@ public class MainActivity extends Activity {
 
         addMetric(
                 "Bitcoin",
-                "$"
-                        +
-                format(
-                        currentPrice
-                )
+                "$" + format(currentPrice)
         );
 
 
         addMetric(
                 "Gold",
-                "$"
-                        +
-                format(
-                        goldPrice
-                )
+                "$" + format(goldPrice)
         );
 
 
         addMetric(
                 "Support",
-                "$"
-                        +
-                format(
-                        support
-                )
+                "$" + format(support)
         );
 
 
         addMetric(
                 "Resistance",
-                "$"
-                        +
-                format(
-                        resistance
-                )
+                "$" + format(resistance)
         );
 
 
@@ -1304,9 +2183,7 @@ public class MainActivity extends Activity {
 
         addMetric(
                 "Average Volume",
-                format(
-                        averageVolume
-                )
+                format(averageVolume)
         );
 
 
@@ -1546,7 +2423,7 @@ public class MainActivity extends Activity {
 
 
         // =====================================================
-        // TECHNICAL DETAILS
+        // TECHNICAL
         // =====================================================
 
         addSection(
@@ -1556,93 +2433,61 @@ public class MainActivity extends Activity {
 
         addMetric(
                 "RSI",
-                format(
-                        technical.rsi
-                )
+                format(technical.rsi)
         );
 
 
         addMetric(
                 "EMA 20",
-                "$"
-                        +
-                format(
-                        technical.ema20
-                )
+                "$" + format(technical.ema20)
         );
 
 
         addMetric(
                 "EMA 50",
-                "$"
-                        +
-                format(
-                        technical.ema50
-                )
+                "$" + format(technical.ema50)
         );
 
 
         addMetric(
                 "EMA 200",
-                "$"
-                        +
-                format(
-                        technical.ema200
-                )
+                "$" + format(technical.ema200)
         );
 
 
         addMetric(
                 "MACD",
-                format(
-                        technical.macd
-                )
+                format(technical.macd)
         );
 
 
         addMetric(
                 "ATR",
-                "$"
-                        +
-                format(
-                        technical.atr
-                )
+                "$" + format(technical.atr)
         );
 
 
         addMetric(
                 "Bollinger Upper",
-                "$"
-                        +
-                format(
-                        technical.bollingerUpper
-                )
+                "$" + format(technical.bollingerUpper)
         );
 
 
         addMetric(
                 "Bollinger Lower",
-                "$"
-                        +
-                format(
-                        technical.bollingerLower
-                )
+                "$" + format(technical.bollingerLower)
         );
 
 
         addMetric(
                 "Momentum",
-                format(
-                        technical.momentum
-                ) + "%"
+                format(technical.momentum) + "%"
         );
 
 
         addMetric(
                 "Volume Ratio",
-                format(
-                        technical.volumeRatio
-                ) + "x"
+                format(technical.volumeRatio) + "x"
         );
 
 
@@ -1669,25 +2514,19 @@ public class MainActivity extends Activity {
 
         addMetric(
                 "Probability BUY",
-                format(
-                        probability.buyProbability
-                ) + "%"
+                format(probability.buyProbability) + "%"
         );
 
 
         addMetric(
                 "Probability SELL",
-                format(
-                        probability.sellProbability
-                ) + "%"
+                format(probability.sellProbability) + "%"
         );
 
 
         addMetric(
                 "Probability WAIT",
-                format(
-                        probability.neutralProbability
-                ) + "%"
+                format(probability.neutralProbability) + "%"
         );
 
 
@@ -1777,7 +2616,7 @@ public class MainActivity extends Activity {
 
 
         // =====================================================
-        // ORIGINAL BACKTEST V3
+        // BACKTEST V3
         // =====================================================
 
         addSection(
@@ -1893,7 +2732,7 @@ public class MainActivity extends Activity {
 
 
         // =====================================================
-        // V3 RISK
+        // RISK
         // =====================================================
 
         addSection(
@@ -2001,7 +2840,7 @@ public class MainActivity extends Activity {
 
 
         // =====================================================
-        // DATA INFORMATION
+        // DATA
         // =====================================================
 
         addText(
@@ -2012,35 +2851,42 @@ public class MainActivity extends Activity {
 
 
         addText(
-                "BTC 15M Data: 1000 candles",
+                "BTC 15M Data: 1000 candles + live candle stream",
                 12,
                 Color.GRAY
         );
 
 
         addText(
-                "BTC 5M Data: 1000 candles",
+                "BTC 5M Data: 1000 candles + live candle stream",
                 12,
                 Color.GRAY
         );
 
 
         addText(
-                "BTC live price is received through a live market WebSocket.",
+                "BTC live price and candles are received through WebSocket streams.",
                 12,
                 Color.GRAY
         );
 
 
         addText(
-                "Move Detector identifies abnormal-move conditions; direction probabilities are estimates, not guarantees.",
+                "Live 5M / 15M indicators update as the current candle changes.",
                 12,
                 Color.GRAY
         );
 
 
         addText(
-                "Historical backtests and model probabilities do not guarantee future results.",
+                "Move probabilities are analytical estimates, not guarantees.",
+                12,
+                Color.GRAY
+        );
+
+
+        addText(
+                "Historical backtests do not guarantee future results.",
                 12,
                 Color.GRAY
         );
@@ -2120,7 +2966,7 @@ public class MainActivity extends Activity {
 
 
     // =========================================================
-    // MOVE AGREEMENT COLOR
+    // MOVE COLOR
     // =========================================================
 
     private int getMoveAgreementColor(
@@ -2177,7 +3023,7 @@ public class MainActivity extends Activity {
                         )
         ) {
 
-            return "Both short-term timeframes point UP while move-risk is elevated. This is an early-warning condition for a potentially larger upward move, not a guarantee.";
+            return "Both short-term timeframes point UP while move-risk is elevated. This is an early-warning condition, not a guarantee.";
         }
 
 
@@ -2193,30 +3039,26 @@ public class MainActivity extends Activity {
                         )
         ) {
 
-            return "Both short-term timeframes point DOWN while move-risk is elevated. This is an early-warning condition for a potentially larger downward move, not a guarantee.";
+            return "Both short-term timeframes point DOWN while move-risk is elevated. This is an early-warning condition, not a guarantee.";
         }
 
 
         if (
-                move5.direction.equals(
-                        "UNCERTAIN"
-                )
+                move5.direction.equals("UNCERTAIN")
                         ||
-                move15.direction.equals(
-                        "UNCERTAIN"
-                )
+                move15.direction.equals("UNCERTAIN")
         ) {
 
             return "Short-term direction is not sufficiently aligned yet.";
         }
 
 
-        return "5M and 15M signals are not strongly aligned. No large directional move is confirmed.";
+        return "5M and 15M signals are not strongly aligned.";
     }
 
 
     // =========================================================
-    // YES / NO
+    // YES NO
     // =========================================================
 
     private String yesNo(
@@ -2230,7 +3072,7 @@ public class MainActivity extends Activity {
 
 
     // =========================================================
-    // ERROR SCREEN
+    // ERROR
     // =========================================================
 
     private void showError(
@@ -2238,6 +3080,7 @@ public class MainActivity extends Activity {
     ) {
 
         container.removeAllViews();
+
 
         showTitle(
                 "MARKET AI"
@@ -2334,7 +3177,7 @@ public class MainActivity extends Activity {
 
 
     // =========================================================
-    // BTC DAILY DATA
+    // FETCH DAILY BTC
     // =========================================================
 
     private void fetchBTC()
@@ -2342,9 +3185,12 @@ public class MainActivity extends Activity {
 
         String urlString =
                 "https://api.binance.com/api/v3/klines"
-                        + "?symbol=BTCUSDT"
-                        + "&interval=1d"
-                        + "&limit=730";
+                        +
+                "?symbol=BTCUSDT"
+                        +
+                "&interval=1d"
+                        +
+                "&limit=730";
 
 
         fetchCandleData(
@@ -2373,7 +3219,7 @@ public class MainActivity extends Activity {
 
 
     // =========================================================
-    // BTC INTRADAY DATA
+    // FETCH INTRADAY BTC
     // =========================================================
 
     private void fetchIntradayBTC(
@@ -2388,14 +3234,18 @@ public class MainActivity extends Activity {
 
     ) throws Exception {
 
-
         String urlString =
                 "https://api.binance.com/api/v3/klines"
-                        + "?symbol=BTCUSDT"
-                        + "&interval="
-                        + interval
-                        + "&limit="
-                        + limit;
+                        +
+                "?symbol=BTCUSDT"
+                        +
+                "&interval="
+                        +
+                interval
+                        +
+                "&limit="
+                        +
+                limit;
 
 
         fetchCandleData(
@@ -2428,7 +3278,7 @@ public class MainActivity extends Activity {
 
 
     // =========================================================
-    // GENERIC CANDLE FETCHER
+    // GENERIC CANDLE FETCH
     // =========================================================
 
     private void fetchCandleData(
@@ -2442,7 +3292,6 @@ public class MainActivity extends Activity {
             List<Double> volumeList
 
     ) throws Exception {
-
 
         URL url =
                 new URL(
@@ -2549,9 +3398,7 @@ public class MainActivity extends Activity {
         ) {
 
             JSONArray candle =
-                    candles.getJSONArray(
-                            i
-                    );
+                    candles.getJSONArray(i);
 
 
             double open =
@@ -2598,7 +3445,7 @@ public class MainActivity extends Activity {
 
 
     // =========================================================
-    // GOLD DATA
+    // GOLD
     // =========================================================
 
     private double fetchGold()
@@ -2606,8 +3453,10 @@ public class MainActivity extends Activity {
 
         String urlString =
                 "https://query1.finance.yahoo.com/v8/finance/chart/GC=F"
-                        + "?range=6mo"
-                        + "&interval=1d";
+                        +
+                "?range=6mo"
+                        +
+                "&interval=1d";
 
 
         URL url =
@@ -2682,9 +3531,7 @@ public class MainActivity extends Activity {
                         != null
         ) {
 
-            response.append(
-                    line
-            );
+            response.append(line);
         }
 
 
@@ -2724,9 +3571,7 @@ public class MainActivity extends Activity {
 
 
         JSONObject result =
-                results.getJSONObject(
-                        0
-                );
+                results.getJSONObject(0);
 
 
         JSONObject indicators =
@@ -2742,9 +3587,7 @@ public class MainActivity extends Activity {
 
 
         JSONObject quoteData =
-                quote.getJSONObject(
-                        0
-                );
+                quote.getJSONObject(0);
 
 
         JSONArray closes =
@@ -2769,9 +3612,7 @@ public class MainActivity extends Activity {
             ) {
 
                 latest =
-                        closes.getDouble(
-                                i
-                        );
+                        closes.getDouble(i);
 
                 break;
             }
@@ -3166,9 +4007,7 @@ public class MainActivity extends Activity {
     ) {
 
         TextView title =
-                new TextView(
-                        this
-                );
+                new TextView(this);
 
 
         title.setText(
@@ -3221,9 +4060,7 @@ public class MainActivity extends Activity {
     ) {
 
         TextView view =
-                new TextView(
-                        this
-                );
+                new TextView(this);
 
 
         view.setText(
@@ -3275,9 +4112,7 @@ public class MainActivity extends Activity {
     ) {
 
         TextView section =
-                new TextView(
-                        this
-                );
+                new TextView(this);
 
 
         section.setText(
@@ -3325,9 +4160,7 @@ public class MainActivity extends Activity {
     ) {
 
         TextView metric =
-                new TextView(
-                        this
-                );
+                new TextView(this);
 
 
         metric.setText(
@@ -3374,9 +4207,7 @@ public class MainActivity extends Activity {
     ) {
 
         TextView view =
-                new TextView(
-                        this
-                );
+                new TextView(this);
 
 
         view.setText(
@@ -3418,9 +4249,7 @@ public class MainActivity extends Activity {
     private void addSpace() {
 
         TextView space =
-                new TextView(
-                        this
-                );
+                new TextView(this);
 
 
         space.setText(
