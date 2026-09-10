@@ -145,6 +145,9 @@ public class MainActivity extends Activity {
     private StrategyEngine.StrategyResult strategy5m;
     private StrategyEngine.StrategyResult strategy15m;
 
+    private StrategyBacktestEngine.Result strategyBacktest5m;
+    private StrategyBacktestEngine.Result strategyBacktest15m;
+
 
     // =========================================================
     // DAILY BTC
@@ -680,30 +683,11 @@ public class MainActivity extends Activity {
                     )
             ) {
 
-                opens.set(
-                        last,
-                        candle.open
-                );
-
-                highs.set(
-                        last,
-                        candle.high
-                );
-
-                lows.set(
-                        last,
-                        candle.low
-                );
-
-                closes.set(
-                        last,
-                        candle.close
-                );
-
-                volumes.set(
-                        last,
-                        candle.volume
-                );
+                opens.set(last, candle.open);
+                highs.set(last, candle.high);
+                lows.set(last, candle.low);
+                closes.set(last, candle.close);
+                volumes.set(last, candle.volume);
 
             } else {
 
@@ -903,6 +887,28 @@ public class MainActivity extends Activity {
                                 );
 
 
+                        // =================================================
+                        // STRATEGY BACKTEST
+                        // =================================================
+
+                        StrategyBacktestEngine.Result strategyBT5m =
+                                StrategyBacktestEngine.run(
+                                        btc5Prices,
+                                        btc5High,
+                                        btc5Low,
+                                        btc5Volume
+                                );
+
+
+                        StrategyBacktestEngine.Result strategyBT15m =
+                                StrategyBacktestEngine.run(
+                                        btc15Prices,
+                                        btc15High,
+                                        btc15Low,
+                                        btc15Volume
+                                );
+
+
                         double currentPrice =
                                 btcPrices.get(
                                         btcPrices.size() - 1
@@ -935,12 +941,17 @@ public class MainActivity extends Activity {
 
                                     isRefreshing = false;
 
-
                                     strategy5m =
                                             setup5m;
 
                                     strategy15m =
                                             setup15m;
+
+                                    strategyBacktest5m =
+                                            strategyBT5m;
+
+                                    strategyBacktest15m =
+                                            strategyBT15m;
 
 
                                     showDashboard(
@@ -959,7 +970,9 @@ public class MainActivity extends Activity {
                                             move15,
                                             move5,
                                             setup5m,
-                                            setup15m
+                                            setup15m,
+                                            strategyBT5m,
+                                            strategyBT15m
                                     );
                                 }
                         );
@@ -1014,18 +1027,21 @@ public class MainActivity extends Activity {
 
             StrategyEngine.StrategyResult setup5m,
 
-            StrategyEngine.StrategyResult setup15m
+            StrategyEngine.StrategyResult setup15m,
+
+            StrategyBacktestEngine.Result strategyBT5m,
+
+            StrategyBacktestEngine.Result strategyBT15m
 
     ) {
 
         container.removeAllViews();
 
-
         showHeader();
 
 
         // =====================================================
-        // LIVE BTC
+        // LIVE MARKET
         // =====================================================
 
         addSectionTitle("LIVE MARKET");
@@ -1092,9 +1108,7 @@ public class MainActivity extends Activity {
         );
 
 
-        container.addView(
-                liveCard
-        );
+        container.addView(liveCard);
 
 
         // =====================================================
@@ -1195,442 +1209,20 @@ public class MainActivity extends Activity {
         addSectionTitle("STRATEGY SETUP");
 
 
-        // =====================================================
-        // 5M STRATEGY
-        // =====================================================
-
-        LinearLayout strategyCard5 =
-                createCard();
-
-
-        strategyCard5.addView(
-                cardTitle("5M SETUP")
+        addStrategyCard(
+                "5M SETUP",
+                setup5m
         );
 
 
-        TextView setupTitle5 =
-                new TextView(this);
-
-
-        setupTitle5.setText(
-                setup5m.setup
-        );
-
-        setupTitle5.setTextSize(25);
-
-        setupTitle5.setTypeface(
-                Typeface.DEFAULT,
-                Typeface.BOLD
-        );
-
-        setupTitle5.setTextColor(
-                strategyColor(setup5m.setup)
-        );
-
-        setupTitle5.setPadding(
-                0,
-                4,
-                0,
-                8
-        );
-
-
-        strategyCard5.addView(
-                setupTitle5
-        );
-
-
-        addCardMetric(
-                strategyCard5,
-                "Strategy",
-                setup5m.strategy
-        );
-
-
-        addCardMetric(
-                strategyCard5,
-                "Quality",
-                format(setup5m.qualityScore) + "%"
-        );
-
-
-        addCardMetric(
-                strategyCard5,
-                "Direction",
-                setup5m.direction
-        );
-
-
-        if (
-                !"NO SETUP".equals(
-                        setup5m.setup
-                )
-        ) {
-
-            strategyCard5.addView(
-                    divider()
-            );
-
-
-            addCardMetric(
-                    strategyCard5,
-                    "Entry",
-                    "$" +
-                    format(setup5m.entry)
-            );
-
-
-            addCardMetric(
-                    strategyCard5,
-                    "Stop Loss",
-                    "$" +
-                    format(setup5m.stopLoss)
-            );
-
-
-            addCardMetric(
-                    strategyCard5,
-                    "Target 1",
-                    "$" +
-                    format(setup5m.target1)
-            );
-
-
-            addCardMetric(
-                    strategyCard5,
-                    "Target 2",
-                    "$" +
-                    format(setup5m.target2)
-            );
-
-
-            addCardMetric(
-                    strategyCard5,
-                    "R:R 1",
-                    format(setup5m.riskReward1)
-            );
-
-
-            addCardMetric(
-                    strategyCard5,
-                    "R:R 2",
-                    format(setup5m.riskReward2)
-            );
-        }
-
-
-        strategyCard5.addView(
-                divider()
-        );
-
-
-        addCardMetric(
-                strategyCard5,
-                "EMA",
-                setup5m.emaAligned
-                        ? "CONFIRMED"
-                        : "NO"
-        );
-
-
-        addCardMetric(
-                strategyCard5,
-                "Trend",
-                setup5m.trendAligned
-                        ? "CONFIRMED"
-                        : "NO"
-        );
-
-
-        addCardMetric(
-                strategyCard5,
-                "Momentum",
-                setup5m.momentumConfirmed
-                        ? "CONFIRMED"
-                        : "NO"
-        );
-
-
-        addCardMetric(
-                strategyCard5,
-                "Volume",
-                setup5m.volumeConfirmed
-                        ? "CONFIRMED"
-                        : "NO"
-        );
-
-
-        addCardMetric(
-                strategyCard5,
-                "Bollinger",
-                setup5m.bollingerBreakout
-                        ? "BREAKOUT"
-                        : "NO"
-        );
-
-
-        addCardMetric(
-                strategyCard5,
-                "RSI",
-                setup5m.rsiConfirmed
-                        ? "CONFIRMED"
-                        : "NO"
-        );
-
-
-        strategyCard5.addView(
-                divider()
-        );
-
-
-        TextView evidence5 =
-                new TextView(this);
-
-        evidence5.setText(
-                setup5m.evidence
-        );
-
-        evidence5.setTextSize(12);
-
-        evidence5.setTextColor(MUTED);
-
-        evidence5.setPadding(
-                0,
-                5,
-                0,
-                5
-        );
-
-
-        strategyCard5.addView(
-                evidence5
-        );
-
-
-        container.addView(
-                strategyCard5
+        addStrategyCard(
+                "15M SETUP",
+                setup15m
         );
 
 
         // =====================================================
-        // 15M STRATEGY
-        // =====================================================
-
-        LinearLayout strategyCard15 =
-                createCard();
-
-
-        strategyCard15.addView(
-                cardTitle("15M SETUP")
-        );
-
-
-        TextView setupTitle15 =
-                new TextView(this);
-
-
-        setupTitle15.setText(
-                setup15m.setup
-        );
-
-        setupTitle15.setTextSize(25);
-
-        setupTitle15.setTypeface(
-                Typeface.DEFAULT,
-                Typeface.BOLD
-        );
-
-        setupTitle15.setTextColor(
-                strategyColor(setup15m.setup)
-        );
-
-        setupTitle15.setPadding(
-                0,
-                4,
-                0,
-                8
-        );
-
-
-        strategyCard15.addView(
-                setupTitle15
-        );
-
-
-        addCardMetric(
-                strategyCard15,
-                "Strategy",
-                setup15m.strategy
-        );
-
-
-        addCardMetric(
-                strategyCard15,
-                "Quality",
-                format(setup15m.qualityScore) + "%"
-        );
-
-
-        addCardMetric(
-                strategyCard15,
-                "Direction",
-                setup15m.direction
-        );
-
-
-        if (
-                !"NO SETUP".equals(
-                        setup15m.setup
-                )
-        ) {
-
-            strategyCard15.addView(
-                    divider()
-            );
-
-
-            addCardMetric(
-                    strategyCard15,
-                    "Entry",
-                    "$" +
-                    format(setup15m.entry)
-            );
-
-
-            addCardMetric(
-                    strategyCard15,
-                    "Stop Loss",
-                    "$" +
-                    format(setup15m.stopLoss)
-            );
-
-
-            addCardMetric(
-                    strategyCard15,
-                    "Target 1",
-                    "$" +
-                    format(setup15m.target1)
-            );
-
-
-            addCardMetric(
-                    strategyCard15,
-                    "Target 2",
-                    "$" +
-                    format(setup15m.target2)
-            );
-
-
-            addCardMetric(
-                    strategyCard15,
-                    "R:R 1",
-                    format(setup15m.riskReward1)
-            );
-
-
-            addCardMetric(
-                    strategyCard15,
-                    "R:R 2",
-                    format(setup15m.riskReward2)
-            );
-        }
-
-
-        strategyCard15.addView(
-                divider()
-        );
-
-
-        addCardMetric(
-                strategyCard15,
-                "EMA",
-                setup15m.emaAligned
-                        ? "CONFIRMED"
-                        : "NO"
-        );
-
-
-        addCardMetric(
-                strategyCard15,
-                "Trend",
-                setup15m.trendAligned
-                        ? "CONFIRMED"
-                        : "NO"
-        );
-
-
-        addCardMetric(
-                strategyCard15,
-                "Momentum",
-                setup15m.momentumConfirmed
-                        ? "CONFIRMED"
-                        : "NO"
-        );
-
-
-        addCardMetric(
-                strategyCard15,
-                "Volume",
-                setup15m.volumeConfirmed
-                        ? "CONFIRMED"
-                        : "NO"
-        );
-
-
-        addCardMetric(
-                strategyCard15,
-                "Bollinger",
-                setup15m.bollingerBreakout
-                        ? "BREAKOUT"
-                        : "NO"
-        );
-
-
-        addCardMetric(
-                strategyCard15,
-                "RSI",
-                setup15m.rsiConfirmed
-                        ? "CONFIRMED"
-                        : "NO"
-        );
-
-
-        strategyCard15.addView(
-                divider()
-        );
-
-
-        TextView evidence15 =
-                new TextView(this);
-
-        evidence15.setText(
-                setup15m.evidence
-        );
-
-        evidence15.setTextSize(12);
-
-        evidence15.setTextColor(MUTED);
-
-        evidence15.setPadding(
-                0,
-                5,
-                0,
-                5
-        );
-
-
-        strategyCard15.addView(
-                evidence15
-        );
-
-
-        container.addView(
-                strategyCard15
-        );
-
-
-        // =====================================================
-        // MULTI TIMEFRAME AGREEMENT
+        // MULTI TIMEFRAME
         // =====================================================
 
         addSectionTitle(
@@ -1653,9 +1245,7 @@ public class MainActivity extends Activity {
                 new TextView(this);
 
 
-        mtfTitle.setText(
-                mtfState
-        );
+        mtfTitle.setText(mtfState);
 
         mtfTitle.setTextSize(22);
 
@@ -1680,9 +1270,7 @@ public class MainActivity extends Activity {
         );
 
 
-        mtfCard.addView(
-                mtfTitle
-        );
+        mtfCard.addView(mtfTitle);
 
 
         addCardMetric(
@@ -1713,9 +1301,7 @@ public class MainActivity extends Activity {
         );
 
 
-        mtfCard.addView(
-                divider()
-        );
+        mtfCard.addView(divider());
 
 
         addTextToCard(
@@ -1724,8 +1310,302 @@ public class MainActivity extends Activity {
         );
 
 
+        container.addView(mtfCard);
+
+
+        // =====================================================
+        // STRATEGY BACKTEST
+        // =====================================================
+
+        addSectionTitle(
+                "STRATEGY BACKTEST"
+        );
+
+
+        LinearLayout strategyBTCard =
+                createCard();
+
+
+        strategyBTCard.addView(
+                cardTitle("HISTORICAL PERFORMANCE")
+        );
+
+
+        // 5M
+        TextView fiveTitle =
+                new TextView(this);
+
+        fiveTitle.setText("5 MINUTE");
+
+        fiveTitle.setTextSize(12);
+
+        fiveTitle.setTextColor(BLUE);
+
+        fiveTitle.setTypeface(
+                Typeface.DEFAULT,
+                Typeface.BOLD
+        );
+
+        fiveTitle.setPadding(
+                0,
+                4,
+                0,
+                3
+        );
+
+        strategyBTCard.addView(fiveTitle);
+
+
+        addCardMetric(
+                strategyBTCard,
+                "Setups",
+                String.valueOf(
+                        strategyBT5m.totalSignals
+                )
+        );
+
+
+        addCardMetric(
+                strategyBTCard,
+                "Win Rate",
+                format(
+                        strategyBT5m.winRate
+                ) + "%"
+        );
+
+
+        addCardMetric(
+                strategyBTCard,
+                "Wins / Losses",
+                strategyBT5m.wins
+                        +
+                        " / "
+                        +
+                        strategyBT5m.losses
+        );
+
+
+        addCardMetric(
+                strategyBTCard,
+                "Average Return",
+                format(
+                        strategyBT5m.averageReturn
+                ) + "%"
+        );
+
+
+        addCardMetric(
+                strategyBTCard,
+                "Profit Factor",
+                format(
+                        strategyBT5m.profitFactor
+                )
+        );
+
+
+        addCardMetric(
+                strategyBTCard,
+                "Max Drawdown",
+                format(
+                        strategyBT5m.maxDrawdown
+                ) + "%"
+        );
+
+
+        strategyBTCard.addView(divider());
+
+
+        // 15M
+        TextView fifteenTitle =
+                new TextView(this);
+
+        fifteenTitle.setText("15 MINUTE");
+
+        fifteenTitle.setTextSize(12);
+
+        fifteenTitle.setTextColor(BLUE);
+
+        fifteenTitle.setTypeface(
+                Typeface.DEFAULT,
+                Typeface.BOLD
+        );
+
+        fifteenTitle.setPadding(
+                0,
+                4,
+                0,
+                3
+        );
+
+        strategyBTCard.addView(
+                fifteenTitle
+        );
+
+
+        addCardMetric(
+                strategyBTCard,
+                "Setups",
+                String.valueOf(
+                        strategyBT15m.totalSignals
+                )
+        );
+
+
+        addCardMetric(
+                strategyBTCard,
+                "Win Rate",
+                format(
+                        strategyBT15m.winRate
+                ) + "%"
+        );
+
+
+        addCardMetric(
+                strategyBTCard,
+                "Wins / Losses",
+                strategyBT15m.wins
+                        +
+                        " / "
+                        +
+                        strategyBT15m.losses
+        );
+
+
+        addCardMetric(
+                strategyBTCard,
+                "Average Return",
+                format(
+                        strategyBT15m.averageReturn
+                ) + "%"
+        );
+
+
+        addCardMetric(
+                strategyBTCard,
+                "Profit Factor",
+                format(
+                        strategyBT15m.profitFactor
+                )
+        );
+
+
+        addCardMetric(
+                strategyBTCard,
+                "Max Drawdown",
+                format(
+                        strategyBT15m.maxDrawdown
+                ) + "%"
+        );
+
+
+        strategyBTCard.addView(divider());
+
+
+        TextView qualityTitle =
+                new TextView(this);
+
+        qualityTitle.setText(
+                "QUALITY BREAKDOWN"
+        );
+
+        qualityTitle.setTextSize(12);
+
+        qualityTitle.setTextColor(MUTED);
+
+        qualityTitle.setTypeface(
+                Typeface.DEFAULT,
+                Typeface.BOLD
+        );
+
+        qualityTitle.setPadding(
+                0,
+                3,
+                0,
+                3
+        );
+
+        strategyBTCard.addView(
+                qualityTitle
+        );
+
+
+        addCardMetric(
+                strategyBTCard,
+                "5M ≥ 60 Quality",
+                String.valueOf(
+                        strategyBT5m.quality60Plus
+                )
+        );
+
+
+        addCardMetric(
+                strategyBTCard,
+                "5M ≥ 70 Quality",
+                String.valueOf(
+                        strategyBT5m.quality70Plus
+                )
+        );
+
+
+        addCardMetric(
+                strategyBTCard,
+                "5M ≥ 80 Quality",
+                String.valueOf(
+                        strategyBT5m.quality80Plus
+                )
+        );
+
+
+        addCardMetric(
+                strategyBTCard,
+                "15M ≥ 60 Quality",
+                String.valueOf(
+                        strategyBT15m.quality60Plus
+                )
+        );
+
+
+        addCardMetric(
+                strategyBTCard,
+                "15M ≥ 70 Quality",
+                String.valueOf(
+                        strategyBT15m.quality70Plus
+                )
+        );
+
+
+        addCardMetric(
+                strategyBTCard,
+                "15M ≥ 80 Quality",
+                String.valueOf(
+                        strategyBT15m.quality80Plus
+                )
+        );
+
+
+        TextView btNote =
+                new TextView(this);
+
+        btNote.setText(
+                "Historical analysis only. Past results do not guarantee future performance."
+        );
+
+        btNote.setTextSize(11);
+
+        btNote.setTextColor(MUTED);
+
+        btNote.setPadding(
+                0,
+                8,
+                0,
+                2
+        );
+
+        strategyBTCard.addView(btNote);
+
+
         container.addView(
-                mtfCard
+                strategyBTCard
         );
 
 
@@ -1777,9 +1657,7 @@ public class MainActivity extends Activity {
                 );
 
 
-        shortCard.addView(
-                divider()
-        );
+        shortCard.addView(divider());
 
 
         addCardMetric(
@@ -1789,9 +1667,7 @@ public class MainActivity extends Activity {
         );
 
 
-        container.addView(
-                shortCard
-        );
+        container.addView(shortCard);
 
 
         // =====================================================
@@ -1869,9 +1745,7 @@ public class MainActivity extends Activity {
         );
 
 
-        container.addView(
-                candle5
-        );
+        container.addView(candle5);
 
 
         LinearLayout candle15 =
@@ -1940,9 +1814,7 @@ public class MainActivity extends Activity {
         );
 
 
-        container.addView(
-                candle15
-        );
+        container.addView(candle15);
 
 
         // =====================================================
@@ -2000,9 +1872,7 @@ public class MainActivity extends Activity {
         );
 
 
-        container.addView(
-                marketCard
-        );
+        container.addView(marketCard);
 
 
         // =====================================================
@@ -2074,9 +1944,7 @@ public class MainActivity extends Activity {
         );
 
 
-        container.addView(
-                technicalCard
-        );
+        container.addView(technicalCard);
 
 
         // =====================================================
@@ -2148,9 +2016,7 @@ public class MainActivity extends Activity {
         );
 
 
-        container.addView(
-                moveCard
-        );
+        container.addView(moveCard);
 
 
         // =====================================================
@@ -2223,9 +2089,7 @@ public class MainActivity extends Activity {
         );
 
 
-        container.addView(
-                aiCard
-        );
+        container.addView(aiCard);
 
 
         // =====================================================
@@ -2322,9 +2186,7 @@ public class MainActivity extends Activity {
         );
 
 
-        container.addView(
-                cbCard
-        );
+        container.addView(cbCard);
 
 
         // =====================================================
@@ -2421,9 +2283,7 @@ public class MainActivity extends Activity {
         );
 
 
-        container.addView(
-                btCard
-        );
+        container.addView(btCard);
 
 
         // =====================================================
@@ -2444,9 +2304,7 @@ public class MainActivity extends Activity {
         );
 
 
-        container.addView(
-                refresh
-        );
+        container.addView(refresh);
 
 
         addSpace();
@@ -2464,6 +2322,234 @@ public class MainActivity extends Activity {
                 11,
                 MUTED
         );
+    }
+
+
+    // =========================================================
+    // STRATEGY CARD
+    // =========================================================
+
+    private void addStrategyCard(
+            String title,
+            StrategyEngine.StrategyResult strategy
+    ) {
+
+        LinearLayout card =
+                createCard();
+
+
+        card.addView(
+                cardTitle(title)
+        );
+
+
+        if (strategy == null) {
+
+            addCardMetric(
+                    card,
+                    "Status",
+                    "WAIT"
+            );
+
+            container.addView(card);
+
+            return;
+        }
+
+
+        TextView setupTitle =
+                new TextView(this);
+
+
+        setupTitle.setText(
+                strategy.setup
+        );
+
+        setupTitle.setTextSize(24);
+
+        setupTitle.setTypeface(
+                Typeface.DEFAULT,
+                Typeface.BOLD
+        );
+
+        setupTitle.setTextColor(
+                strategyColor(strategy.setup)
+        );
+
+        setupTitle.setPadding(
+                0,
+                3,
+                0,
+                7
+        );
+
+
+        card.addView(setupTitle);
+
+
+        addCardMetric(
+                card,
+                "Strategy",
+                strategy.strategy
+        );
+
+
+        addCardMetric(
+                card,
+                "Quality",
+                format(strategy.qualityScore) + "%"
+        );
+
+
+        addCardMetric(
+                card,
+                "Direction",
+                strategy.direction
+        );
+
+
+        if (
+                !"NO SETUP".equalsIgnoreCase(
+                        strategy.setup
+                )
+        ) {
+
+            card.addView(divider());
+
+
+            addCardMetric(
+                    card,
+                    "Entry",
+                    "$" + format(strategy.entry)
+            );
+
+
+            addCardMetric(
+                    card,
+                    "Stop Loss",
+                    "$" + format(strategy.stopLoss)
+            );
+
+
+            addCardMetric(
+                    card,
+                    "Target 1",
+                    "$" + format(strategy.target1)
+            );
+
+
+            addCardMetric(
+                    card,
+                    "Target 2",
+                    "$" + format(strategy.target2)
+            );
+
+
+            addCardMetric(
+                    card,
+                    "R:R 1",
+                    format(strategy.riskReward1)
+            );
+
+
+            addCardMetric(
+                    card,
+                    "R:R 2",
+                    format(strategy.riskReward2)
+            );
+        }
+
+
+        card.addView(divider());
+
+
+        addCardMetric(
+                card,
+                "EMA",
+                strategy.emaAligned
+                        ? "CONFIRMED"
+                        : "NO"
+        );
+
+
+        addCardMetric(
+                card,
+                "Trend",
+                strategy.trendAligned
+                        ? "CONFIRMED"
+                        : "NO"
+        );
+
+
+        addCardMetric(
+                card,
+                "Momentum",
+                strategy.momentumConfirmed
+                        ? "CONFIRMED"
+                        : "NO"
+        );
+
+
+        addCardMetric(
+                card,
+                "Volume",
+                strategy.volumeConfirmed
+                        ? "CONFIRMED"
+                        : "NO"
+        );
+
+
+        addCardMetric(
+                card,
+                "Bollinger",
+                strategy.bollingerBreakout
+                        ? "BREAKOUT"
+                        : "NO"
+        );
+
+
+        addCardMetric(
+                card,
+                "RSI",
+                strategy.rsiConfirmed
+                        ? "CONFIRMED"
+                        : "NO"
+        );
+
+
+        if (
+                strategy.evidence != null
+                        &&
+                !strategy.evidence.isEmpty()
+        ) {
+
+            card.addView(divider());
+
+
+            TextView evidence =
+                    new TextView(this);
+
+            evidence.setText(
+                    strategy.evidence
+            );
+
+            evidence.setTextSize(12);
+
+            evidence.setTextColor(MUTED);
+
+            evidence.setPadding(
+                    0,
+                    5,
+                    0,
+                    4
+            );
+
+
+            card.addView(evidence);
+        }
+
+
+        container.addView(card);
     }
 
 
@@ -3019,7 +3105,11 @@ public class MainActivity extends Activity {
         TextView right =
                 new TextView(this);
 
-        right.setText(value);
+        right.setText(
+                value == null
+                        ? "-"
+                        : value
+        );
 
         right.setTextSize(13);
 
@@ -3468,9 +3558,17 @@ public class MainActivity extends Activity {
 
 
         if (
-                setup5.setup.equals("NO SETUP")
+                setup5.setup != null
                         &&
-                setup15.setup.equals("NO SETUP")
+                setup15.setup != null
+                        &&
+                setup5.setup.equalsIgnoreCase(
+                        "NO SETUP"
+                )
+                        &&
+                setup15.setup.equalsIgnoreCase(
+                        "NO SETUP"
+                )
         ) {
 
             return "NO SETUP";
@@ -4224,10 +4322,20 @@ public class MainActivity extends Activity {
             double value
     ) {
 
+        if (
+                Double.isNaN(value)
+                        ||
+                Double.isInfinite(value)
+        ) {
+
+            return "—";
+        }
+
+
         return String.format(
                 Locale.US,
                 "%.2f",
                 value
         );
     }
-            }
+    }
